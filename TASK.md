@@ -1,4 +1,18 @@
-# P1.02.a — Yerel CSV/ZIP kalite raporunun ilk dikey dilimi
+# DCABOT Task History
+
+# Current task status — 2026-09-11
+
+Verified commit: `8bcf7fc`, equal to `origin/main` on the private repository. The review hardening changed only six scoped files and passed `414/414` full backend tests, Python `-O` focused tests, compileall, workspace checks, and frontend production build.
+
+The P2.03 lifecycle-to-core binding already exists in `a60ef1f` and is locally verified as an offline/fake Spot LIMIT binding. It does not activate live Binance REST/WS, signed account, mutation, persistence atomicity, or mainnet.
+
+Current gate: Full P2.03 `IN_PROGRESS`; trading activation `NO-GO`.
+
+Next safe action: consolidate P2.03/P2.04 offline acceptance evidence and evaluate remaining live-integration prerequisites in a separate decision gate. Testnet mutation requires explicit authorization.
+
+---
+
+## P1.02.a — Yerel CSV/ZIP kalite raporunun ilk dikey dilimi
 
 Durum: COMPLETE / LOCAL_PASS; review: NOT_RUN. P1.02.a tamamlandı; bağımsız faz incelemesi açık bırakıldı. Sıradaki en küçük davranış P1.02.b'dir.
 
