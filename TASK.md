@@ -8,7 +8,7 @@ The P2.03 lifecycle-to-core binding already exists in `a60ef1f` and is locally v
 
 Current gate: Full P2.03 `IN_PROGRESS`; trading activation `NO-GO`.
 
-Next safe action: consolidate P2.03/P2.04 offline acceptance evidence and evaluate remaining live-integration prerequisites in a separate decision gate. Testnet mutation requires explicit authorization.
+Next safe action: run the read-only P2.05 acceptance matrix against the existing public snapshot and offline/fake states. Keep live signed integration and Testnet mutation closed; mutation requires explicit authorization.
 
 ---
 
