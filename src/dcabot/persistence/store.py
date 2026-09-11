@@ -27,6 +27,15 @@ def digest(value: str) -> str:
 class Conflict(ValueError):
     pass
 
+class LedgerInvariantError(RuntimeError):
+    """Raised when an economic posting batch is not balanced."""
+
+
+def _require_balanced_postings(entries: dict[str, Q]) -> None:
+    if sum(entries.values()) != 0:
+        raise LedgerInvariantError("Posting ledger entries do not balance")
+
+
 
 class Store:
     def __init__(self, path: Path, config: dict | None = None):
@@ -149,7 +158,7 @@ class Store:
             "FEE_EXPENSE": fee,
             "FUNDING_EXPENSE": funding,
         }
-        assert sum(entries.values()) == 0
+        _require_balanced_postings(entries)
         for account, amount in entries.items():
             if amount:
                 numerator, denominator = ratio(amount)

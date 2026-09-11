@@ -87,12 +87,6 @@ class OrderSender:
                 now_us=self.clock_us(),
                 reason=exc.code,
             )
-        except Exception:
-            return self.store.mark_unknown(
-                attempt_id,
-                now_us=self.clock_us(),
-                reason="TRANSPORT_FAILURE",
-            )
         if not isinstance(result, TransportAccepted):
             return self.store.mark_unknown(
                 attempt_id,

@@ -11,7 +11,12 @@ from check_workspace import ROOT
 from dcabot.domain.config import Config
 from dcabot.domain.engine import State, apply, decision, report
 from dcabot.application.service import preview, notional, replay, replay_tick
-from dcabot.persistence.store import Store, Conflict
+from dcabot.persistence.store import (
+    Conflict,
+    LedgerInvariantError,
+    Store,
+    _require_balanced_postings,
+)
 
 
 def raw(**updates):
@@ -251,6 +256,10 @@ class StoreTests(unittest.TestCase):
         self.store.db.execute("DROP TRIGGER fail_post")
         self.store.append("f", fill())
         self.assertEqual(self.store.load().position.qty, 1)
+
+    def test_unbalanced_postings_raise_without_assertions(self):
+        with self.assertRaises(LedgerInvariantError):
+            _require_balanced_postings({"WALLET": F(1), "REALIZED_PNL": F(0)})
 
     def test_restart_rebuilds_exact_partial_position_and_postings(self):
         events = [

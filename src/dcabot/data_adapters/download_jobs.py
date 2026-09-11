@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from dcabot.data_adapters.public_download import (
     DownloadOpener,
+    PublicDownloadError,
     download_to_cache,
 )
 from dcabot.data_adapters.public_sources import PublicDownloadPlan
@@ -159,7 +160,7 @@ class DownloadJobManager:
                     on_progress=lambda byte_count, total: self._progress(job_id, byte_count, total),
                     cancel_check=record.cancel.is_set,
                 )
-            except Exception:
+            except PublicDownloadError:
                 if record.cancel.is_set() or self._is_terminal(job_id):
                     return
                 if attempt < self._max_attempts:
@@ -173,6 +174,14 @@ class DownloadJobManager:
                     status=DownloadJobStatus.FAILED,
                     error_code="DOWNLOAD_FAILED",
                     error_message="Public dataset indirilemedi; doğrulanmış cache yayımlanmadı.",
+                )
+                return
+            except Exception:
+                self._finish(
+                    job_id,
+                    status=DownloadJobStatus.FAILED,
+                    error_code="DOWNLOAD_INTERNAL_ERROR",
+                    error_message="Download işleyicisinde beklenmeyen teknik hata oluştu.",
                 )
                 return
             self._finish(

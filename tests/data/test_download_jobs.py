@@ -3,6 +3,7 @@ import time
 import unittest
 from pathlib import Path
 from threading import Event
+from unittest.mock import patch
 
 from dcabot.data_adapters.download_jobs import (
     DownloadJobConflict,
@@ -119,3 +120,29 @@ class DownloadJobTests(unittest.TestCase):
                 )
             manager.cancel(job_id)
             opener.release.set()
+
+    def test_unexpected_job_error_fails_without_retrying_as_public_download_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manager = DownloadJobManager(max_attempts=3, retry_delay_seconds=0)
+            with patch(
+                "dcabot.data_adapters.download_jobs.download_to_cache",
+                side_effect=TypeError("programming bug"),
+            ):
+                job_id = manager.start(
+                    "dataset-id",
+                    BINANCE_BTCUSDT_1H_2025_01_01_PLAN,
+                    Path(directory),
+                )
+                deadline = time.monotonic() + 2
+                snapshot = manager.get(job_id)
+                while snapshot.status in {
+                    DownloadJobStatus.QUEUED,
+                    DownloadJobStatus.RUNNING,
+                    DownloadJobStatus.RETRYING,
+                } and time.monotonic() < deadline:
+                    time.sleep(0.01)
+                    snapshot = manager.get(job_id)
+
+            self.assertEqual(snapshot.status, DownloadJobStatus.FAILED)
+            self.assertEqual(snapshot.attempt, 1)
+            self.assertEqual(snapshot.error_code, "DOWNLOAD_INTERNAL_ERROR")

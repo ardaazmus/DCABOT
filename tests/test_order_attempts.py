@@ -219,6 +219,23 @@ class OrderAttemptTests(unittest.TestCase):
             self.assertNotIn("untrusted-detail", repr(result))
             store.close()
 
+    def test_unexpected_transport_error_is_not_reclassified_as_venue_ambiguity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = AttemptStore(Path(directory) / "attempts.sqlite")
+            store.prepare(attempt())
+            store.persist("attempt-1", now_us=1_700_000_000_000_050)
+            sender = OrderSender(store, clock_us=lambda: 1_700_000_000_000_100)
+
+            with self.assertRaisesRegex(RuntimeError, "programming bug"):
+                sender.send(
+                    "attempt-1",
+                    {"symbol": "BTCUSDT", "side": "BUY", "quantity": "0.001"},
+                    RecordingTransport(RuntimeError("programming bug")),
+                )
+
+            self.assertEqual(store.get("attempt-1").state, AttemptState.SENDING)
+            store.close()
+
 
 if __name__ == "__main__":
     unittest.main()
