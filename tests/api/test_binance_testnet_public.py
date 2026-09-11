@@ -47,3 +47,31 @@ class BinanceTestnetPublicApiTests(unittest.TestCase):
         self.assertNotIn("api_key", json.dumps(result).lower())
         self.assertNotIn("secret", json.dumps(result).lower())
         self.assertEqual(response.headers["cache-control"], "no-store")
+
+    def test_upstream_failures_map_to_sanitized_problem_details(self):
+        cases = (
+            ("TESTNET_SYMBOL_NOT_FOUND", 404),
+            ("TESTNET_RESPONSE_INVALID", 502),
+            ("TESTNET_RESPONSE_TOO_LARGE", 502),
+            ("TESTNET_UPSTREAM_UNAVAILABLE", 503),
+        )
+
+        for code, status_code in cases:
+            with self.subTest(code=code):
+                failure = api.BinanceTestnetPublicError(
+                    code, "secret=must-not-cross-the-api-boundary"
+                )
+
+                def fail(_symbol: str, *, failure=failure):
+                    raise failure
+
+                api.fetch_binance_testnet_exchange_info = fail
+                response = Response()
+                result = api.get_binance_testnet_exchange_info("BTCUSDT", response)
+
+                self.assertEqual(result.status_code, status_code)
+                body = json.loads(result.body)
+                self.assertEqual(body["code"], code)
+                self.assertNotIn("secret", json.dumps(body).lower())
+                self.assertNotIn("must-not-cross", json.dumps(body))
+                self.assertEqual(result.media_type, "application/problem+json")

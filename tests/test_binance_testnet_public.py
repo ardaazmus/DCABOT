@@ -99,6 +99,19 @@ class BinanceTestnetPublicTests(unittest.TestCase):
         with self.assertRaisesRegex(BinanceTestnetPublicError, "TESTNET_RESPONSE_TOO_LARGE"):
             fetch_binance_testnet_exchange_info("BTCUSDT", opener=_FakeOpener(oversized))
 
+    def test_malformed_json_is_not_accepted_as_a_snapshot(self):
+        with self.assertRaisesRegex(BinanceTestnetPublicError, "TESTNET_RESPONSE_INVALID"):
+            fetch_binance_testnet_exchange_info("BTCUSDT", opener=_FakeOpener(b"not-json"))
+
+    def test_unknown_venue_status_is_preserved_for_fail_closed_ui_handling(self):
+        raw = _exchange_info_payload()
+        raw["symbols"][0]["status"] = "FUTURE_STATUS"
+        encoded = json.dumps(raw, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+
+        snapshot = fetch_binance_testnet_exchange_info("BTCUSDT", opener=_FakeOpener(encoded))
+
+        self.assertEqual(snapshot.status, "FUTURE_STATUS")
+
     def test_symbol_rejects_whitespace_and_control_characters(self):
         with self.assertRaisesRegex(BinanceTestnetPublicError, "TESTNET_SYMBOL_INVALID"):
             fetch_binance_testnet_exchange_info("BTC USDT", opener=_FakeOpener(b"{}"))
