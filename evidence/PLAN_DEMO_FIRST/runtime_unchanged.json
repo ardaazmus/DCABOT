@@ -1,0 +1,127 @@
+[
+  {
+    "path": ".python-version",
+    "sha256": "02e735b3dfe1c32833eb550b7ff8ffa17f5f2bc3fa1e7bae61a8f5a3883ce398",
+    "unchanged": true
+  },
+  {
+    "path": "config/offline.json",
+    "sha256": "171bfe052ef57b3b67f8a99b89162dddc77b7c8cc4fbebfad03ebd569f625b36",
+    "unchanged": true
+  },
+  {
+    "path": "config/paper.json",
+    "sha256": "4f3b315fae6285531d853e5bf4c6e47270947c5a68b3b4e8b402631729e13134",
+    "unchanged": true
+  },
+  {
+    "path": "pyproject.toml",
+    "sha256": "346969a496aae990582bb20a15f7d893b46ee8d36e860730ee2c7fc263014eea",
+    "unchanged": true
+  },
+  {
+    "path": "src/dcabot/__init__.py",
+    "sha256": "a4cf0a776564f516df208fa225b54fa53e14a36114534f72ff0933b632157401",
+    "unchanged": true
+  },
+  {
+    "path": "src/dcabot/application/service.py",
+    "sha256": "0dbf250ca6b2c7c27a721015fa247a3d65aadf4079e807eb55a77d8fddaf065d",
+    "unchanged": true
+  },
+  {
+    "path": "src/dcabot/bootstrap.py",
+    "sha256": "2c39bc8e3978085e7080c3b469f3e259b6f7b9edb134e828f4ef85beb479989f",
+    "unchanged": true
+  },
+  {
+    "path": "src/dcabot/domain/config.py",
+    "sha256": "10faf177b8fbfe6f210e9aeab5d76649e2d180dd2771be3811868d899da7ca2d",
+    "unchanged": true
+  },
+  {
+    "path": "src/dcabot/domain/engine.py",
+    "sha256": "1c65f4f93cd1cb6fa44a886af8beded5b8a0926094e1d883a4086e7051ae26c8",
+    "unchanged": true
+  },
+  {
+    "path": "src/dcabot/domain/math.py",
+    "sha256": "1bfa3f96fdecf7e46a77972e7edcfe5937dae7d3f967a3f5eafa1edf95e9e97c",
+    "unchanged": true
+  },
+  {
+    "path": "src/dcabot/domain/numbers.py",
+    "sha256": "f257046c26bd74d35db5d02e18ed67d87219ed07a6917ad1a70d2132e4d9c788",
+    "unchanged": true
+  },
+  {
+    "path": "src/dcabot/persistence/store.py",
+    "sha256": "8235fef89624894d4eb8419d93f028c15b5ae3c484868426db093d9d2bdf0770",
+    "unchanged": true
+  },
+  {
+    "path": "src/dcabot/ports/journal.py",
+    "sha256": "2d7f6a38687977681b5d38696d791cfac0ddef200a60804052ca36098dd8c894",
+    "unchanged": true
+  },
+  {
+    "path": "tests/fixtures/demo_ticks.json",
+    "sha256": "3eee7646aef36edd0f33360fd4ce06250546a92623cd7c846506d3cb3d3b3ae6",
+    "unchanged": true
+  },
+  {
+    "path": "tests/fixtures/notional.json",
+    "sha256": "e1f63f8cdd66e41d8898128a50deac0267a5429bf790248312b278fb3c49e9aa",
+    "unchanged": true
+  },
+  {
+    "path": "tests/test_backup_inspection.py",
+    "sha256": "f997807f1a72f61b275611bcf8cf56aeeb0c21502dcfdf34cf7b3aa8f3360932",
+    "unchanged": true
+  },
+  {
+    "path": "tests/test_bootstrap.py",
+    "sha256": "abf8ea0460fbc0867c881dea6b773303ec09b27b47fc6ef1e36d6b00142c3536",
+    "unchanged": true
+  },
+  {
+    "path": "tests/test_engine_store.py",
+    "sha256": "69fa3395767227978d1b3d8ddf6caddbed30a617e68a2a7a0c82244052d59aed",
+    "unchanged": true
+  },
+  {
+    "path": "tests/test_math_core.py",
+    "sha256": "b231932c7acae3c9db473e04b1e6e161499bd4dd0d49cd67fbbb18a2733d108d",
+    "unchanged": true
+  },
+  {
+    "path": "tools/bot.py",
+    "sha256": "f1fb49a41d8c58a45b344b35f2dc8a3c62dfa7d4e05ddfea481de9ed951b5c7c",
+    "unchanged": true
+  },
+  {
+    "path": "tools/check_workspace.py",
+    "sha256": "3330e369fae9d3faefff855edf0fecc1e8a6f6887e95a9a17e2b734220ec65d4",
+    "unchanged": true
+  },
+  {
+    "path": "tools/inspect_backup.py",
+    "sha256": "494c07c32235c2c6602c093ae0c5abe075d6c8d1179d43a968836a1997e31868",
+    "unchanged": true
+  },
+  {
+    "path": "tools/run_checks.py",
+    "sha256": "a6092b5b6fc1a213fc38d37e96a2e90e7eac7a58e0218a7b64988af9efd81e52",
+    "unchanged": true
+  },
+  {
+    "path": "tools/run_offline.py",
+    "sha256": "378da8e991930485109cb0bd991c38c9495eb25cbcfc2624a617a95621bcee43",
+    "unchanged": true
+  },
+  {
+    "path": "uv.lock",
+    "sha256": "54dd3cf2a62dc88b74965cde1c12069abf76df21a14ba98ea810dc707beb4bd8",
+    "unchanged": true
+  }
+]

@@ -1,0 +1,1 @@
+"""Data adapter tests."""

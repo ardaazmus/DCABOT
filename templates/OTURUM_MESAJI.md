@@ -1,0 +1,3 @@
+# Bir sonraki AI oturumu
+
+> AGENTS.md, STATE.md ve TASK.md'yi oku. Yeni sıra bağlayıcı: önce tam arayüzlü ve gerçek geçmiş verili demo, sonra Binance testnet, ardından gerçek Binance kurulum, en son diğer borsalar. Mevcut Python çekirdeğini koruyup ortak ekonomik katman olarak kullan. Yalnız TASK içindeki P1.01'i tamamla: tarayıcı formu → gerçek API → çekirdek preview → ekranda ladder/bütçe. Public veri okuma ileride P1'de olabilir; private emir bağlantısını erkene alma. Yedeği topluca okuma/çalıştırma. Gerçek odak test ve UI akışını doğrula, kanıtı kaydet, STATE/TASK'ı P1.02'ye geçir. Planlanmış UI/veri özelliklerini yapılmış diye sunma. Yerel geliştirme için tekrar izin istemene gerek yok.

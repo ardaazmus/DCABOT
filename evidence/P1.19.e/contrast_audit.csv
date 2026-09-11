@@ -1,0 +1,13 @@
+pair,foreground,background,ratio,threshold,result
+primary text / body,#e6edf5,#09121c,15.96,4.5,PASS
+muted helper / body,#8294a5,#09121c,6.03,4.5,PASS
+primary button text / button,#ffffff,#1373df,4.62,4.5,PASS
+focus ring / body,#42a5ff,#09121c,7.23,3,PASS
+warning text / body,#f5c55b,#09121c,11.68,4.5,PASS
+error text / body,#ffaaa5,#09121c,10.36,4.5,PASS
+success text / body,#45c793,#09121c,8.83,4.5,PASS
+focus ring / sidebar,#42a5ff,#0b1621,7.00,3,PASS
+border / body,#223241,#09121c,1.44,3,FAIL
+heading / table header,#dce7f0,#10202d,13.21,4.5,PASS
+secondary text / table header,#cbd8e4,#10202d,11.43,4.5,PASS
+input text / input,#eef4fa,#0b1722,16.34,4.5,PASS

@@ -1,0 +1,80 @@
+{
+  "python": "3.12.13",
+  "scope": "OFFLINE_TARGETED_PROBES_NOT_FULL_SUITE",
+  "results": [
+    {
+      "id": "F01",
+      "status": "BUG_REPRODUCED",
+      "observed": "90.500",
+      "corrected_contract": "Toy root 90/0.995=90.45226130653266331658291457; not exchange-exact"
+    },
+    {
+      "id": "F03",
+      "status": "BUG_REPRODUCED",
+      "observed": "1E-8",
+      "corrected_contract": "Reject deviation >= 1; do not invent price"
+    },
+    {
+      "id": "F05",
+      "status": "BUG_REPRODUCED",
+      "observed": {
+        "safe": true,
+        "actions": [
+          "MARK_ORDER_CANCELLED_LOCALLY:o1"
+        ]
+      },
+      "corrected_contract": "Missing in unknown query scope => unresolved; no cancellation inference or new-risk resume"
+    },
+    {
+      "id": "F06",
+      "status": "BUG_REPRODUCED",
+      "observed": {
+        "clean": true,
+        "discrepancies": 0
+      },
+      "corrected_contract": "NEW versus CANCELED must be a status discrepancy"
+    },
+    {
+      "id": "F07",
+      "status": "BUG_REPRODUCED",
+      "observed": "140",
+      "corrected_contract": "Same settlement identity posted once => 120"
+    },
+    {
+      "id": "F08",
+      "status": "BUG_REPRODUCED",
+      "observed": {
+        "equity": "100",
+        "tripped": false
+      },
+      "corrected_contract": "100 -> 120 -> 100 peak drawdown = 1/6; crosses 15%"
+    },
+    {
+      "id": "F09",
+      "status": "BUG_REPRODUCED",
+      "observed": {
+        "owner_lock_exists": false
+      },
+      "corrected_contract": "A lock instance without ownership must not release another owner's lock"
+    },
+    {
+      "id": "F02",
+      "status": "BUG_REPRODUCED",
+      "observed": {
+        "safety_count": 1,
+        "reference": "90"
+      },
+      "corrected_contract": "SO intent may be pending; completed level must not advance before fill"
+    },
+    {
+      "id": "F04",
+      "status": "BUG_REPRODUCED",
+      "observed": {
+        "reported_position": "0.5",
+        "internal_quantity": "1",
+        "previous_position": "1"
+      },
+      "corrected_contract": "Partial close updates remaining quantity/cost from execution"
+    }
+  ]
+}

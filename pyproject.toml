@@ -1,0 +1,17 @@
+[project]
+name = "dcabot"
+version = "0.1.0"
+description = "Offline DCABOT economic core; no venue integration"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "fastapi>=0.116,<1",
+    "uvicorn>=0.35,<1",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+norecursedirs = ["YEDEK_ESKI_PROJE", ".venv", "docs", "data", "reports"]

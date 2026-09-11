@@ -1,0 +1,6 @@
+YEDEK_ESKI_PROJE/
+.venv/
+data/
+reports/
+docs/archive/
+__pycache__/

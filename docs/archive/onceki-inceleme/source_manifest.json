@@ -1,0 +1,682 @@
+{
+  "commit": "318e1c409ff67083168b31fdd5a27fb28ec7d5f7",
+  "scope": "Markdown file metadata, not full semantic audit",
+  "files": [
+    {
+      "path": ".tmp/oracle-audit-1A625E06A2A5/VERIFICATION.md",
+      "bytes": 8292,
+      "lines": 77,
+      "sha256": "a06bcfca08f242551026ef7e1bfa5eb86d494cda61a29190b161ae6051f330fe",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 3551,
+      "lines": 65,
+      "sha256": "b84d03c6a89859a8cefac105dbe2553f5d00501457b753ec4aa3f463b63009d6",
+      "review": "TAM_METIN"
+    },
+    {
+      "path": "BOT_ARCHITECTURE_PLAN_V3.md",
+      "bytes": 50400,
+      "lines": 905,
+      "sha256": "7a93adc627ac6e8f29872518d127c9deed8070d3227aba967b1ac31a942a9c31",
+      "review": "HEDEFLI_BOLUM"
+    },
+    {
+      "path": "CLAUDE.md",
+      "bytes": 828,
+      "lines": 13,
+      "sha256": "94994be6f5433eaaf223fcb2cc4107eb3c39c73c7f23eee60150c7d1b5d1e582",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "bytes": 1748,
+      "lines": 40,
+      "sha256": "ee461737fd97068c0df4122e19a654799759fd6413169510d6d26343ae454c70",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "DCABOT_MASTER_RESEARCH_AND_PLAN.md",
+      "bytes": 264138,
+      "lines": 3143,
+      "sha256": "6ca8a4a52958e987120833e6b9a0e339cda68ac8f9cea9f73bd657d213bc743c",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "DESIGN.md",
+      "bytes": 3794,
+      "lines": 71,
+      "sha256": "86382d4300ae87526dca458b6728710d800c1241e467fff61e9d978eb49e85cb",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "FILE_MAP.md",
+      "bytes": 2129,
+      "lines": 28,
+      "sha256": "76dc67ea32088887d110e56f837a4db0ea414a4f6c1a17ee46dbad493f32a44d",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "GEMINI.md",
+      "bytes": 766,
+      "lines": 12,
+      "sha256": "0aa3b0a68e0f4d9099d868efc97a45d8f6600224ca43d4454226f9dc736365c9",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "IDE_RULES.md",
+      "bytes": 1033,
+      "lines": 17,
+      "sha256": "d383a96e2e398e3fc38b6f1777c2d9299bd07aba5df7d9a37791c80a32c69a1d",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "OPENCODE.md",
+      "bytes": 752,
+      "lines": 12,
+      "sha256": "c03daf518cc24fad1fec74b24bb115592de079f812e75c9c7caee8d5c6aa822b",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "PLAN.md",
+      "bytes": 11488,
+      "lines": 176,
+      "sha256": "4457e4843b0bd399266780a78fc655dba56725abb5e2594fab2f7bd14159b82e",
+      "review": "TAM_METIN"
+    },
+    {
+      "path": "PROJECT_CONTEXT.md",
+      "bytes": 9111,
+      "lines": 143,
+      "sha256": "9a7307c3abadfece796abbf94c69b25da46ea43887ab023441e37e45d15585a3",
+      "review": "TAM_METIN"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5649,
+      "lines": 120,
+      "sha256": "166e26baeca278ae14c508bbd4f3d606d5fa79acaf7869a3e4630b9a7549406a",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "SECURITY.md",
+      "bytes": 1455,
+      "lines": 32,
+      "sha256": "e1f82d8777a51b5477c9a35736f3fc67e913ffb5459f75e3bea9d14cb3873cc9",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "WORKFLOW.md",
+      "bytes": 4044,
+      "lines": 103,
+      "sha256": "eacd7f513464d8564a14c209232adb9c65205cd79c5e917efc2d7def43d1402e",
+      "review": "TAM_METIN"
+    },
+    {
+      "path": "WORKLOG.md",
+      "bytes": 84042,
+      "lines": 1324,
+      "sha256": "df009c50a09804e73839e8e89c8264e648fdf13e33bc9cc4bf874d26893c4f62",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/TESTNET_REHBERI.md",
+      "bytes": 3633,
+      "lines": 71,
+      "sha256": "3d541c8ebce195f0623c18241d0ec94a74068b72304fd809cf331c124f5ee0af",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/README.md",
+      "bytes": 997,
+      "lines": 21,
+      "sha256": "bac313288fefc9c9af3416b93aaf38e5afd4ca9da8f0259f99aba68676975109",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/SHA256SUMS.md",
+      "bytes": 5530,
+      "lines": 41,
+      "sha256": "0c4e3057353b151cfaa3311c44d7d478db7ed5d6cc7d8c07ab54e90665b47d21",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/00-paket-indeksi.md",
+      "bytes": 6525,
+      "lines": 70,
+      "sha256": "38eed07e4d3acc029fcf946a094bb9d46cea7337d47a378735839e16d3859a68",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/01-vizyon-kapsam-ve-ilkeler.md",
+      "bytes": 4905,
+      "lines": 68,
+      "sha256": "d13656e5c04e0bcf1ae09b75cda774ea2882fee9980fdd9a2f9e0dcdb9afa777",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/02-mimari-kararlar-ve-degismezler.md",
+      "bytes": 8276,
+      "lines": 171,
+      "sha256": "2c66612166df29642af50b0819bb94dba9b229e14b48eea075da8b776b028531",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/03-yazilim-gelistirme-kurallari.md",
+      "bytes": 4357,
+      "lines": 91,
+      "sha256": "d61b367bd5549e3245411036d2716437b9e468e41f98e9fc1215f33fe1e342e9",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/04-dogrulama-ve-test-stratejisi.md",
+      "bytes": 4110,
+      "lines": 89,
+      "sha256": "b79c7908db5d268a0180a0d1d16528a21b8a69783d6327ce282f49920b7d8dd2",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/05-guvenlik-modeli-ve-secret-politikasi.md",
+      "bytes": 5650,
+      "lines": 92,
+      "sha256": "09e9a870970418816886ebc2a5c5a496e8e4360ab9ce9ee79e20ac06a6853258",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/06-matematik-ve-finansal-hesap-sozlesmesi.md",
+      "bytes": 6799,
+      "lines": 139,
+      "sha256": "721404efa4c488c59c57e112b1d2544f1804b8db6e26a01ac0b6b8b373f1a657",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/07-api-entegrasyon-kapilari.md",
+      "bytes": 6914,
+      "lines": 108,
+      "sha256": "759beb0a845cceb2fe318e31706873d9677251f48f6ae741c241eadd85c065c7",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/08-veri-modeli-ve-kalicilik.md",
+      "bytes": 4430,
+      "lines": 74,
+      "sha256": "61b23381b477bf4c9212f0ef9b799c400c256932caee18ab34693a65a4e615b2",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/09-strateji-taksonomisi.md",
+      "bytes": 3794,
+      "lines": 78,
+      "sha256": "3d3d477d537eab42f3ca32173e071e67bbb67f8d738c4bfaaa97b70e0c6acae5",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/10-backtest-ve-terfi-protokolu.md",
+      "bytes": 4092,
+      "lines": 85,
+      "sha256": "1b75b27d35ded664af1173b15b18a00b4133dd5e44eb558f4adc3e451845776a",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/11-calisma-modeli-ve-zamanlanmis-gorevler.md",
+      "bytes": 4115,
+      "lines": 91,
+      "sha256": "b8bfece48c901bd9ac925e434763e3d9b8aba973403259657c9888e701c4238b",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-0a-cevrimdisi-guvenlik-cekirdegi.md",
+      "bytes": 9510,
+      "lines": 140,
+      "sha256": "00a3c396bd3d472f63ee82cb9d9a6d7b0ce18f3e8d238cdab0296dea87e0736f",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-0b-kalicilik-outbox-ve-lease.md",
+      "bytes": 3902,
+      "lines": 66,
+      "sha256": "103ab30fc03450630fc28d12f283bccb361b5aa5b7594ea11427172059f703c5",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-1a-binance-baglanti-ve-enstruman-kurallari.md",
+      "bytes": 2925,
+      "lines": 58,
+      "sha256": "efce17705c04c6aa1002e1fab41cd88cc6db9b4b67c341fb19f6a845ed709280",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-1b-piyasa-verisi-ve-orderbook.md",
+      "bytes": 2129,
+      "lines": 46,
+      "sha256": "66d5027b19234468605d9a59cdcfad0653dbd68ea345e116028e6b48bfe3a05a",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-1c-user-stream-ve-reconciler.md",
+      "bytes": 2278,
+      "lines": 47,
+      "sha256": "03d1d004e9ed2e579a60d052edf5b056d465392ab5b1301038f3c69523a2cf55",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-2a-emir-yurutme-ve-tekyazar.md",
+      "bytes": 2595,
+      "lines": 50,
+      "sha256": "93893d9b4b52d0dcd7cf5f76c2bae1353a9acc15e7de2a51e9f127743be744bb",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-2b-risk-motoru-ve-killswitch.md",
+      "bytes": 3185,
+      "lines": 53,
+      "sha256": "3ccdc61e1da1529373dca7d9c4d998e86ec1842d21489a8a91f3715baa525e2b",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-2c-testnet-emir-yasam-dongusu.md",
+      "bytes": 2011,
+      "lines": 43,
+      "sha256": "62fa6a4c6be42436ee2379556640c6769d01857e11488f1002d480c2bc9dff19",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-3a-strateji-cekirdegi-ve-durum-makinesi.md",
+      "bytes": 2542,
+      "lines": 49,
+      "sha256": "a3fcc78a5733edf322336cdbcad900c95afe5c76267784ca6a5e353a2f39d07d",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-3b-dca-stratejileri.md",
+      "bytes": 2469,
+      "lines": 52,
+      "sha256": "fa5149731f4775313aec8e0499391d9d63d07677ecd22701317e98de0369dbd8",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-3c-grid-ve-hybrid-stratejileri.md",
+      "bytes": 2348,
+      "lines": 49,
+      "sha256": "371d4d168860556c83bc371dcb017e5c57119e098327c275d53ddc15915c4004",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-4a-backtest-motoru.md",
+      "bytes": 2384,
+      "lines": 50,
+      "sha256": "eebb2a10f2b13a382c9703ced25a9371ddf50dd9b823d293db399835c442b4ca",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-4b-veri-kalitesi-ve-lineage.md",
+      "bytes": 2314,
+      "lines": 51,
+      "sha256": "20c9dae5b4ddd69df7ec741acf510f3c9e1af64b4218cda0c24b467b4f5b3d6f",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-4c-istatistik-ve-terfi-analizi.md",
+      "bytes": 2517,
+      "lines": 49,
+      "sha256": "c062c49171b6c4a5e40fc80f1dcf59c11182bea3a6d1f2478a0d312bafc8fd3e",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-5-yonetim-paneli-ve-webhook.md",
+      "bytes": 2598,
+      "lines": 51,
+      "sha256": "d7d37751070b88f3e5abd8d19689ada0dff749f8e61000c3929698c1486f12ea",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-6-coklu-borsa.md",
+      "bytes": 2774,
+      "lines": 52,
+      "sha256": "ac3b947ffbff4b74acb30b2c36a806077a6408ddc3b32757b3f42df98cf3e132",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/roadmap/fazlar/faz-7-mainnet-canary.md",
+      "bytes": 2077,
+      "lines": 52,
+      "sha256": "4761922eec8b4e67698024bc1258e0589102bf1da42e755417b574b38a727d82",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/superpowers/plans/2026-08-11-phase-0a-offline-safety-kernel-plan.md",
+      "bytes": 39024,
+      "lines": 927,
+      "sha256": "259673ad6f11b629122973404d471835e38496685cfed778bef30aaa1a87391c",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/superpowers/plans/2026-08-11-r0-competitive-math-security-plan.md",
+      "bytes": 16347,
+      "lines": 220,
+      "sha256": "d92b654d19a7cc3ef5a7a7398f458fbf09d349846e36814738ab255632d6c2d6",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/superpowers/specs/2026-08-11-dcabot-foundation-design.md",
+      "bytes": 17779,
+      "lines": 445,
+      "sha256": "16088e5d5d5b3e9b5550edcb31dc27d1e26c9f7f84a8532c00ac50756d44200f",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/superpowers/specs/2026-08-11-r0-competitive-math-security-design.md",
+      "bytes": 14299,
+      "lines": 327,
+      "sha256": "186b291e3fb201f33d87a055c0517410dd56a39611dcc73ae13ae4013df26317",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/archive/legacy-roadmaps-2026-09-05/superpowers/specs/2026-09-05-dcabot-roadmap-v2-design.md",
+      "bytes": 18627,
+      "lines": 343,
+      "sha256": "9ebd099b4a8493a43be2acbdc925795b94be7e46991dc13663b574fecb0f065f",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/context/CONTEXT_STRATEGY.md",
+      "bytes": 5355,
+      "lines": 105,
+      "sha256": "6da5aa613b204dc20ac3ef71c0b42197f4ca088242df523eef2cab5db02f94e2",
+      "review": "TAM_METIN"
+    },
+    {
+      "path": "docs/context/PHASE_CONTEXT_MAP.md",
+      "bytes": 1896,
+      "lines": 23,
+      "sha256": "f223ab5cce5ba45fda2469bb54dc787feb8ec03b2f7f4ef7ed0c8f65a6e35f8c",
+      "review": "TAM_METIN"
+    },
+    {
+      "path": "docs/context/TASK_CONTEXT_TEMPLATE.md",
+      "bytes": 605,
+      "lines": 20,
+      "sha256": "aeef8d67ee63f2862fc6629b2e22766e7745106f16e0a9a50ef667d7e1c4bea5",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/context/UI_CONTEXT_MAP.md",
+      "bytes": 1158,
+      "lines": 17,
+      "sha256": "a1e9119c621f3c8932838cc4cbbb704ccf8cbf552be51e868492e6ff52061f95",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/research/2026-09-05-order-state-replay-oracle-evaluation.md",
+      "bytes": 5862,
+      "lines": 112,
+      "sha256": "abd72e1d035cea2b11b20f532cb78977f16f292a5d7cf20d2119f2c6a11be84a",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/research/qwen-prototip-degerlendirmesi.md",
+      "bytes": 6001,
+      "lines": 77,
+      "sha256": "6157ca2ed0606d0b62c6d18aba50bd608737e39761925236690b08bbc47ffac4",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/research/r0/README.md",
+      "bytes": 7574,
+      "lines": 91,
+      "sha256": "79379ada7b16afb9ad06003281415a0ab454905db08b4cb7213a86435336e233",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/research/r0/backtest-validation-protocol.md",
+      "bytes": 27649,
+      "lines": 352,
+      "sha256": "cad85975ad2f29c33702c0b55465e62c5c49bc5c622408c6ea1e470e6bb4d66c",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/research/r0/competitive-feature-matrix.md",
+      "bytes": 24486,
+      "lines": 97,
+      "sha256": "5100ef09072111320784d6fa5ca42e12c2528d23cd8749d50e4da890eb5ce4be",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/research/r0/feature-decision-log.md",
+      "bytes": 27064,
+      "lines": 95,
+      "sha256": "96d1aba7cc912f8fa494b4c2e0cb3c7b769a3f5378627283aec554d3ad61db03",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/research/r0/license-and-provenance-register.md",
+      "bytes": 9864,
+      "lines": 56,
+      "sha256": "1f0c907e4f1bcd184104784c9d41fadfbc52c4174afccabb793c2ece5882ae38",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/research/r0/open-source-failure-catalog.md",
+      "bytes": 19236,
+      "lines": 214,
+      "sha256": "e79fdef7ce96142b061979268f1720e1d4b3bfa1ad96f45f9b9d731280a4517c",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/research/r0/r0-acceptance-report.md",
+      "bytes": 11757,
+      "lines": 90,
+      "sha256": "dc6b458d1378151808ca8e6f4228e4323c24d90ba90ea5a5978fdc2f0eed7cfe",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/research/r0/source-register.md",
+      "bytes": 25487,
+      "lines": 63,
+      "sha256": "67b036ebd710336b0412008c4daddc29891494798461865cde60c354b68dbabf",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/research/r0/strategy-math-contract.md",
+      "bytes": 24807,
+      "lines": 507,
+      "sha256": "b543148c29083947d2240fcae3eed6bbbc5bc3c819f2d0a251c31c41a3a6be92",
+      "review": "HEDEFLI_BOLUM"
+    },
+    {
+      "path": "docs/yeni/00_OKU_BENI.md",
+      "bytes": 5545,
+      "lines": 57,
+      "sha256": "f75b96973d45c6fe5cbe1a7522d3236d5b7c2853cbb16c7b8ed59ff1900204e2",
+      "review": "TAM_METIN"
+    },
+    {
+      "path": "docs/yeni/00_PLAN_AKTIVASYON_KAYDI.md",
+      "bytes": 2178,
+      "lines": 43,
+      "sha256": "8352e1fbfd9a2c0ac156619d3185023cf111a25f41028c3348a48dc2a034b179",
+      "review": "TAM_METIN"
+    },
+    {
+      "path": "docs/yeni/01_MASTER_PLAN_DUZELTME_KAYDI.md",
+      "bytes": 15461,
+      "lines": 194,
+      "sha256": "1bf885f360192296135136a99ac5105e8f58a61b5bbb020bbfeb7d1d6b7b465c",
+      "review": "TAM_METIN"
+    },
+    {
+      "path": "docs/yeni/AGENTS.md",
+      "bytes": 2489,
+      "lines": 28,
+      "sha256": "cb9e06c4e0b6bd59bb37de19da7dfb4d4e8ae4bf7b047ac41094558d9b3f8f18",
+      "review": "TAM_METIN"
+    },
+    {
+      "path": "docs/yeni/ANONYMOUS_DCA_FINANCIAL_TRUTH_AND_REPLAY_RESEARCH.md",
+      "bytes": 102423,
+      "lines": 1158,
+      "sha256": "4bf4172db692fd3b45a53cce1dfdaff0bc3e20c8386d9b272088d5b4fc9131b7",
+      "review": "HEDEFLI_BOLUM"
+    },
+    {
+      "path": "docs/yeni/ANONYMOUS_ORDER_STATE_REPLAY_ORACLE.md",
+      "bytes": 77818,
+      "lines": 1507,
+      "sha256": "1a625e06a2a555176dd107997952613b156af77483c64bacae32f15ee7c26287",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/PROJE_KANIT_VE_KOD_KALITESI_MD_PAKETI/00_OKU_BENI.md",
+      "bytes": 5545,
+      "lines": 57,
+      "sha256": "f75b96973d45c6fe5cbe1a7522d3236d5b7c2853cbb16c7b8ed59ff1900204e2",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/PROJE_KANIT_VE_KOD_KALITESI_MD_PAKETI/AGENTS.md",
+      "bytes": 2489,
+      "lines": 28,
+      "sha256": "cb9e06c4e0b6bd59bb37de19da7dfb4d4e8ae4bf7b047ac41094558d9b3f8f18",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/PROJE_KANIT_VE_KOD_KALITESI_MD_PAKETI/docs/research/01_PROJE_GERCEGI_VE_MIMARI.md",
+      "bytes": 8463,
+      "lines": 87,
+      "sha256": "d5d8a74a45c3a25a52d14386e87733e79c2d547acf51bc47bc863103431cbbb4",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/PROJE_KANIT_VE_KOD_KALITESI_MD_PAKETI/docs/research/02_BORSA_ADAPTOR_KANITLARI.md",
+      "bytes": 7522,
+      "lines": 75,
+      "sha256": "0ae1d9d3311cdd63dcd880e16c4481565d47b71566423907d43e459324855375",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/PROJE_KANIT_VE_KOD_KALITESI_MD_PAKETI/docs/research/03_KALICILIK_ESZAMANLILIK_KURTARMA.md",
+      "bytes": 7354,
+      "lines": 72,
+      "sha256": "460d2270d5473c73076965fff54102444c797629168e3622998e44c98d7c33d2",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/PROJE_KANIT_VE_KOD_KALITESI_MD_PAKETI/docs/research/04_VERI_SOZLESMESI_VE_MUHASEBE.md",
+      "bytes": 7327,
+      "lines": 76,
+      "sha256": "67e7977539a11ef083ffb55e77d013d5e2552df0c99c9db42dd2eaa513a5d280",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/PROJE_KANIT_VE_KOD_KALITESI_MD_PAKETI/docs/research/05_TEST_KALITESI_VE_GUVENLIK.md",
+      "bytes": 7691,
+      "lines": 73,
+      "sha256": "73ab72a0ac82e5b814dafbd3169861ca104792a34742f5746ec5aa80a2a4adab",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/PROJE_KANIT_VE_KOD_KALITESI_MD_PAKETI/docs/research/06_BAGLAM_TOKEN_VE_CALISMA_AKISI.md",
+      "bytes": 8776,
+      "lines": 83,
+      "sha256": "a43c68a9390a509b154469c22e262f7d09f71f8f2563a387cead534ddb28ede3",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/PROJE_KANIT_VE_KOD_KALITESI_MD_PAKETI/docs/research/07_KAYNAKLAR_VE_ACIK_KARARLAR.md",
+      "bytes": 10385,
+      "lines": 102,
+      "sha256": "c41c62c09f18a9b51bff6fc04db8e900bae8e55067d5599404c56b7c9143bcae",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/V3_EK_ARASTIRMA_REHBERI.md",
+      "bytes": 7559,
+      "lines": 78,
+      "sha256": "d38b8446c4a327a69260b61e57595025ca358d053b19aefeb8efe505ac3d9d97",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/V3_MASTER_PLAN_EK_ARASTIRMALAR/V3_MASTER_PLAN_EKLERI/V3_EK_ARASTIRMA_REHBERI.md",
+      "bytes": 7559,
+      "lines": 78,
+      "sha256": "d38b8446c4a327a69260b61e57595025ca358d053b19aefeb8efe505ac3d9d97",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/V3_MASTER_PLAN_EK_ARASTIRMALAR/V3_MASTER_PLAN_EKLERI/docs/research/v3/01_MASTER_PLAN_DUZELTME_KAYDI.md",
+      "bytes": 15461,
+      "lines": 194,
+      "sha256": "1bf885f360192296135136a99ac5105e8f58a61b5bbb020bbfeb7d1d6b7b465c",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/V3_MASTER_PLAN_EK_ARASTIRMALAR/V3_MASTER_PLAN_EKLERI/docs/research/v3/02_EMIR_ALGO_REZERV_SOZLESMESI.md",
+      "bytes": 15111,
+      "lines": 193,
+      "sha256": "d1975e8d5c5d4fae37e79de7bc9e4bb7b9a0b01d897eb87924f24a22431e387d",
+      "review": "HEDEFLI_BOLUM"
+    },
+    {
+      "path": "docs/yeni/V3_MASTER_PLAN_EK_ARASTIRMALAR/V3_MASTER_PLAN_EKLERI/docs/research/v3/03_DCA_GRID_HYBRID_VE_POZISYON_SAHIPLIGI.md",
+      "bytes": 12336,
+      "lines": 182,
+      "sha256": "35e49fc6c9f63123f41985fde59b37f39c95c9a14e0ce0fd82ace04b489cfd64",
+      "review": "HEDEFLI_BOLUM"
+    },
+    {
+      "path": "docs/yeni/V3_MASTER_PLAN_EK_ARASTIRMALAR/V3_MASTER_PLAN_EKLERI/docs/research/v3/04_BORSA_MANIFESTI_VE_GUNCELLIK.md",
+      "bytes": 13511,
+      "lines": 173,
+      "sha256": "9a3fc95b2558ae8251e88b4aec34ce9209ce2116ec101ee04359e3f83205d8f2",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/V3_MASTER_PLAN_EK_ARASTIRMALAR/V3_MASTER_PLAN_EKLERI/docs/research/v3/05_WEBHOOK_ONAY_VE_YETKI_SOZLESMESI.md",
+      "bytes": 11060,
+      "lines": 134,
+      "sha256": "02a2799c84259ea8ce4cfd6ee55c3b846ec59a7bee8f07a9bbabe53db3e726e6",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/V3_MASTER_PLAN_EK_ARASTIRMALAR/V3_MASTER_PLAN_EKLERI/docs/research/v3/06_BACKTEST_DENEY_VE_RELEASE_KANITI.md",
+      "bytes": 16494,
+      "lines": 233,
+      "sha256": "a512a7060472c9aecb22dc5cdbf86c43a28553c2fd03716eb235d48dc72c53d6",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/V3_MASTER_PLAN_EK_ARASTIRMALAR/V3_MASTER_PLAN_EKLERI/docs/research/v3/07_UYGULAMA_DILIMLERI_VE_BAGLAM.md",
+      "bytes": 10480,
+      "lines": 162,
+      "sha256": "b6a0f8673c8bdae7b8c6e06ab15af05419b15cb561c9d8208b29ac9930492790",
+      "review": "ENVANTER_YALNIZ"
+    },
+    {
+      "path": "docs/yeni/V3_MASTER_PLAN_EK_ARASTIRMALAR/V3_MASTER_PLAN_EKLERI/docs/research/v3/08_KAYNAKLAR_VE_ACIK_KANITLAR.md",
+      "bytes": 17247,
+      "lines": 142,
+      "sha256": "521d85b8e7d4918448d9a8037bfe41f5bfaa6e700ba499156678f93b282e4d2d",
+      "review": "ENVANTER_YALNIZ"
+    }
+  ],
+  "duplicate_groups": [
+    [
+      "docs/yeni/00_OKU_BENI.md",
+      "docs/yeni/PROJE_KANIT_VE_KOD_KALITESI_MD_PAKETI/00_OKU_BENI.md"
+    ],
+    [
+      "docs/yeni/01_MASTER_PLAN_DUZELTME_KAYDI.md",
+      "docs/yeni/V3_MASTER_PLAN_EK_ARASTIRMALAR/V3_MASTER_PLAN_EKLERI/docs/research/v3/01_MASTER_PLAN_DUZELTME_KAYDI.md"
+    ],
+    [
+      "docs/yeni/AGENTS.md",
+      "docs/yeni/PROJE_KANIT_VE_KOD_KALITESI_MD_PAKETI/AGENTS.md"
+    ],
+    [
+      "docs/yeni/V3_EK_ARASTIRMA_REHBERI.md",
+      "docs/yeni/V3_MASTER_PLAN_EK_ARASTIRMALAR/V3_MASTER_PLAN_EKLERI/V3_EK_ARASTIRMA_REHBERI.md"
+    ]
+  ]
+}

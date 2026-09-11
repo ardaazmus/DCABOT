@@ -1,0 +1,62 @@
+{
+  "stage": "OFFLINE_CORE",
+  "mode": "offline",
+  "trading_enabled": false,
+  "symbol": "BTCUSDT",
+  "qty": "0",
+  "cost": "0",
+  "average": null,
+  "realized_gross": "30",
+  "fees": "0.57",
+  "funding": "0",
+  "realized_net_after_all_costs": "29.43",
+  "unrealized": "0",
+  "equity": "1029.43",
+  "peak_equity": "1029.73",
+  "max_drawdown": "0.03027",
+  "current_drawdown": "0.000291338506",
+  "anchor": "100",
+  "take_profit_price": null,
+  "entry_notional": "270",
+  "halted": false,
+  "safety_stopped": false,
+  "unsettled_orders": [],
+  "blockers": [],
+  "last_policy_rejection": null,
+  "global_new_risk_gate_open": false,
+  "deal_complete": true,
+  "exact_ratios": {
+    "qty": [
+      "0",
+      "1"
+    ],
+    "cost": [
+      "0",
+      "1"
+    ],
+    "realized": [
+      "30",
+      "1"
+    ],
+    "fees": [
+      "57",
+      "100"
+    ],
+    "funding": [
+      "0",
+      "1"
+    ],
+    "equity": [
+      "102943",
+      "100"
+    ]
+  },
+  "model": "LINEAR_LONG_SINGLE_DEAL; no external cashflows; no venue liquidation engine",
+  "audit": {
+    "status": "PASS",
+    "events": 16,
+    "incidents": 0,
+    "scope": "OFFLINE_JOURNAL_AND_BALANCED_CASH_POSTINGS"
+  },
+  "simulation": "SYNTHETIC_TICKS_IMMEDIATE_FULL_FILL; one action per tick; configured slippage/fee"
+}

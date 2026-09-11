@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "markdown_files": 18,
+  "source_probes_reproduced": 9,
+  "document_math_vectors_passed": 13,
+  "scope": "Artifact consistency, not product certification",
+  "issues": []
+}

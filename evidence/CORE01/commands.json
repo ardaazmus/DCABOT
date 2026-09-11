@@ -1,0 +1,277 @@
+[
+  {
+    "command": [
+      "uv",
+      "lock",
+      "--check",
+      "--offline"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 0,
+    "expected_exit": 0,
+    "stdout": "",
+    "stderr": "Resolved 1 package in 0.81ms\n",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/check_workspace.py"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 0,
+    "expected_exit": 0,
+    "stdout": "{\n  \"status\": \"PASS\",\n  \"errors\": [],\n  \"active_python_files\": 18,\n  \"backup_layout\": \"EMPTY_OR_NOT_PLACED\",\n  \"scope\": \"SCAFFOLD_WORKSPACE_ONLY\"\n}\n",
+    "stderr": "",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/run_checks.py"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 0,
+    "expected_exit": 0,
+    "stdout": "",
+    "stderr": "test_missing_candidate_is_not_reported_as_verified (test_backup_inspection.BackupInspectionTests.test_missing_candidate_is_not_reported_as_verified) ... ok\ntest_paths_outside_selected_source_types_are_rejected (test_backup_inspection.BackupInspectionTests.test_paths_outside_selected_source_types_are_rejected) ... ok\ntest_selected_source_is_hashed_without_execution_or_modification (test_backup_inspection.BackupInspectionTests.test_selected_source_is_hashed_without_execution_or_modification) ... ok\ntest_active_symlink_is_rejected (test_bootstrap.BootstrapTests.test_active_symlink_is_rejected) ... ok\ntest_file_discovery_does_not_visit_backup (test_bootstrap.BootstrapTests.test_file_discovery_does_not_visit_backup) ... ok\ntest_offline_core_never_enables_live_trading (test_bootstrap.BootstrapTests.test_offline_core_never_enables_live_trading) ... ok\ntest_other_modes_cannot_enable_trading (test_bootstrap.BootstrapTests.test_other_modes_cannot_enable_trading) ... ok\ntest_unrecognized_fields_are_rejected (test_bootstrap.BootstrapTests.test_unrecognized_fields_are_rejected) ... ok\ntest_config_rejects_scope_expansion_and_inexact_order_grid (test_engine_store.EngineTests.test_config_rejects_scope_expansion_and_inexact_order_grid) ... ok\ntest_drawdown_latches_and_proposes_protective_exit (test_engine_store.EngineTests.test_drawdown_latches_and_proposes_protective_exit) ... ok\ntest_intent_and_status_do_not_manufacture_fills (test_engine_store.EngineTests.test_intent_and_status_do_not_manufacture_fills) ... ok\ntest_ladder_preview_and_unit_boundary (test_engine_store.EngineTests.test_ladder_preview_and_unit_boundary) ... ok\ntest_partial_base_cannot_start_safety_without_final_coverage (test_engine_store.EngineTests.test_partial_base_cannot_start_safety_without_final_coverage) ... ok\ntest_partial_canceled_safety_stops_ladder (test_engine_store.EngineTests.test_partial_canceled_safety_stops_ladder) ... ok\ntest_unknown_and_insufficient_coverage_block_repetition (test_engine_store.EngineTests.test_unknown_and_insufficient_coverage_block_repetition) ... ok\ntest_funding_receipt_and_fee_rebate_increase_equity (test_engine_store.ReplayBoundaryTests.test_funding_receipt_and_fee_rebate_increase_equity) ... ok\ntest_gap_produces_only_one_safety_per_tick (test_engine_store.ReplayBoundaryTests.test_gap_produces_only_one_safety_per_tick) ... ok\ntest_late_fill_is_accounted_but_invalidates_coverage (test_engine_store.ReplayBoundaryTests.test_late_fill_is_accounted_but_invalidates_coverage) ... ok\ntest_slippage_changes_execution_price_once (test_engine_store.ReplayBoundaryTests.test_slippage_changes_execution_price_once) ... ok\ntest_conflicting_execution_is_quarantined_and_blocks_new_risk (test_engine_store.StoreTests.test_conflicting_execution_is_quarantined_and_blocks_new_risk) ... ok\ntest_duplicate_execution_with_different_transport_id_has_one_effect (test_engine_store.StoreTests.test_duplicate_execution_with_different_transport_id_has_one_effect) ... ok\ntest_existing_unrelated_database_is_never_overwritten (test_engine_store.StoreTests.test_existing_unrelated_database_is_never_overwritten) ... ok\ntest_overfill_preserves_raw_incident_without_false_position (test_engine_store.StoreTests.test_overfill_preserves_raw_incident_without_false_position) ... ok\ntest_policy_rejection_is_durable_and_visible (test_engine_store.StoreTests.test_policy_rejection_is_durable_and_visible) ... ok\ntest_posting_failure_rolls_back_execution_and_can_retry (test_engine_store.StoreTests.test_posting_failure_rolls_back_execution_and_can_retry) ... ok\ntest_real_process_death_rolls_back_uncommitted_batch (test_engine_store.StoreTests.test_real_process_death_rolls_back_uncommitted_batch) ... ok\ntest_replay_known_cycle_repeat_and_restart (test_engine_store.StoreTests.test_replay_known_cycle_repeat_and_restart) ... ok\ntest_restart_rebuilds_exact_partial_position_and_postings (test_engine_store.StoreTests.test_restart_rebuilds_exact_partial_position_and_postings) ... ok\ntest_tampered_posting_is_detected_on_open (test_engine_store.StoreTests.test_tampered_posting_is_detected_on_open) ... ok\ntest_tick_failure_rolls_back_whole_synthetic_cycle (test_engine_store.StoreTests.test_tick_failure_rolls_back_whole_synthetic_cycle) ... ok\ntest_two_writers_cannot_both_reserve_the_next_order (test_engine_store.StoreTests.test_two_writers_cannot_both_reserve_the_next_order) ... ok\ntest_global_decimal_context_does_not_change_economics (test_math_core.MathTests.test_global_decimal_context_does_not_change_economics) ... ok\ntest_net_target_and_liquidation_roots (test_math_core.MathTests.test_net_target_and_liquidation_roots) ... ok\ntest_notional_and_bad_numeric_inputs (test_math_core.MathTests.test_notional_and_bad_numeric_inputs) ... ok\ntest_partial_exit_preserves_average_and_equity_bridge (test_math_core.MathTests.test_partial_exit_preserves_average_and_equity_bridge) ... ok\ntest_peak_drawdown_not_initial_loss (test_math_core.MathTests.test_peak_drawdown_not_initial_loss) ... ok\ntest_repeating_cost_allocation_has_no_residual (test_math_core.MathTests.test_repeating_cost_allocation_has_no_residual) ... ok\ntest_tick_grid_not_decimal_places (test_math_core.MathTests.test_tick_grid_not_decimal_places) ... ok\n\n----------------------------------------------------------------------\nRan 38 tests in 0.139s\n\nOK\n",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/run_offline.py"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 0,
+    "expected_exit": 0,
+    "stdout": "{\n  \"mode\": \"offline\",\n  \"stage\": \"OFFLINE_CORE\",\n  \"strategy_implemented\": true,\n  \"trading_enabled\": false\n}\n",
+    "stderr": "",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/bot.py",
+      "demo"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 0,
+    "expected_exit": 0,
+    "stdout": "{\n  \"stage\": \"OFFLINE_CORE\",\n  \"mode\": \"offline\",\n  \"trading_enabled\": false,\n  \"symbol\": \"BTCUSDT\",\n  \"qty\": \"0\",\n  \"cost\": \"0\",\n  \"average\": null,\n  \"realized_gross\": \"30\",\n  \"fees\": \"0.57\",\n  \"funding\": \"0\",\n  \"realized_net_after_all_costs\": \"29.43\",\n  \"unrealized\": \"0\",\n  \"equity\": \"1029.43\",\n  \"peak_equity\": \"1029.73\",\n  \"max_drawdown\": \"0.03027\",\n  \"current_drawdown\": \"0.000291338506\",\n  \"anchor\": \"100\",\n  \"take_profit_price\": null,\n  \"entry_notional\": \"270\",\n  \"halted\": false,\n  \"safety_stopped\": false,\n  \"unsettled_orders\": [],\n  \"blockers\": [],\n  \"last_policy_rejection\": null,\n  \"global_new_risk_gate_open\": false,\n  \"deal_complete\": true,\n  \"exact_ratios\": {\n    \"qty\": [\n      \"0\",\n      \"1\"\n    ],\n    \"cost\": [\n      \"0\",\n      \"1\"\n    ],\n    \"realized\": [\n      \"30\",\n      \"1\"\n    ],\n    \"fees\": [\n      \"57\",\n      \"100\"\n    ],\n    \"funding\": [\n      \"0\",\n      \"1\"\n    ],\n    \"equity\": [\n      \"102943\",\n      \"100\"\n    ]\n  },\n  \"model\": \"LINEAR_LONG_SINGLE_DEAL; no external cashflows; no venue liquidation engine\",\n  \"audit\": {\n    \"status\": \"PASS\",\n    \"events\": 16,\n    \"incidents\": 0,\n    \"scope\": \"OFFLINE_JOURNAL_AND_BALANCED_CASH_POSTINGS\"\n  },\n  \"simulation\": \"SYNTHETIC_TICKS_IMMEDIATE_FULL_FILL; one action per tick; configured slippage/fee\"\n}\n",
+    "stderr": "",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/bot.py",
+      "notional",
+      "--input",
+      "tests/fixtures/notional.json"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 0,
+    "expected_exit": 0,
+    "stdout": "{\n  \"symbol\": \"BTCUSDT\",\n  \"notional\": \"4.01\",\n  \"asset\": \"USDT\"\n}\n",
+    "stderr": "",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/bot.py",
+      "preview",
+      "--anchor",
+      "100"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 0,
+    "expected_exit": 0,
+    "stdout": "{\n  \"symbol\": \"BTCUSDT\",\n  \"base_asset\": \"BTC\",\n  \"quote_asset\": \"USDT\",\n  \"anchor\": \"100\",\n  \"base_notional\": \"100\",\n  \"planned_gross_notional\": \"270\",\n  \"estimated_initial_margin\": \"270\",\n  \"policy_required_collateral\": null,\n  \"within_gross_entry_cap\": true,\n  \"levels\": [\n    {\n      \"index\": 1,\n      \"price\": \"90\",\n      \"qty\": \"1\",\n      \"notional\": \"90\"\n    },\n    {\n      \"index\": 2,\n      \"price\": \"80\",\n      \"qty\": \"1\",\n      \"notional\": \"80\"\n    }\n  ],\n  \"assumption\": \"Theoretical full fills at plan prices; no venue collateral guarantee\"\n}\n",
+    "stderr": "",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/bot.py",
+      "init",
+      "--db",
+      "/workspace/scratch/09e356cff24b/offline-core/DCABOT/data/validation-_89owkpp/test.db"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 0,
+    "expected_exit": 0,
+    "stdout": "{\n  \"stage\": \"OFFLINE_CORE\",\n  \"mode\": \"offline\",\n  \"trading_enabled\": false,\n  \"symbol\": \"BTCUSDT\",\n  \"qty\": \"0\",\n  \"cost\": \"0\",\n  \"average\": null,\n  \"realized_gross\": \"0\",\n  \"fees\": \"0\",\n  \"funding\": \"0\",\n  \"realized_net_after_all_costs\": \"0\",\n  \"unrealized\": \"0\",\n  \"equity\": \"1000\",\n  \"peak_equity\": \"1000\",\n  \"max_drawdown\": \"0\",\n  \"current_drawdown\": \"0\",\n  \"anchor\": null,\n  \"take_profit_price\": null,\n  \"entry_notional\": \"0\",\n  \"halted\": false,\n  \"safety_stopped\": false,\n  \"unsettled_orders\": [],\n  \"blockers\": [],\n  \"last_policy_rejection\": null,\n  \"global_new_risk_gate_open\": true,\n  \"deal_complete\": false,\n  \"exact_ratios\": {\n    \"qty\": [\n      \"0\",\n      \"1\"\n    ],\n    \"cost\": [\n      \"0\",\n      \"1\"\n    ],\n    \"realized\": [\n      \"0\",\n      \"1\"\n    ],\n    \"fees\": [\n      \"0\",\n      \"1\"\n    ],\n    \"funding\": [\n      \"0\",\n      \"1\"\n    ],\n    \"equity\": [\n      \"1000\",\n      \"1\"\n    ]\n  },\n  \"model\": \"LINEAR_LONG_SINGLE_DEAL; no external cashflows; no venue liquidation engine\"\n}\n",
+    "stderr": "",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/bot.py",
+      "replay",
+      "--db",
+      "/workspace/scratch/09e356cff24b/offline-core/DCABOT/data/validation-_89owkpp/test.db",
+      "--input",
+      "tests/fixtures/demo_ticks.json"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 0,
+    "expected_exit": 0,
+    "stdout": "{\n  \"stage\": \"OFFLINE_CORE\",\n  \"mode\": \"offline\",\n  \"trading_enabled\": false,\n  \"symbol\": \"BTCUSDT\",\n  \"qty\": \"0\",\n  \"cost\": \"0\",\n  \"average\": null,\n  \"realized_gross\": \"30\",\n  \"fees\": \"0.57\",\n  \"funding\": \"0\",\n  \"realized_net_after_all_costs\": \"29.43\",\n  \"unrealized\": \"0\",\n  \"equity\": \"1029.43\",\n  \"peak_equity\": \"1029.73\",\n  \"max_drawdown\": \"0.03027\",\n  \"current_drawdown\": \"0.000291338506\",\n  \"anchor\": \"100\",\n  \"take_profit_price\": null,\n  \"entry_notional\": \"270\",\n  \"halted\": false,\n  \"safety_stopped\": false,\n  \"unsettled_orders\": [],\n  \"blockers\": [],\n  \"last_policy_rejection\": null,\n  \"global_new_risk_gate_open\": false,\n  \"deal_complete\": true,\n  \"exact_ratios\": {\n    \"qty\": [\n      \"0\",\n      \"1\"\n    ],\n    \"cost\": [\n      \"0\",\n      \"1\"\n    ],\n    \"realized\": [\n      \"30\",\n      \"1\"\n    ],\n    \"fees\": [\n      \"57\",\n      \"100\"\n    ],\n    \"funding\": [\n      \"0\",\n      \"1\"\n    ],\n    \"equity\": [\n      \"102943\",\n      \"100\"\n    ]\n  },\n  \"model\": \"LINEAR_LONG_SINGLE_DEAL; no external cashflows; no venue liquidation engine\",\n  \"audit\": {\n    \"status\": \"PASS\",\n    \"events\": 16,\n    \"incidents\": 0,\n    \"scope\": \"OFFLINE_JOURNAL_AND_BALANCED_CASH_POSTINGS\"\n  },\n  \"simulation\": \"SYNTHETIC_TICKS_IMMEDIATE_FULL_FILL; one action per tick; configured slippage/fee\"\n}\n",
+    "stderr": "",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/bot.py",
+      "replay",
+      "--db",
+      "/workspace/scratch/09e356cff24b/offline-core/DCABOT/data/validation-_89owkpp/test.db",
+      "--input",
+      "tests/fixtures/demo_ticks.json"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 0,
+    "expected_exit": 0,
+    "stdout": "{\n  \"stage\": \"OFFLINE_CORE\",\n  \"mode\": \"offline\",\n  \"trading_enabled\": false,\n  \"symbol\": \"BTCUSDT\",\n  \"qty\": \"0\",\n  \"cost\": \"0\",\n  \"average\": null,\n  \"realized_gross\": \"30\",\n  \"fees\": \"0.57\",\n  \"funding\": \"0\",\n  \"realized_net_after_all_costs\": \"29.43\",\n  \"unrealized\": \"0\",\n  \"equity\": \"1029.43\",\n  \"peak_equity\": \"1029.73\",\n  \"max_drawdown\": \"0.03027\",\n  \"current_drawdown\": \"0.000291338506\",\n  \"anchor\": \"100\",\n  \"take_profit_price\": null,\n  \"entry_notional\": \"270\",\n  \"halted\": false,\n  \"safety_stopped\": false,\n  \"unsettled_orders\": [],\n  \"blockers\": [],\n  \"last_policy_rejection\": null,\n  \"global_new_risk_gate_open\": false,\n  \"deal_complete\": true,\n  \"exact_ratios\": {\n    \"qty\": [\n      \"0\",\n      \"1\"\n    ],\n    \"cost\": [\n      \"0\",\n      \"1\"\n    ],\n    \"realized\": [\n      \"30\",\n      \"1\"\n    ],\n    \"fees\": [\n      \"57\",\n      \"100\"\n    ],\n    \"funding\": [\n      \"0\",\n      \"1\"\n    ],\n    \"equity\": [\n      \"102943\",\n      \"100\"\n    ]\n  },\n  \"model\": \"LINEAR_LONG_SINGLE_DEAL; no external cashflows; no venue liquidation engine\",\n  \"audit\": {\n    \"status\": \"PASS\",\n    \"events\": 16,\n    \"incidents\": 0,\n    \"scope\": \"OFFLINE_JOURNAL_AND_BALANCED_CASH_POSTINGS\"\n  },\n  \"simulation\": \"SYNTHETIC_TICKS_IMMEDIATE_FULL_FILL; one action per tick; configured slippage/fee\"\n}\n",
+    "stderr": "",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/bot.py",
+      "status",
+      "--db",
+      "/workspace/scratch/09e356cff24b/offline-core/DCABOT/data/validation-_89owkpp/test.db"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 0,
+    "expected_exit": 0,
+    "stdout": "{\n  \"stage\": \"OFFLINE_CORE\",\n  \"mode\": \"offline\",\n  \"trading_enabled\": false,\n  \"symbol\": \"BTCUSDT\",\n  \"qty\": \"0\",\n  \"cost\": \"0\",\n  \"average\": null,\n  \"realized_gross\": \"30\",\n  \"fees\": \"0.57\",\n  \"funding\": \"0\",\n  \"realized_net_after_all_costs\": \"29.43\",\n  \"unrealized\": \"0\",\n  \"equity\": \"1029.43\",\n  \"peak_equity\": \"1029.73\",\n  \"max_drawdown\": \"0.03027\",\n  \"current_drawdown\": \"0.000291338506\",\n  \"anchor\": \"100\",\n  \"take_profit_price\": null,\n  \"entry_notional\": \"270\",\n  \"halted\": false,\n  \"safety_stopped\": false,\n  \"unsettled_orders\": [],\n  \"blockers\": [],\n  \"last_policy_rejection\": null,\n  \"global_new_risk_gate_open\": false,\n  \"deal_complete\": true,\n  \"exact_ratios\": {\n    \"qty\": [\n      \"0\",\n      \"1\"\n    ],\n    \"cost\": [\n      \"0\",\n      \"1\"\n    ],\n    \"realized\": [\n      \"30\",\n      \"1\"\n    ],\n    \"fees\": [\n      \"57\",\n      \"100\"\n    ],\n    \"funding\": [\n      \"0\",\n      \"1\"\n    ],\n    \"equity\": [\n      \"102943\",\n      \"100\"\n    ]\n  },\n  \"model\": \"LINEAR_LONG_SINGLE_DEAL; no external cashflows; no venue liquidation engine\"\n}\n",
+    "stderr": "",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/bot.py",
+      "audit",
+      "--db",
+      "/workspace/scratch/09e356cff24b/offline-core/DCABOT/data/validation-_89owkpp/test.db"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 0,
+    "expected_exit": 0,
+    "stdout": "{\n  \"status\": \"PASS\",\n  \"events\": 16,\n  \"incidents\": 0,\n  \"scope\": \"OFFLINE_JOURNAL_AND_BALANCED_CASH_POSTINGS\"\n}\n",
+    "stderr": "",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/bot.py",
+      "init",
+      "--db",
+      "/workspace/scratch/09e356cff24b/offline-core/DCABOT/data/validation-_89owkpp/test.db"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 2,
+    "expected_exit": 2,
+    "stdout": "",
+    "stderr": "Offline bot error: [Errno 17] File exists: '/workspace/scratch/09e356cff24b/offline-core/DCABOT/data/validation-_89owkpp/test.db'\n",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/bot.py",
+      "notional",
+      "--input",
+      "/workspace/scratch/09e356cff24b/offline-core/DCABOT/data/validation-_89owkpp/bad.json"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 2,
+    "expected_exit": 2,
+    "stdout": "",
+    "stderr": "Offline bot error: Financial values must be plain decimal strings (no exponent)\n",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/bot.py",
+      "demo",
+      "--config",
+      "/workspace/scratch/09e356cff24b/offline-core/DCABOT/data/validation-_89owkpp/bad.json"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 2,
+    "expected_exit": 2,
+    "stdout": "",
+    "stderr": "Offline bot error: Only offline config schema 1 is supported\n",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "/root/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13",
+      "tools/bot.py",
+      "notional",
+      "--input",
+      "/workspace/scratch/09e356cff24b/offline-core/DCABOT/data/validation-_89owkpp/bad.json"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 2,
+    "expected_exit": 2,
+    "stdout": "",
+    "stderr": "Offline bot error: Duplicate JSON key: symbol\n",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "uv",
+      "tool",
+      "run",
+      "--from",
+      "ruff==0.12.12",
+      "ruff",
+      "check",
+      "src",
+      "tools",
+      "tests",
+      "--select",
+      "E4,E7,E9,F"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 0,
+    "expected_exit": 0,
+    "stdout": "All checks passed!\n",
+    "stderr": "",
+    "status": "PASS"
+  },
+  {
+    "command": [
+      "uv",
+      "tool",
+      "run",
+      "--from",
+      "ruff==0.12.12",
+      "ruff",
+      "format",
+      "--check",
+      "src",
+      "tools",
+      "tests"
+    ],
+    "cwd": "/workspace/scratch/09e356cff24b/offline-core/DCABOT",
+    "exit_code": 0,
+    "expected_exit": 0,
+    "stdout": "18 files already formatted\n",
+    "stderr": "",
+    "status": "PASS"
+  }
+]

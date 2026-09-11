@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "python": "3.13.14",
+  "backup": "EMPTY",
+  "fresh_extraction": true,
+  "results": [
+    {
+      "command": "python3.13 tools/check_workspace.py",
+      "exit_code": 0,
+      "stdout": "{\n  \"status\": \"PASS\",\n  \"errors\": [],\n  \"active_python_files\": 8,\n  \"backup_layout\": \"EMPTY_OR_NOT_PLACED\",\n  \"scope\": \"SCAFFOLD_WORKSPACE_ONLY\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "command": "python3.13 tools/run_checks.py",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "test_missing_candidate_is_not_reported_as_verified (test_backup_inspection.BackupInspectionTests.test_missing_candidate_is_not_reported_as_verified) ... ok\ntest_paths_outside_selected_source_types_are_rejected (test_backup_inspection.BackupInspectionTests.test_paths_outside_selected_source_types_are_rejected) ... ok\ntest_selected_source_is_hashed_without_execution_or_modification (test_backup_inspection.BackupInspectionTests.test_selected_source_is_hashed_without_execution_or_modification) ... ok\ntest_active_symlink_is_rejected (test_bootstrap.BootstrapTests.test_active_symlink_is_rejected) ... ok\ntest_file_discovery_does_not_visit_backup (test_bootstrap.BootstrapTests.test_file_discovery_does_not_visit_backup) ... ok\ntest_offline_status_has_no_strategy_or_trading (test_bootstrap.BootstrapTests.test_offline_status_has_no_strategy_or_trading) ... ok\ntest_other_modes_cannot_enable_trading (test_bootstrap.BootstrapTests.test_other_modes_cannot_enable_trading) ... ok\ntest_unrecognized_fields_are_rejected (test_bootstrap.BootstrapTests.test_unrecognized_fields_are_rejected) ... ok\n\n----------------------------------------------------------------------\nRan 8 tests in 0.002s\n\nOK\n"
+    },
+    {
+      "command": "python3.13 tools/run_offline.py",
+      "exit_code": 0,
+      "stdout": "{\n  \"mode\": \"offline\",\n  \"stage\": \"SCAFFOLD_ONLY\",\n  \"strategy_implemented\": false,\n  \"trading_enabled\": false\n}\n",
+      "stderr": ""
+    }
+  ]
+}

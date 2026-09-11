@@ -1,0 +1,100 @@
+[
+  {
+    "id": "A01",
+    "claim": "INTENT kabulü order active yapar",
+    "status": "BLOCKED_MISSING_LOCAL_EVIDENCE",
+    "required": "Order/state types + intent reducer + call-site test",
+    "tests": "T07,T27"
+  },
+  {
+    "id": "A02",
+    "claim": "INTENT ekonomik fill oluşturmaz",
+    "status": "BLOCKED_MISSING_LOCAL_EVIDENCE",
+    "required": "Intent reducer unit + integration test",
+    "tests": "T01,T30"
+  },
+  {
+    "id": "A03",
+    "claim": "Yalnız yetkili FILL trade accounting yazar",
+    "status": "BLOCKED_MISSING_LOCAL_EVIDENCE",
+    "required": "Reducer FILL/MARK/FINAL branch ve mutation audit",
+    "tests": "T25,T26,T30"
+  },
+  {
+    "id": "A04",
+    "claim": "Partial exact leaves",
+    "status": "BLOCKED_MISSING_LOCAL_EVIDENCE",
+    "required": "Fill reducer + quantity type test",
+    "tests": "T04,T18"
+  },
+  {
+    "id": "A05",
+    "claim": "Duplicate ikinci posting yok",
+    "status": "BLOCKED_MISSING_LOCAL_EVIDENCE",
+    "required": "Dedupe validation + event chain test",
+    "tests": "T08,T16,T20"
+  },
+  {
+    "id": "A06",
+    "claim": "Yeni late FILL explicit unresolved",
+    "status": "BLOCKED_MISSING_LOCAL_EVIDENCE",
+    "required": "Final/fill ordering + integrity guard",
+    "tests": "T09,T20"
+  },
+  {
+    "id": "A07",
+    "claim": "BASE anchor timing açık",
+    "status": "BLOCKED_MISSING_LOCAL_EVIDENCE",
+    "required": "Anchor owner + strategy decision call-site",
+    "tests": "T06,T30"
+  },
+  {
+    "id": "A08",
+    "claim": "Coverage complete açık",
+    "status": "BLOCKED_MISSING_LOCAL_EVIDENCE",
+    "required": "Coverage aggregate/final validator",
+    "tests": "T05,T19"
+  },
+  {
+    "id": "A09",
+    "claim": "Pending/unresolved yeni riski sınırlar",
+    "status": "BLOCKED_MISSING_LOCAL_EVIDENCE",
+    "required": "Pending predicate + risk gate + intent accept",
+    "tests": "T07,T29"
+  },
+  {
+    "id": "A10",
+    "claim": "Fee/slippage tek pipeline",
+    "status": "BLOCKED_MISSING_LOCAL_EVIDENCE",
+    "required": "Economic helpers + reducer call sites",
+    "tests": "T14,T24"
+  },
+  {
+    "id": "A11",
+    "claim": "ORDER_FINAL order/position ayrımı",
+    "status": "BLOCKED_MISSING_LOCAL_EVIDENCE",
+    "required": "Final branch + position predicates",
+    "tests": "T11,T19"
+  },
+  {
+    "id": "B",
+    "claim": "Historical timing",
+    "status": "BLOCKED_MISSING_LOCAL_EVIDENCE",
+    "required": "Strategy decision loop + policy eligible check",
+    "tests": "T01–03,T10–12,T15,T21–22"
+  },
+  {
+    "id": "C",
+    "claim": "BASE-only vertical slice",
+    "status": "BLOCKED_MISSING_LOCAL_EVIDENCE",
+    "required": "Actual intent→adapter→reducer→next-decision integration",
+    "tests": "T01–13,T17,T23,T27,T30"
+  },
+  {
+    "id": "D",
+    "claim": "Exact accounting",
+    "status": "BLOCKED_MISSING_LOCAL_EVIDENCE",
+    "required": "Independent domain ledger + reference oracle + observed state",
+    "tests": "T04,T14,T18,T24–25,T28–29"
+  }
+]

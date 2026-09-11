@@ -1,0 +1,70 @@
+{
+  "scope": "DOCUMENT_RATIONAL_VECTORS_ONLY",
+  "checks": [
+    {
+      "id": "fixed_capital",
+      "result": "PASS",
+      "exact_value": "300"
+    },
+    {
+      "id": "geometric_capital",
+      "result": "PASS",
+      "exact_value": "12850"
+    },
+    {
+      "id": "second_anchor_level",
+      "result": "PASS",
+      "exact_value": "80"
+    },
+    {
+      "id": "weighted_average",
+      "result": "PASS",
+      "exact_value": "95"
+    },
+    {
+      "id": "partial_exit_cost",
+      "result": "PASS",
+      "exact_value": "285/2"
+    },
+    {
+      "id": "partial_exit_realized",
+      "result": "PASS",
+      "exact_value": "15/2"
+    },
+    {
+      "id": "remaining_unrealized",
+      "result": "PASS",
+      "exact_value": "15/2"
+    },
+    {
+      "id": "net_tp_root",
+      "result": "PASS",
+      "exact_value": "32015/333"
+    },
+    {
+      "id": "net_at_rounded_tp",
+      "result": "PASS",
+      "exact_value": "19177/10000"
+    },
+    {
+      "id": "net_at_gross_tp",
+      "result": "PASS",
+      "exact_value": "15181/10000"
+    },
+    {
+      "id": "liquidation_long_toy",
+      "result": "PASS",
+      "exact_value": "18000/199"
+    },
+    {
+      "id": "peak_drawdown",
+      "result": "PASS",
+      "exact_value": "1/6"
+    },
+    {
+      "id": "tick_floor",
+      "result": "PASS",
+      "exact_value": "100"
+    }
+  ]
+}
