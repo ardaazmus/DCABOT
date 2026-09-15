@@ -5,7 +5,7 @@ from enum import StrEnum
 import hashlib
 import json
 import re
-from typing import Protocol
+from typing import Iterable, Protocol
 
 from dcabot.application.order_attempt import AttemptState, OrderAttempt, OrderAttemptError
 from dcabot.persistence.attempt_store import AttemptStore
@@ -128,6 +128,36 @@ class UserDataEvent:
         return cls(event_id, event_time_ms, event_type, venue_order_id, fingerprint)
 
 
+@dataclass(frozen=True, slots=True)
+class AuthoritativeReconciliationSnapshot:
+    """Redacted snapshot proof required before hydrated state can become synced."""
+
+    snapshot_id: str
+    observed_at_ms: int
+    event_cursor: UserDataEvent | None
+    snapshot_fingerprint: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.snapshot_id, str) or _IDENTIFIER.fullmatch(self.snapshot_id) is None:
+            raise ReconciliationError(
+                "SNAPSHOT_ID_INVALID", "Snapshot ID güvenli biçimde saklanamaz."
+            )
+        if type(self.observed_at_ms) is not int or self.observed_at_ms < 0:
+            raise ReconciliationError(
+                "SNAPSHOT_TIME_INVALID", "Snapshot zamanı negatif olmayan integer olmalıdır."
+            )
+        if self.event_cursor is not None and not isinstance(self.event_cursor, UserDataEvent):
+            raise ReconciliationError(
+                "SNAPSHOT_CURSOR_INVALID", "Snapshot event cursor güvenli tipte değil."
+            )
+        if not isinstance(self.snapshot_fingerprint, str) or _SHA256.fullmatch(
+            self.snapshot_fingerprint
+        ) is None:
+            raise ReconciliationError(
+                "SNAPSHOT_HASH_INVALID", "Snapshot fingerprint geçersiz."
+            )
+
+
 class ReconciliationCoordinator:
     """Keep venue connectivity, event continuity, and economic synchronization separate."""
 
@@ -136,7 +166,9 @@ class ReconciliationCoordinator:
         self.state = ConnectionState.DISCONNECTED
         self._seen_events: dict[str, str] = {}
         self._last_event_time_ms: int | None = None
+        self._last_event_id: str | None = None
         self._reset_pending = False
+        self._snapshot_required = False
 
     def begin_connect(self) -> ConnectionState:
         self.state = ConnectionState.CONNECTING
@@ -153,6 +185,145 @@ class ReconciliationCoordinator:
         recovered = self.store.recover_after_restart(now_us=now_us)
         self.state = ConnectionState.RECONCILIATION_REQUIRED
         return recovered
+
+    def startup_with_durable_recovery(
+        self,
+        *,
+        now_us: int,
+        continuity_observations: Iterable[tuple[UserDataEvent, EventDecision, ConnectionState]],
+    ) -> tuple[OrderAttempt, ...]:
+        """Validate durable event continuity before quarantining in-flight attempts."""
+
+        if self.store is None:
+            raise ReconciliationError("ATTEMPT_STORE_REQUIRED", "Restart recovery için durable store gerekir.")
+        restored_state = self.hydrate_event_continuity(continuity_observations)
+        recovered = self.store.recover_after_restart(now_us=now_us)
+        self.state = restored_state
+        return recovered
+
+    def reconcile_recovered_attempts(
+        self,
+        recovered_attempts: Iterable[OrderAttempt],
+        query: OrderQuery,
+        *,
+        now_us: int,
+    ) -> tuple[OrderAttempt, ...]:
+        """Hand recovered UNKNOWN attempts to the explicit lookup boundary."""
+
+        if self.store is None:
+            raise ReconciliationError("ATTEMPT_STORE_REQUIRED", "Reconciliation için durable store gerekir.")
+        if self.state not in {
+            ConnectionState.RECONCILIATION_REQUIRED,
+            ConnectionState.GAP,
+            ConnectionState.STALE,
+        }:
+            raise ReconciliationError(
+                "RECONCILIATION_STATE_INVALID", "Attempt yalnız reconciliation durumunda sorgulanabilir."
+            )
+        if not callable(getattr(query, "find_order", None)):
+            raise ReconciliationError("RECONCILIATION_QUERY_INVALID", "Lookup query callable olmalıdır.")
+        try:
+            items = tuple(recovered_attempts)
+        except TypeError as exc:
+            raise ReconciliationError(
+                "RECOVERY_HANDOFF_INVALID", "Recovered attempt listesi iterable olmalıdır."
+            ) from exc
+        if len(items) > 1_000:
+            raise ReconciliationError(
+                "RECOVERY_HANDOFF_LIMIT", "Recovered attempt sınırı aşılamaz."
+            )
+        attempt_ids: set[str] = set()
+        for item in items:
+            if not isinstance(item, OrderAttempt):
+                raise ReconciliationError(
+                    "RECOVERY_HANDOFF_ATTEMPT_INVALID", "Recovered kayıt güvenli attempt tipinde değil."
+                )
+            if item.state is not AttemptState.UNKNOWN:
+                raise ReconciliationError(
+                    "RECOVERY_HANDOFF_STATE_INVALID", "Recovery handoff yalnız UNKNOWN attempt kabul eder."
+                )
+            if item.attempt_id in attempt_ids:
+                raise ReconciliationError(
+                    "RECOVERY_HANDOFF_DUPLICATE", "Aynı recovered attempt iki kez verilemez."
+                )
+            attempt_ids.add(item.attempt_id)
+        return tuple(
+            self.reconcile_attempt(item.attempt_id, query, now_us=now_us)
+            for item in items
+        )
+
+    def hydrate_event_continuity(
+        self,
+        observations: Iterable[tuple[UserDataEvent, EventDecision, ConnectionState]],
+    ) -> ConnectionState:
+        """Restore a validated event cursor without restoring economic sync."""
+
+        seen_events: dict[str, str] = {}
+        last_event_time_ms: int | None = None
+        last_event_id: str | None = None
+        restored_state = ConnectionState.RECONCILIATION_REQUIRED
+        state_priority = {
+            ConnectionState.RECONCILIATION_REQUIRED: 0,
+            ConnectionState.STALE: 1,
+            ConnectionState.GAP: 2,
+            ConnectionState.UNKNOWN: 3,
+            ConnectionState.FAILED: 4,
+        }
+        try:
+            iterator = iter(observations)
+        except TypeError as exc:
+            raise ReconciliationError(
+                "HYDRATION_OBSERVATIONS_INVALID", "Hydration gözlemleri iterable olmalıdır."
+            ) from exc
+        for count, item in enumerate(iterator, start=1):
+            if count > 1_000:
+                raise ReconciliationError(
+                    "HYDRATION_EVENT_LIMIT", "Hydration gözlem sınırı aşılamaz."
+                )
+            if not isinstance(item, tuple) or len(item) != 3:
+                raise ReconciliationError(
+                    "HYDRATION_OBSERVATION_INVALID", "Hydration gözlemi üçlü tuple olmalıdır."
+                )
+            event, decision, state = item
+            if not isinstance(event, UserDataEvent):
+                raise ReconciliationError(
+                    "HYDRATION_EVENT_INVALID", "Hydration event güvenli tipte değil."
+                )
+            try:
+                decision = EventDecision(decision)
+                state = ConnectionState(state)
+            except (TypeError, ValueError) as exc:
+                raise ReconciliationError(
+                    "HYDRATION_STATE_INVALID", "Hydration karar/state değeri geçersiz."
+                ) from exc
+            if decision is EventDecision.ACCEPTED:
+                prior_fingerprint = seen_events.get(event.event_id)
+                if prior_fingerprint is not None and prior_fingerprint != event.payload_fingerprint:
+                    raise ReconciliationError(
+                        "HYDRATION_EVENT_CONFLICT", "Hydration aynı event için farklı fingerprint buldu."
+                    )
+                if last_event_time_ms is not None and event.event_time_ms < last_event_time_ms:
+                    raise ReconciliationError(
+                        "HYDRATION_EVENT_ORDER", "Hydration event zamanı geriye gidemez."
+                    )
+                seen_events[event.event_id] = event.payload_fingerprint
+                last_event_time_ms = event.event_time_ms
+                last_event_id = event.event_id
+            elif decision is EventDecision.DUPLICATE:
+                if seen_events.get(event.event_id) != event.payload_fingerprint:
+                    raise ReconciliationError(
+                        "HYDRATION_DUPLICATE_INVALID", "Hydration duplicate kabul edilmiş event ile eşleşmiyor."
+                    )
+            elif decision in {EventDecision.CONFLICT, EventDecision.OUT_OF_ORDER}:
+                state = ConnectionState.GAP
+            if state in state_priority and state_priority[state] > state_priority[restored_state]:
+                restored_state = state
+        self._seen_events = seen_events
+        self._last_event_time_ms = last_event_time_ms
+        self._last_event_id = last_event_id
+        self.state = restored_state
+        self._snapshot_required = True
+        return self.state
 
     def on_disconnect(self) -> ConnectionState:
         self.state = ConnectionState.STALE
@@ -181,6 +352,7 @@ class ReconciliationCoordinator:
             return EventDecision.OUT_OF_ORDER
         self._seen_events[event.event_id] = event.payload_fingerprint
         self._last_event_time_ms = event.event_time_ms
+        self._last_event_id = event.event_id
         return EventDecision.ACCEPTED
 
     def compare_event_with_lookup(
@@ -249,9 +421,61 @@ class ReconciliationCoordinator:
             reason=f"REST_{lookup.kind.value}",
         )
 
+    def apply_authoritative_snapshot(
+        self, snapshot: AuthoritativeReconciliationSnapshot
+    ) -> ConnectionState:
+        """Validate a redacted snapshot against the hydrated cursor before syncing."""
+
+        if not isinstance(snapshot, AuthoritativeReconciliationSnapshot):
+            raise ReconciliationError(
+                "AUTHORITATIVE_SNAPSHOT_REQUIRED", "Geçerli authoritative snapshot gerekir."
+            )
+        if self.state is not ConnectionState.RECONCILIATION_REQUIRED:
+            raise ReconciliationError(
+                "SYNC_STATE_INVALID", "Snapshot yalnız reconciliation sonrasında uygulanabilir."
+            )
+        if self._reset_pending:
+            raise ReconciliationError(
+                "RESET_REVALIDATION_REQUIRED", "Testnet reset sonrası yeni snapshot doğrulanmalıdır."
+            )
+        if self._last_event_id is None:
+            if snapshot.event_cursor is not None:
+                raise ReconciliationError(
+                    "SNAPSHOT_CURSOR_MISMATCH", "Snapshot cursor boş hydrated cursor ile eşleşmiyor."
+                )
+        else:
+            cursor = snapshot.event_cursor
+            if (
+                cursor is None
+                or cursor.event_id != self._last_event_id
+                or cursor.event_time_ms != self._last_event_time_ms
+                or self._seen_events.get(cursor.event_id) != cursor.payload_fingerprint
+            ):
+                raise ReconciliationError(
+                    "SNAPSHOT_CURSOR_MISMATCH", "Authoritative snapshot hydrated cursor ile eşleşmiyor."
+                )
+        if (
+            self._last_event_time_ms is not None
+            and snapshot.observed_at_ms < self._last_event_time_ms
+        ):
+            raise ReconciliationError(
+                "SNAPSHOT_STALE", "Authoritative snapshot hydrated event cursor’dan eski."
+            )
+        if self.store is not None and self.store.count_blocking_attempts() > 0:
+            raise ReconciliationError(
+                "UNRESOLVED_ATTEMPTS", "Çözülmemiş attempt varken ekonomik state SYNCED olamaz."
+            )
+        self._snapshot_required = False
+        self.state = ConnectionState.SYNCED
+        return self.state
+
     def mark_synced(self, *, authoritative_snapshot: bool) -> ConnectionState:
         if self.state is not ConnectionState.RECONCILIATION_REQUIRED:
             raise ReconciliationError("SYNC_STATE_INVALID", "SYNCED yalnız reconciliation sonrasında verilebilir.")
+        if self._snapshot_required:
+            raise ReconciliationError(
+                "AUTHORITATIVE_SNAPSHOT_REQUIRED", "Hydration sonrası snapshot nesnesi gerekir."
+            )
         if authoritative_snapshot is not True:
             raise ReconciliationError(
                 "AUTHORITATIVE_SNAPSHOT_REQUIRED", "SYNCED için authoritative REST snapshot gerekir."
@@ -274,6 +498,7 @@ class ReconciliationCoordinator:
     def testnet_reset_detected(self) -> ConnectionState:
         self._seen_events.clear()
         self._last_event_time_ms = None
+        self._last_event_id = None
         self._reset_pending = True
         self.state = ConnectionState.RECONCILIATION_REQUIRED
         return self.state

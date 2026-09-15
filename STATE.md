@@ -1,13 +1,13 @@
 # Güncel durum
 
-# 2026-09-11 current verified status
+# 2026-09-15 current verified status
 
-- Review hardening commit `8bcf7fc` is pushed to the private `origin/main`.
-- Focus tests `39/39 PASS`, Python `-O` `39/39 PASS`, full regression `414/414 PASS`, compileall/workspace/frontend build PASS.
-- No secret, mainnet, or real Testnet mutation was used. Full P2.03 remains `IN_PROGRESS`; trading activation remains `NO-GO`.
+- Base commit `b1f3e03` equals the private `origin/main`; the current working tree contains the offline durable-binding slice.
+- P2.05 read-only acceptance: `29/29 PASS`; current full local regression: `432/432 PASS`; compileall/workspace/frontend build PASS.
+- No secret, mainnet, or real Testnet mutation was used. Durable P2.03 lifecycle/core plus redacted reconciliation association is `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`; full P2.03/P2.04 remain `IN_PROGRESS`; trading activation remains `NO-GO`.
 
 
-- P2.03/P2.04 offline acceptance evidence was consolidated in `evidence/P2.03/P2.04_OFFLINE_ACCEPTANCE_SONUC.md`. The next safe gate is read-only P2.05 acceptance; live signed integration and mutation remain closed.
+- P2.03/P2.04 offline acceptance, P2.03 durable binding/reconciliation association, coordinator hydration/snapshot gate, AttemptStore recovery orchestration, post-recovery lookup handoff and P2.05 read-only acceptance are recorded in `evidence/P2.03/P2.04_OFFLINE_ACCEPTANCE_SONUC.md`, `evidence/P2.03/DURABLE_BINDING_SONUC.md` and `evidence/P2.05/SONUC.md`. The next safe gate is offline reconciliation-result evidence binding: lookup outcomes remain separate from economic fill/core posting until an explicit venue-event contract is proven; live signed integration and mutation remain closed.
 - 2026-09-11 P2.03 ilk dilimi `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: Fake/offline Spot order lifecycle modülü eklendi. LIMIT/MARKET, exact filter validation, quantity/quoteOrderQty ayrımı, partial fill/leaves conservation, order-scoped event, duplicate/conflict, out-of-order, terminal late fill ve cancel/fill race sözleşmeleri doğrulandı. `7` odak test, tam regresyon `404/404 PASS`, Python compileall/workspace PASS. Gerçek Binance REST/WS, signed account/order, mutation, frontend binding, fee/balance/reserve/PnL ve conditional/order-list lifecycle açılmadı; trading activation `NO-GO`. Full P2.03 `IN_PROGRESS`. Kanıt: `evidence/P2.03/SONUC.md`. Sıradaki tek iş: venue lifecycle facts → mevcut domain.engine ekonomik event binding kararı ve offline dedup/reconciliation kanıtı.
 
 - 2026-09-11 P2.04.c `COMPLETE_WITH_LIMITATION / LOCAL_PASS`: Mevcut signed request, credential, order transport ve reconciliation sınırları denetlendi. Public Testnet adapter yalnız kimliksiz snapshot; signer yalnız offline payload; `OrderTransport` fake/gelecek adapter protokolü; gerçek signed REST, API-key header binding, Binance User Data Stream, reconnect worker ve canlı order query yok. Bu nedenle gerçek entegrasyon açılmadı. Standart suite `397/397 PASS`, Python 3.13 compileall/workspace ve frontend build PASS. Full P2.04 `IN_PROGRESS`, trading activation `NO-GO`. Kanıt: `evidence/P2.04.c/SONUC.md`. Sıradaki tek iş: P2.03 fake venue ile Spot LIMIT/MARKET order lifecycle, partial fill ve cancel/fill race.

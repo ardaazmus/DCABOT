@@ -1,14 +1,14 @@
 # DCABOT Task History
 
-# Current task status — 2026-09-11
+# Current task status — 2026-09-15
 
-Verified commit: `8bcf7fc`, equal to `origin/main` on the private repository. The review hardening changed only six scoped files and passed `414/414` full backend tests, Python `-O` focused tests, compileall, workspace checks, and frontend production build.
+Base commit: `b1f3e03`, equal to `origin/main` on the private repository. P2.05 read-only acceptance passed `29/29`; the current full local regression is `432/432`, with compileall, workspace checks, and frontend production build passing.
 
-The P2.03 lifecycle-to-core binding already exists in `a60ef1f` and is locally verified as an offline/fake Spot LIMIT binding. It does not activate live Binance REST/WS, signed account, mutation, persistence atomicity, or mainnet.
+The P2.03 lifecycle-to-core binding exists in `a60ef1f`; the current working slice adds its offline durable replay journal, redacted reconciliation association, fail-closed coordinator restart hydration, explicit authoritative snapshot gate, AttemptStore recovery orchestration, and bounded post-recovery lookup handoff. P2.05 also accepts the public read-only Testnet snapshot boundary. Neither activates live Binance REST/WS, signed account, mutation, live recovery, or mainnet.
 
-Current gate: Full P2.03 `IN_PROGRESS`; trading activation `NO-GO`.
+Current gate: Full P2.03/P2.04 `IN_PROGRESS`; trading activation `NO-GO`.
 
-Next safe action: run the read-only P2.05 acceptance matrix against the existing public snapshot and offline/fake states. Keep live signed integration and Testnet mutation closed; mutation requires explicit authorization.
+Next safe action: define offline reconciliation-result evidence binding; lookup outcomes must remain separate from economic fill/core posting until an explicit venue-event contract is proven. Keep live signed integration and Testnet mutation closed; mutation requires explicit authorization.
 
 ---
 
