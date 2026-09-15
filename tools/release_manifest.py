@@ -28,12 +28,26 @@ def _tracked_files(root: Path) -> tuple[str, ...]:
     return tuple(sorted(paths))
 
 
-def _sha256(path: Path) -> str:
+def _sha256_stream(stream) -> str:
     digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        while chunk := stream.read(_CHUNK_BYTES):
-            digest.update(chunk)
+    while chunk := stream.read(_CHUNK_BYTES):
+        digest.update(chunk)
     return digest.hexdigest()
+
+
+def _index_sha256(root: Path, name: str) -> str:
+    process = subprocess.Popen(
+        ["git", "-C", str(root), "show", f":{name}"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert process.stdout is not None
+    checksum = _sha256_stream(process.stdout)
+    stderr = process.stderr.read() if process.stderr is not None else b""
+    return_code = process.wait()
+    if return_code:
+        raise subprocess.CalledProcessError(return_code, process.args, stderr=stderr)
+    return checksum
 
 
 def _parse_manifest(path: Path) -> dict[str, str]:
@@ -65,7 +79,7 @@ def check(root: Path = ROOT) -> dict[str, object]:
             file_path = root / Path(*PurePosixPath(name).parts)
             if not file_path.is_file():
                 errors.append(f"Tracked file is missing from checkout: {name}")
-            elif _sha256(file_path) != entries[name]:
+            elif _index_sha256(root, name) != entries[name]:
                 errors.append(f"SHA-256 mismatch: {name}")
     except (OSError, UnicodeError, ValueError, subprocess.SubprocessError) as exc:
         errors.append(str(exc))
@@ -83,7 +97,7 @@ def check(root: Path = ROOT) -> dict[str, object]:
 def generate(root: Path = ROOT) -> dict[str, object]:
     tracked = tuple(name for name in _tracked_files(root) if name != MANIFEST_NAME)
     content = "\n".join(
-        f"{_sha256(root / Path(*PurePosixPath(name).parts))}  {name}"
+        f"{_index_sha256(root, name)}  {name}"
         for name in tracked
     ) + "\n"
     (root / MANIFEST_NAME).write_text(content, encoding="ascii")
