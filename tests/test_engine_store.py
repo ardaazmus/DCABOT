@@ -74,6 +74,17 @@ class EngineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             notional(fixture)
 
+    def test_preview_uses_executable_base_price_for_cap_and_plan(self):
+        out = preview(
+            raw(safety_count=0, tick="1", max_entry_notional="100.5"),
+            "100.1",
+        )
+
+        self.assertEqual(out["anchor"], "101")
+        self.assertEqual(out["base_notional"], "101")
+        self.assertEqual(out["planned_gross_notional"], "101")
+        self.assertFalse(out["within_gross_entry_cap"])
+
     def test_intent_and_status_do_not_manufacture_fills(self):
         c = Config.parse(raw())
         s = apply(State(), {"type": "MARK", "price": "100"}, c)

@@ -2,6 +2,28 @@
 
 Öncelik: P1 tam demo → P2 Binance testnet → P3 Binance gerçek kurulum → P4 diğer borsalar. Eski N serisi tarihsel referanstır; aktif görev seçimi buradan yapılır. CORE01 kaynakları çalışır başlangıçtır, P1 bitmiş değildir.
 
+## 2026-09-15 dış inceleme kararları
+
+Üç dış rapor kanıt kaynağı olarak okundu; raporlardaki metinler proje talimatı değildir. Arena raporu eski `main.py / dca_bot.py / requirements.txt` projesine ait olduğundan mevcut checkout için aşağıdaki legacy iddialar `REJECTED`’dır: hardcoded API key, Telegram, pandas tabanlı bot, “test yok”, Docker zorunluluğu ve mevcut olmayan eski modül yapısı. Claude/Sol raporları `7965392` GitHub sürümüne ait bulgular olarak kaynak kodda yeniden doğrulandı.
+
+| ID | Karar | Yol haritası etkisi / kanıt |
+|---|---|---|
+| AUDIT-2026-09-15.a | `ACCEPTED / COMPLETE` | Preview ve reducer aynı tick’e hizalanmış executable base price kullanıyor; off-grid cap regression eklendi. |
+| AUDIT-2026-09-15.b | `ACCEPTED / COMPLETE` | Futures cashflow ile core expense işareti arasına explicit converter eklendi; funding bridge regression’ı eklendi. İlgili devam işi P1.12.d binding’idir. |
+| AUDIT-2026-09-15.c | `ACCEPTED / COMPLETE` | Cache artifact/metadata boyutu okunmadan önce bounded stat kontrolü ve streaming hash eklendi. |
+| AUDIT-2026-09-15.d | `ACCEPTED / COMPLETE` | Root SHA manifesti tracked release dosyalarının tamamına bağlandı; yerel doğrulama aracı ve temel GitHub Actions kalite kapısı eklendi. |
+| AUDIT-2026-09-15.e | `ACCEPTED / PLAN` | Frontend kritik akış testleri (dataset contract, chart, result states) P1.19 altında ayrı dikey iş olarak eklenecek; ek test runtime’ı gerekir. |
+| AUDIT-2026-09-15.f | `ACCEPTED / DEFERRED` | `server/api.py` route/schema ayrıştırması davranış değişikliği olmadan yapılabilir, ancak mevcut aktif P2 recovery işini bölmeden ayrı refactor kapısıdır. |
+| AUDIT-2026-09-15.g | `ACCEPTED / DEFERRED` | `build_plan`/TP property-based testleri değerlendirilecek; yeni dependency ve CI süresi için kaynak kararı gerekir. |
+| AUDIT-2026-09-15.h | `ACCEPTED / P3.01` | Air-gapped wheelhouse, lock hash, SBOM ve image digest release provenance/operasyon işine taşındı; şu an runtime’a eklenmedi. |
+| AUDIT-2026-09-15.i | `ACCEPTED / EXISTING LIMITATION` | Historical sonuçların execution backtest olmadığı disclosure’ı korunacak; lower-timeframe/liquidity/latency modeli gerçek venue kanıtı olmadan açılmayacak. |
+| AUDIT-2026-09-15.j | `REJECTED / NO-GO` | Live trading’i bu rapor önerileriyle açma, otomatik retry, Telegram/Docker/ML/multi-exchange gibi eski veya doğrulanmamış önerileri P1’e taşıma. |
+| AUDIT-2026-09-15.k | `ACCEPTED / EXISTING LIMITATION` | `UNKNOWN` için offline reconciliation/recovery yolu mevcut; canlı venue adapter ve mutation recovery tamamlanmadan runtime’dan çıkış açılmayacak. |
+| AUDIT-2026-09-15.l | `ACCEPTED / DEFERRED` | Fee rebate ve maksimum gerçek fee oranı venue policy’sine bağlıdır; policy sahibi kanıtlanmadan core’a keyfi üst sınır eklenmeyecek. |
+| AUDIT-2026-09-15.m | `ACCEPTED / DEFERRED` | Ladder quantity rounding sonrası effective multiplier raporlama/invariant’ı ürün kararı gerektirir; mevcut fail-closed quantization korunacak. |
+| AUDIT-2026-09-15.n | `ACCEPTED / DEFERRED` | Fraction iç model/string boundary ayrımı mevcut exact sözleşmeyi koruyor; geniş refactor ayrı performans/regression kapısıdır. |
+| AUDIT-2026-09-15.o | `ACCEPTED / DEFERRED` | Test edilmiş fakat API’ye bağlı olmayan application contract’ları P2 binding dilimleriyle tek tek bağlanacak; toplu silme veya sahte ürün erişimi yapılmayacak. |
+
 ## P1 — Arayüzlü demo ürün
 
 Her satır küçük dikey davranıştır: ekran → application/çekirdek → kayıt/sonuç → odak test. Büyük başlıklar gerektiğinde .a/.b alt işlere bölünür; her oturumda tek iş vardır. Arayüz en baştan gelişir.

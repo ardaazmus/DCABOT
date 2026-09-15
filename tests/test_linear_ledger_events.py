@@ -3,6 +3,7 @@ import unittest
 from dcabot.application.linear_futures_math import (
     LinearLedgerEvent,
     apply_linear_ledger_event,
+    funding_expense_from_cashflow,
     net_realized_result,
     new_linear_ledger_state,
 )
@@ -58,6 +59,10 @@ class LinearLedgerEventTests(unittest.TestCase):
                 new_linear_ledger_state("USDT"),
                 LinearLedgerEvent("fee-1", "TRADING_FEE", 1_000, "BTC", "0.5"),
             )
+
+def test_funding_cashflow_requires_explicit_core_expense_conversion(self):
+        self.assertEqual(funding_expense_from_cashflow("-5.25"), "5.25")
+        self.assertEqual(funding_expense_from_cashflow("5.25"), "-5.25")
 
 
 if __name__ == "__main__":

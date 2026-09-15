@@ -1,0 +1,27 @@
+name: quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: uv sync --frozen
+      - run: uv run --frozen python tools/run_checks.py
+      - run: uv run --frozen python -m compileall -q src tests tools
+      - run: uv run --frozen python tools/release_manifest.py
+      - run: npm ci --prefix frontend
+      - run: npm run build --prefix frontend

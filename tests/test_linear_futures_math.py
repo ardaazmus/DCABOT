@@ -42,6 +42,9 @@ class LinearFuturesMathTests(unittest.TestCase):
         self.assertEqual(long_funding.amount, "-5.25")
         self.assertEqual(short_funding.amount, "5.25")
         self.assertEqual(received_funding.amount, "5.25")
+        self.assertEqual(long_funding.core_expense, "5.25")
+        self.assertEqual(short_funding.core_expense, "-5.25")
+        self.assertEqual(received_funding.core_expense, "-5.25")
         self.assertEqual(long_funding.effective_time_us, 1_000)
 
     def test_invalid_position_or_funding_context_fails_closed(self):

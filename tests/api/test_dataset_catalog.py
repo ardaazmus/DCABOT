@@ -8,10 +8,15 @@ import unittest
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from starlette.responses import Response
+from unittest.mock import patch
 
 from dcabot.data_adapters.catalog import PublicDatasetCatalog, PublicDatasetDefinition
 from dcabot.data_adapters.download_jobs import DownloadJobNotFound, DownloadJobSnapshot, DownloadJobStatus
-from dcabot.data_adapters.public_download import download_to_cache
+from dcabot.data_adapters.public_download import (
+    MAX_CACHE_METADATA_BYTES,
+    download_to_cache,
+    inspect_cached_artifact,
+)
 from dcabot.data_adapters.public_sources import PublicDownloadRegistry, PublicSourceSpec
 import dcabot.server.api as api
 
@@ -179,6 +184,44 @@ class DatasetCatalogApiTests(unittest.TestCase):
 
         self.assertEqual(result.status_code, 409)
         self.assertEqual(json.loads(result.body)["code"], "DATASET_CACHE_CORRUPT")
+
+    def test_oversized_cached_artifact_is_rejected_before_reading_payload(self):
+        payload = b"payload"
+        registry = PublicDownloadRegistry(
+            [
+                PublicSourceSpec(
+                    source_id="cache-source",
+                    allowed_hosts=frozenset({"public.example"}),
+                    allowed_path_prefixes=("/datasets",),
+                )
+            ]
+        )
+        plan = registry.create_plan(
+            source_id="cache-source",
+            url="https://public.example/datasets/payload.zip",
+            filename="payload.zip",
+            expected_sha256=hashlib.sha256(payload).hexdigest(),
+            expected_bytes=len(payload),
+            max_bytes=len(payload),
+        )
+        cache_dir = Path(self.directory.name)
+        (cache_dir / f"{plan.expected_sha256}.zip").write_bytes(b"x" * (len(payload) + 1))
+
+        with patch.object(Path, "read_bytes", side_effect=AssertionError("payload read")):
+            self.assertIsNone(inspect_cached_artifact(plan, cache_dir))
+
+    def test_oversized_cached_metadata_is_rejected_before_reading_text(self):
+        payload = _zip_payload()
+        download_to_cache(
+            self.definition.plan,
+            Path(self.directory.name),
+            opener=_FakeOpener(payload),
+        )
+        metadata_path = Path(self.directory.name) / f"{self.definition.plan.expected_sha256}.json"
+        metadata_path.write_bytes(b"x" * (MAX_CACHE_METADATA_BYTES + 1))
+
+        with patch.object(Path, "read_text", side_effect=AssertionError("metadata read")):
+            self.assertIsNone(inspect_cached_artifact(self.definition.plan, Path(self.directory.name)))
 
     def test_download_start_status_and_cancel_never_expose_paths_or_urls(self):
         response = Response()

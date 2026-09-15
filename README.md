@@ -1,12 +1,10 @@
-# DCABOT — Demo öncelikli güncellenmiş proje paketi
+# DCABOT — Offline-first trading research ve güvenli yürütme çekirdeği
 
-Plan: DEMO_FIRST_1. İçerilen Python çekirdek: 0.1.0, önceki teslimle aynı kod. **Bu teslim işlem sırasını ve geniş ürün/arayüz kapsamını düzeltir; bitmiş arayüz teslimi değildir.**
+Plan sırası: **tam arayüz + geçmiş veri demo → Binance testnet → gerçek Binance kurulum → diğer borsalar.** Bu GitHub deposu public’tir; gerçek credential, imzalı hesap çağrısı ve emir yetkisi kaynakta tutulmaz.
 
-Yeni sıra: **tam arayüz + geçmiş veri demo → Binance testnet → gerçek Binance kurulum → diğer borsalar.**
+Güncel doğrulanmış durum: P1.20 tarihsel demo ve P2.05 salt-okunur Testnet sınırı tamamlanmıştır. P2.03/P2.04 offline lifecycle, durable replay ve reconciliation sözleşmeleri yereldir; gerçek signed REST/WS, mutation ve mainnet hâlâ `NO-GO`’dur. Güncel karar ve tek aktif iş [STATE.md](STATE.md) ile [TASK.md](TASK.md) içindedir.
 
-Önce [ürün kapsamını](docs/URUN_KAPSAMI.md), ardından [değişiklik tablosunu](docs/GECIS.md) oku. [Özellik matrisi](docs/OZELLIK_MATRISI.md) 40 gereksinimi ve bugünkü gerçek durumunu taşır. [UI/UX](docs/UI_UX.md), [veri/simülasyon](docs/VERI_VE_SIMULASYON.md), [mimari](docs/MIMARI.md) ve [yol haritası](docs/YOL_HARITASI.md) ilgili iş sırasında okunur. Günlük başlangıç yalnız AGENTS/STATE/TASK.
-
-Çekirdek ayrı yazılım katmanıdır; aşağıdaki CLI demo mevcut çalışan kısmıdır. P1.01 ile UI/API önizleme dilimi, P1.02 ile CSV/ZIP kalite akışı, P1.03 ile explicit public dataset/cache ve download job akışı, P1.04.a ile verified canonical historical input sınırı, P1.04.b ile salt-okunur preflight özeti, P1.04.c ile aktif config’e bağlı salt-okunur koşu planı, P1.04.d ile bounded tarihsel koşu validation sınırı, P1.04.e ile sınırlı offline OHLCV simülasyon başlatma akışı, P1.05.a ile minimal sonuç özeti, P1.05.b ile read-only action geçmişi, P1.05.c.1 ile bounded chart data sözleşmesi, P1.05.c.2 ile minimal static OHLC overview, P1.05.c.3 ile doğrulanmış action marker katmanı, P1.05.d ile minimal ekonomik sonuç özeti, P1.06.e ile Saved Runs salt-okunur list/detail UI’sı, P1.16.e ile ayrı stress lineage/result identity ve P1.16.h ile persisted trial/OOS/stress metadata binding sınırı eklendi. P1.16.i.a ile stress ekonomik modelinin mevcut yerel authority envanteri çıkarıldı; P1.16.i.b araştırma raporu denetlendi ve ekonomik implementation `DEFERRED/NO-GO` olarak kapatıldı. P1.16.i.c deterministic identity, P1.16.i.d persistence/replay sınırları bağımsız kontrol edildi; P1.16.i.e ekonomik stress runner için `NO-GO` olarak kapatıldı. P1.17.a historical public download/cache authority’si, P1.17.b public read-only feed contract araştırması, P1.17.c bounded local observation replay sınırı, P1.17.d Binance Spot transport/reconnect araştırma kapısı, P1.17.e network-free payload normalization, P1.17.f network-free replay binding, P1.17.g public profile acceptance matrix, P1.17.h network-free REST public payload normalization ve P1.17.i capability boundary tamamlandı. P1.17.j live transport activation gate `NO-GO/DEFERRED` olarak kapatıldı. P1.18.a offline rule-based read-only event explanation projection, P1.18.b mevcut historical response binding, P1.18.c read-only explanation UI, P1.18.d visual/accessibility QA, P1.19.a result-shell state acceptance, P1.19.b inventory, P1.19.c dark-token/focus implementation ve P1.19.d Chrome CDP accessibility QA `COMPLETE_WITH_LIMITATION` olarak tamamlandı. P1.19.e light theme/uzman görünüm raporu gerçek checkout ile denetlendi; P1.19.f exact token/detailed-view gate ölçüldü, 11 PASS/1 border FAIL sonucu ile yeni light theme ve expert mode `DEFERRED/NO-GO` kaldı. Aktif ürün kararı: exact light palette/default/persistence gereksinimi.
+Başlangıç için [ürün kapsamını](docs/URUN_KAPSAMI.md), [özellik matrisini](docs/OZELLIK_MATRISI.md) ve [yol haritasını](docs/YOL_HARITASI.md) okuyun. Çekirdek ayrı authority katmanıdır; UI finansal hesabı yeniden yapmaz.
 
 ## P1.01 local arayüzü çalıştır
 
@@ -34,6 +32,7 @@ ZIP'teki DCABOT kökünü aç. Python 3.13 kuruluysa:
 
 ```powershell
 py -3.13 tools/run_checks.py
+py -3.13 tools/release_manifest.py
 py -3.13 tools/bot.py demo
 py -3.13 tools/bot.py preview --anchor 100
 ```
@@ -70,7 +69,7 @@ py -3.13 tools/bot.py audit --db data/paper.db
 | Public read-only observation cursor’ı ve fail-closed stale/gap/reconnect sınırı | src/dcabot/data_adapters/public_feed.py |
 | Terminal komutları | tools/bot.py |
 
-Ayrıntılı olay örnekleri ve sınırlar: [docs/CEKIRDEK_KULLANIM.md](docs/CEKIRDEK_KULLANIM.md). Güncel kanıt: [evidence/P1.19.f/SONUC.md](evidence/P1.19.f/SONUC.md). Light theme ve yeni expert mode ürün kararı/ exact palette olmadan açılmadı. Sonraki tek iş: [TASK.md](TASK.md).
+Ayrıntılı olay örnekleri ve sınırlar: [docs/CEKIRDEK_KULLANIM.md](docs/CEKIRDEK_KULLANIM.md). Güncel kanıt: [evidence/P2.03/DURABLE_BINDING_SONUC.md](evidence/P2.03/DURABLE_BINDING_SONUC.md). Sonraki tek iş: [TASK.md](TASK.md).
 
 ## Eski yedeğini koru
 

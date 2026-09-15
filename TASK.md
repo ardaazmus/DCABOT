@@ -2,11 +2,11 @@
 
 # Current task status — 2026-09-15
 
-Base commit: `b1f3e03`, equal to `origin/main` on the private repository. P2.05 read-only acceptance passed `29/29`; the current full local regression is `432/432`, with compileall, workspace checks, and frontend production build passing.
+Audit baseline: `7965392`; target branch is public `origin/main`. P2.05 read-only acceptance passed `29/29`; the current audit-remediation regression target is `437/437`, with compileall, workspace, release-manifest and frontend production build gates required before closing.
 
-The P2.03 lifecycle-to-core binding exists in `a60ef1f`; the current working slice adds its offline durable replay journal, redacted reconciliation association, fail-closed coordinator restart hydration, explicit authoritative snapshot gate, AttemptStore recovery orchestration, and bounded post-recovery lookup handoff. P2.05 also accepts the public read-only Testnet snapshot boundary. Neither activates live Binance REST/WS, signed account, mutation, live recovery, or mainnet.
+The P2.03 lifecycle-to-core binding exists in `a60ef1f`; the current working slice adds its offline durable replay journal, redacted reconciliation association, fail-closed coordinator restart hydration, explicit authoritative snapshot gate, AttemptStore recovery orchestration, bounded post-recovery lookup handoff, and verified external-review fixes. Neither activates live Binance REST/WS, signed account, mutation, live recovery, or mainnet.
 
-Current gate: Full P2.03/P2.04 `IN_PROGRESS`; trading activation `NO-GO`.
+Current gate: External-review remediation is the active WIP; full P2.03/P2.04 remain `IN_PROGRESS`; trading activation `NO-GO`.
 
 Next safe action: define offline reconciliation-result evidence binding; lookup outcomes must remain separate from economic fill/core posting until an explicit venue-event contract is proven. Keep live signed integration and Testnet mutation closed; mutation requires explicit authorization.
 

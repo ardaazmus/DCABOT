@@ -2,8 +2,9 @@
 
 # 2026-09-15 current verified status
 
-- Base commit `b1f3e03` equals the private `origin/main`; the current working tree contains the offline durable-binding slice.
-- P2.05 read-only acceptance: `29/29 PASS`; current full local regression: `432/432 PASS`; compileall/workspace/frontend build PASS.
+- Audit baseline is public commit `7965392`; the repository has no tracked `YEDEK_ESKI_PROJE` content. The current branch contains the offline durable-binding slice plus external-review remediations.
+- P2.05 read-only acceptance remains `29/29 PASS`; the audit-remediation regression suite is `437/437 PASS` after the final manifest refresh, with compileall/workspace/frontend build and release-manifest checks required at the closing gate.
+- Claude/Sol reports were verified against GitHub `7965392`; Arena’s old `main.py / dca_bot.py` findings were rejected as out of scope. Preview canonical pricing, funding sign bridge, bounded cache verification, complete SHA manifest and basic CI are implemented.
 - No secret, mainnet, or real Testnet mutation was used. Durable P2.03 lifecycle/core plus redacted reconciliation association is `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`; full P2.03/P2.04 remain `IN_PROGRESS`; trading activation remains `NO-GO`.
 
 

@@ -105,6 +105,10 @@ Short için `P_TP_short=(q*A-F-T)/(q*(1+f_out))`; geçerli pozitif kök gerekir.
 
 Slippage gerçekleşen fill fiyatına girdiyse PnL'den ikinci kez çıkarılmaz. Üçüncü varlıkla ücret için zamanlı kur ve kaynak gerekir; dönüşüm eksikse net PnL INCOMPLETE olur. Spot base-fee envanteri de azaltır; türev gross miktar modeline aynen taşınmaz.
 
+### Funding işaret köprüsü
+
+Core `FUNDING.amount` alanı gider-pozitiftir: ödenen funding pozitif, alınan funding negatiftir. Lineer futures `FundingProjection.amount` ise cashflow-pozitiftir: long ve pozitif funding oranı için ödeme negatif cashflow üretir. Bu iki alan doğrudan birbirine bağlanmaz; application sınırında `funding_expense_from_cashflow()` ile işaret açıkça çevrilir. Dönüşüm veya settlement asset doğrulanamıyorsa ekonomik posting yapılmaz.
+
 ## M06 — Equity ve drawdown
 
 Tek settlement varlığında `U=s*q*(m-A)`; aynı q,A,m için kaldıraç gross PnL'yi değiştirmez.

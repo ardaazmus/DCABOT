@@ -10,15 +10,16 @@ from dcabot.ports.journal import Journal
 def preview(raw: dict, anchor: str) -> dict:
     c = Config.parse(raw)
     p = positive(anchor)
-    c.check_order(c.base_qty, align(p, c.tick, up=True))
-    levels = c.plan(p)
-    gross = c.base_qty * p + sum((x.qty * x.price for x in levels), Q(0))
+    base_price = align(p, c.tick, up=True)
+    c.check_order(c.base_qty, base_price)
+    levels = c.plan(base_price)
+    gross = c.base_qty * base_price + sum((x.qty * x.price for x in levels), Q(0))
     return {
         "symbol": c.symbol,
         "base_asset": c.base_asset,
         "quote_asset": c.quote_asset,
-        "anchor": text(p),
-        "base_notional": text(c.base_qty * p),
+        "anchor": text(base_price),
+        "base_notional": text(c.base_qty * base_price),
         "planned_gross_notional": text(gross),
         "estimated_initial_margin": text(gross / c.leverage),
         "policy_required_collateral": None,

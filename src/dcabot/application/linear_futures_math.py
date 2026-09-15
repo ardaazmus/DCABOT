@@ -233,6 +233,23 @@ class FundingProjection:
     settlement_asset: str
     amount: str
 
+    @property
+    def core_expense(self) -> str:
+        """Return the same event in the core reducer's expense-positive convention."""
+
+        return funding_expense_from_cashflow(self.amount)
+
+
+def funding_expense_from_cashflow(funding_cashflow: str) -> str:
+    """Convert receipt-positive funding cashflow to core expense-positive form."""
+
+    try:
+        return exact_text(bounded(-number(funding_cashflow)))
+    except ValueError as error:
+        raise LinearFuturesError(
+            "FUNDING_CASHFLOW_INVALID", "Funding cashflow exact decimal olmalıdır."
+        ) from error
+
 
 def project_funding(
     position: LinearFuturesPosition,

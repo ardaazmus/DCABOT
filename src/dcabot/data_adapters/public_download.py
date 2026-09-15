@@ -22,6 +22,7 @@ from dcabot.data_adapters.public_sources import (
 
 DEFAULT_TIMEOUT_SECONDS = 30
 DEFAULT_CHUNK_BYTES = 64 * 1024
+MAX_CACHE_METADATA_BYTES = 16 * 1024
 
 
 class DownloadResponse(Protocol):
@@ -265,19 +266,40 @@ def _validate_zip_member(filename: str, external_attr: int) -> None:
 def _read_verified_cache(
     plan: PublicDownloadPlan, final_path: Path, metadata_path: Path
 ) -> PublicArtifactMetadata | None:
-    if not final_path.is_file() or final_path.is_symlink() or not metadata_path.is_file():
+    if (
+        not final_path.is_file()
+        or final_path.is_symlink()
+        or not metadata_path.is_file()
+        or metadata_path.is_symlink()
+    ):
         return None
     try:
-        payload = final_path.read_bytes()
+        byte_count = final_path.stat().st_size
+        if byte_count > plan.max_bytes or (
+            plan.expected_bytes is not None and byte_count != plan.expected_bytes
+        ):
+            return None
+        if metadata_path.stat().st_size > MAX_CACHE_METADATA_BYTES:
+            return None
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
         if metadata.get("sha256") != plan.expected_sha256:
             return None
-        verified = _verify_staged_zip(plan, final_path, len(payload), hashlib.sha256(payload).hexdigest())
+        verified = _verify_staged_zip(
+            plan, final_path, byte_count, _hash_file(final_path)
+        )
         if metadata != _metadata_dict(verified):
             return None
         return verified
     except (OSError, UnicodeError, json.JSONDecodeError, PublicDownloadError):
         return None
+
+
+def _hash_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(DEFAULT_CHUNK_BYTES):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _write_metadata(path: Path, metadata: PublicArtifactMetadata) -> None:
