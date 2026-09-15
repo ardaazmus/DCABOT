@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from dcabot.bootstrap import describe_bootstrap
-from check_workspace import active_python_files
+from check_workspace import active_python_files, check
 
 
 class BootstrapTests(unittest.TestCase):
@@ -56,3 +56,32 @@ class BootstrapTests(unittest.TestCase):
                 self.skipTest("Symlink creation not available on this host")
             with self.assertRaises(ValueError):
                 active_python_files(root)
+
+    def test_workspace_check_allows_public_checkout_without_private_archive(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            for name in ("src", "tests", "tools", "config", "docs", "reuse"):
+                (root / name).mkdir()
+            for name in (
+                "README.md",
+                "AGENTS.md",
+                "STATE.md",
+                "TASK.md",
+                "WORKFLOW.md",
+                ".gitignore",
+                ".ignore",
+                "uv.lock",
+                "docs/YEDEKTEN_AKTARIM.md",
+                "reuse/REGISTER.md",
+            ):
+                (root / name).write_text("", encoding="utf-8")
+            (root / "config/offline.json").write_text('{"mode": "offline"}', encoding="utf-8")
+            (root / "pyproject.toml").write_text(
+                '[project]\nrequires-python = ">=3.13,<3.14"\n', encoding="utf-8"
+            )
+            (root / ".gitignore").write_text("/YEDEK_ESKI_PROJE/\n", encoding="utf-8")
+
+            report = check(root)
+
+            self.assertEqual(report["status"], "PASS", report)
+            self.assertEqual(report["backup_layout"], "EMPTY_OR_NOT_PLACED")

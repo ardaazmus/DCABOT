@@ -44,7 +44,7 @@ def check(root: Path = ROOT) -> dict[str, object]:
     errors = [f"Missing: {name}" for name in REQUIRED if not (root / name).is_file()]
     errors.extend(
         f"Missing directory: {name}"
-        for name in (*ACTIVE, "YEDEK_ESKI_PROJE")
+        for name in ACTIVE
         if not (root / name).is_dir()
     )
     if sys.version_info[:2] != (3, 13):
