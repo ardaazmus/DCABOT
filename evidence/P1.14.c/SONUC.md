@@ -5,7 +5,7 @@
 - Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`
 - Kod: `src/dcabot/application/signal_readiness.py`
 - Test: `tests/test_signal_readiness.py`
-- Bağımsız review: `NOT_RUN`
+- Bağımsız review: `PASS` (Locke salt-okunur Codex incelemesi)
 - Production readiness: `NO`
 - Sonraki tek iş: `P1.14.d` threshold/time rebalancing trigger karar kapısı
 
@@ -29,11 +29,15 @@ Zaman yalnız source `event_time_us` ve `closed_bar_time_us` ile integer microse
 ## Kontroller
 
 - Önce test RED: yeni test dosyası eksik `signal_readiness` modülü nedeniyle import error verdi.
-- En küçük uygulama sonrası kanonik `uv run --frozen python tools/run_checks.py`: `275/275 PASS`.
-- Bağımsız readiness control: warmup, future/incomplete bar, stale ve ready durumları `PASS`.
-- Bağımsız kontrolde ilk fixture event zamanı yanlış seçildi; bu kontrol verisi düzeltilip aynı iddia tekrar çalıştırıldığında `PASS` alındı.
-- `uv run --frozen python -m compileall -q src tests`: `PASS`.
-- `uv run --frozen python tools/check_workspace.py`: `PASS`; `116` aktif Python dosyası; backup discovery kapsam dışı.
+- Güncel odak `python -m unittest tests.test_signal_readiness`: `6/6 PASS`.
+- İlgili gate kümesi `python -m unittest tests.test_signal_readiness tests.test_futures_dca_start_gate`: `12/12 PASS`.
+- Bağımsız readiness oracle: warmup, future/incomplete bar, stale, stale-boundary ve ready durumları `PASS`.
+- Locke salt-okunur Codex review: `PASS`; precedence, closed-bar eşitliği, stale sınırı,
+  bool/negatif/zero doğrulamaları ve authority sınırı uygun bulundu.
+- `python -m compileall -q src`: `PASS`; `git diff --check`: `PASS`.
+- `tools/run_checks.py` güncel tam-suite için `FAIL`: proje Python `3.13` isterken
+  kullanılabilir bundled runtime `3.12.14`; bu nedenle güncel tam-suite sonucu iddia edilmiyor.
+- Önceki tarihsel tam-suite sonucu (`275/275`) bu oturumun doğrulaması olarak kullanılmadı.
 
 ## Kanıt sınırı
 

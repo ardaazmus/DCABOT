@@ -45,7 +45,7 @@ def _nonnegative(value: object, code: str) -> str:
 
 
 def _identifier(value: object, code: str) -> None:
-    if not isinstance(value, str) or _IDENTIFIER.fullmatch(value) is None:
+    if type(value) is not str or _IDENTIFIER.fullmatch(value) is None:
         raise _error(code, "Kimlik değeri geçersiz.")
 
 
@@ -62,7 +62,7 @@ class LegFill:
 
     def __post_init__(self) -> None:
         _identifier(self.fill_id, "TWO_LEG_FILL_ID_INVALID")
-        if self.leg_id not in _LEG_IDS:
+        if type(self.leg_id) is not str or self.leg_id not in _LEG_IDS:
             raise _error("TWO_LEG_LEG_ID_INVALID", "Leg A veya B olmalıdır.")
         if not isinstance(self.position, HedgePositionIdentity):
             raise _error("TWO_LEG_POSITION_INVALID", "Position identity geçersiz.")
@@ -79,7 +79,7 @@ class LegFill:
                 "Fill quantity pozitif exact decimal metni olmalıdır.",
             ) from error
         object.__setattr__(self, "quantity", quantity)
-        if self.fill_status not in _FILL_STATUSES:
+        if type(self.fill_status) is not str or self.fill_status not in _FILL_STATUSES:
             raise _error(
                 "TWO_LEG_FILL_STATUS_INVALID",
                 "Fill status PARTIAL veya FULL olmalıdır.",
@@ -104,11 +104,21 @@ class TwoLegFillProjection:
     fills: tuple[LegFill, ...] = ()
 
     def __post_init__(self) -> None:
-        if self.state not in _STATES:
+        if type(self.state) is not str or self.state not in _STATES:
             raise _error("TWO_LEG_STATE_INVALID", "Projection state geçersiz.")
         for identity in (self.leg_a_identity, self.leg_b_identity):
             if identity is not None and not isinstance(identity, HedgePositionIdentity):
                 raise _error("TWO_LEG_POSITION_INVALID", "Position identity geçersiz.")
+            if identity is not None and (
+                type(identity.position_mode) is not str
+                or identity.position_mode != "HEDGE"
+                or type(identity.hedge_side) is not str
+                or identity.hedge_side not in ("LONG", "SHORT")
+            ):
+                raise _error(
+                    "TWO_LEG_POSITION_MODE_INVALID",
+                    "İki-leg projection yalnızca HEDGE identity kabul eder.",
+                )
         for attribute, code in (
             ("leg_a_quantity", "TWO_LEG_A_QUANTITY_INVALID"),
             ("leg_b_quantity", "TWO_LEG_B_QUANTITY_INVALID"),
@@ -117,12 +127,111 @@ class TwoLegFillProjection:
             canonical = _nonnegative(quantity, code)
             if quantity != canonical:
                 object.__setattr__(self, attribute, canonical)
-        if self.leg_a_status not in _LEG_STATUSES:
+        if type(self.leg_a_status) is not str or self.leg_a_status not in _LEG_STATUSES:
             raise _error("TWO_LEG_A_STATUS_INVALID", "Leg A status geçersiz.")
-        if self.leg_b_status not in _LEG_STATUSES:
+        if type(self.leg_b_status) is not str or self.leg_b_status not in _LEG_STATUSES:
             raise _error("TWO_LEG_B_STATUS_INVALID", "Leg B status geçersiz.")
         if not isinstance(self.fills, tuple) or not all(isinstance(fill, LegFill) for fill in self.fills):
             raise _error("TWO_LEG_FILLS_INVALID", "Projection fills tuple[LegFill] olmalıdır.")
+        self._validate_consistency()
+
+    def _validate_consistency(self) -> None:
+        if self.leg_a_identity is not None and self.leg_b_identity is not None:
+            if (
+                self.leg_a_identity.account_id != self.leg_b_identity.account_id
+                or self.leg_a_identity.venue_profile != self.leg_b_identity.venue_profile
+                or self.leg_a_identity.product_id != self.leg_b_identity.product_id
+                or self.leg_a_identity.symbol != self.leg_b_identity.symbol
+            ):
+                raise _error("TWO_LEG_SCOPE_CONFLICT", "İki leg aynı scope içinde olmalıdır.")
+            if self.leg_a_identity.hedge_side == self.leg_b_identity.hedge_side:
+                raise _error("TWO_LEG_SIDE_CONFLICT", "İki hedge leg aynı side olamaz.")
+
+        if not self.fills:
+            if self.state in (TwoLegState.NONE, TwoLegState.LEG_A_PENDING):
+                if (
+                    self.leg_a_quantity != "0"
+                    or self.leg_b_quantity != "0"
+                    or self.leg_a_status != "NONE"
+                    or self.leg_b_status != "NONE"
+                ):
+                    raise _error(
+                        "TWO_LEG_STATE_INCONSISTENT",
+                        "Fill olmadan pending/none projection aggregate taşıyamaz.",
+                    )
+                return
+            raise _error(
+                "TWO_LEG_STATE_INCONSISTENT",
+                "Fill history olmadan filled lifecycle state kurulamaz.",
+            )
+
+        seen_ids: set[str] = set()
+        last_event_time = -1
+        leg_identities: dict[str, HedgePositionIdentity] = {}
+        leg_quantities = {"A": number("0"), "B": number("0")}
+        leg_statuses = {"A": "NONE", "B": "NONE"}
+        reference: HedgePositionIdentity | None = None
+        for fill in self.fills:
+            if fill.fill_id in seen_ids:
+                raise _error("TWO_LEG_FILL_HISTORY_INVALID", "Fill identity tekrar edemez.")
+            seen_ids.add(fill.fill_id)
+            if fill.event_time_us < last_event_time:
+                raise _error(
+                    "TWO_LEG_FILL_HISTORY_INVALID",
+                    "Fill history event time geriye gidemez.",
+                )
+            last_event_time = fill.event_time_us
+            if not leg_identities and fill.leg_id != "A":
+                raise _error("TWO_LEG_FILL_HISTORY_INVALID", "İlk fill leg A olmalıdır.")
+            if reference is None:
+                reference = fill.position
+            elif (
+                fill.position.account_id != reference.account_id
+                or fill.position.venue_profile != reference.venue_profile
+                or fill.position.product_id != reference.product_id
+                or fill.position.symbol != reference.symbol
+            ):
+                raise _error("TWO_LEG_SCOPE_CONFLICT", "İki leg aynı scope içinde olmalıdır.")
+            previous_identity = leg_identities.get(fill.leg_id)
+            if previous_identity is not None and previous_identity != fill.position:
+                raise _error("TWO_LEG_POSITION_CONFLICT", "Leg identity değişemez.")
+            opposite = "B" if fill.leg_id == "A" else "A"
+            opposite_identity = leg_identities.get(opposite)
+            if opposite_identity is not None and opposite_identity.hedge_side == fill.position.hedge_side:
+                raise _error("TWO_LEG_SIDE_CONFLICT", "İki hedge leg aynı side olamaz.")
+            if leg_statuses[fill.leg_id] == "FULL":
+                raise _error(
+                    "TWO_LEG_FILL_HISTORY_INVALID",
+                    "Tamamlanan leg history içinde yeni fill taşıyamaz.",
+                )
+            leg_identities[fill.leg_id] = fill.position
+            leg_quantities[fill.leg_id] += positive(fill.quantity)
+            leg_statuses[fill.leg_id] = fill.fill_status
+
+        expected_state = _state_from_statuses(leg_statuses["A"], leg_statuses["B"])
+        if (
+            self.leg_a_identity != leg_identities.get("A")
+            or self.leg_b_identity != leg_identities.get("B")
+            or self.leg_a_quantity != exact_text(bounded(leg_quantities["A"]))
+            or self.leg_b_quantity != exact_text(bounded(leg_quantities["B"]))
+            or self.leg_a_status != leg_statuses["A"]
+            or self.leg_b_status != leg_statuses["B"]
+        ):
+            raise _error(
+                "TWO_LEG_AGGREGATE_INCONSISTENT",
+                "Projection aggregate fill history ile eşleşmiyor.",
+            )
+        if self.state in (TwoLegState.RECOVERY_REQUIRED, TwoLegState.TIMEOUT):
+            if expected_state == TwoLegState.BOTH_ESTABLISHED:
+                raise _error(
+                    "TWO_LEG_STATE_INCONSISTENT",
+                    "Recovery/timeout established projection üzerine uygulanamaz.",
+                )
+        elif self.state != expected_state:
+            raise _error(
+                "TWO_LEG_STATE_INCONSISTENT",
+                "Projection state fill history ile eşleşmiyor.",
+            )
 
 
 def new_two_leg_projection() -> TwoLegFillProjection:
@@ -241,6 +350,19 @@ def _validate_scope(projection: TwoLegFillProjection, fill: LegFill) -> None:
         raise _error("TWO_LEG_POSITION_CONFLICT", "Leg identity değişemez.")
 
 
+def _state_from_statuses(a_status: str, b_status: str) -> str:
+    if a_status == "FULL" and b_status == "FULL":
+        return TwoLegState.BOTH_ESTABLISHED
+    if a_status == "PARTIAL" or b_status == "PARTIAL":
+        return TwoLegState.PARTIAL_HEDGE
+    if a_status == "FULL" and b_status == "NONE":
+        return TwoLegState.ONE_LEG_FILLED
+    raise _error(
+        "TWO_LEG_STATE_INCONSISTENT",
+        "Leg A accepted fill olmadan leg durumu oluşamaz.",
+    )
+
+
 def _next_state(
     projection: TwoLegFillProjection,
     fill: LegFill,
@@ -248,8 +370,4 @@ def _next_state(
 ) -> str:
     a_status = new_status if fill.leg_id == "A" else projection.leg_a_status
     b_status = new_status if fill.leg_id == "B" else projection.leg_b_status
-    if a_status == "FULL" and b_status == "FULL":
-        return TwoLegState.BOTH_ESTABLISHED
-    if a_status == "PARTIAL" or b_status == "PARTIAL":
-        return TwoLegState.PARTIAL_HEDGE
-    return TwoLegState.ONE_LEG_FILLED
+    return _state_from_statuses(a_status, b_status)

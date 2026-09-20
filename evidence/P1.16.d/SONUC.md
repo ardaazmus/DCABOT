@@ -5,7 +5,7 @@
 - Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`
 - Kod: `src/dcabot/application/trial_registry.py`
 - Test: `tests/test_trial_registry.py`
-- Bağımsız review: `NOT_RUN`
+- İkinci salt-okunur kaynak kontrolü: `PASS_WITH_LIMITATION` (P1/P2 bulgu yok)
 - Production readiness: `NO`
 - Sonraki tek iş: `P1.16.e` stress lineage ve ayrı sonuç kimliği karar kapısı
 
@@ -25,11 +25,13 @@ Parametre değerlerinin canonical snapshot’ı, optimizer çalıştırma, score
 
 ## Kontroller
 
-- Önce test RED: yeni `trial_registry` modülü eksik olduğu için `312` testte beklenen import error verdi.
-- Minimal uygulama sonrası `uv run --frozen python tools/run_checks.py`: `315/315 PASS`.
+- `tests.test_trial_registry`: `6/6 PASS`; exact type ve subclass/custom-equality regresyonları dahil.
+- `tests.test_evaluation_run_binding`: `6/6 PASS`.
 - Bağımsız trial control: succeeded/failed/invalid sayımı, duplicate idempotency ve bounded count: `INDEPENDENT_TRIAL_REGISTRY_CONTROL_PASS`.
-- `uv run --frozen python -m compileall -q src tests`: `PASS`.
-- `uv run --frozen python tools/check_workspace.py`: `PASS`; `134` aktif Python dosyası.
+- Bundled Python `3.12.14` ile `python -m compileall -q src tests`: `PASS`.
+- `tests.api.test_historical_run_reads`: bundled runtime’da `starlette` eksikliği nedeniyle `ENVIRONMENT_ERROR`; API sonucu iddia edilmiyor.
+- `tools/run_checks.py` ve `tools/check_workspace.py`: `FAIL`, proje `3.13` istediği halde bundled runtime `3.12.14`; `active_python_files: 286`, `backup_layout: EMPTY_OR_NOT_PLACED`.
+- `git diff --check`: `PASS` (yalnız mevcut LF/CRLF uyarıları).
 - Live/testnet, credential ve dış ağ yolu açılmadı.
 
 ## Araştırma dayanağı

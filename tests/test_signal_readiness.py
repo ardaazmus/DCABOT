@@ -51,6 +51,17 @@ class SignalReadinessTests(unittest.TestCase):
 
         self.assertEqual(result.status, "STALE")
 
+    def test_stale_boundary_is_still_acceptable(self):
+        result = assess_signal_readiness(
+            signal(event_time_us=1_500),
+            closed_bar_time_us=2_000,
+            warmup_bars_observed=5,
+            required_warmup_bars=5,
+            max_staleness_us=500,
+        )
+
+        self.assertEqual(result.status, "READY")
+
     def test_ready_signal_is_a_gate_only(self):
         result = assess_signal_readiness(
             signal(event_time_us=1_500),
@@ -67,6 +78,9 @@ class SignalReadinessTests(unittest.TestCase):
     def test_invalid_gate_inputs_fail_closed(self):
         cases = (
             {"closed_bar_time_us": True},
+            {"warmup_bars_observed": True},
+            {"required_warmup_bars": True},
+            {"max_staleness_us": True},
             {"warmup_bars_observed": -1},
             {"required_warmup_bars": 0},
             {"max_staleness_us": -1},
@@ -83,4 +97,3 @@ class SignalReadinessTests(unittest.TestCase):
                 }
                 values.update(overrides)
                 assess_signal_readiness(signal(), **values)
-

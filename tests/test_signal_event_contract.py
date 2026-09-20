@@ -85,3 +85,16 @@ class SignalEventContractTests(unittest.TestCase):
                 payload_hash="a" * 64,
             )
 
+    def test_history_with_duplicate_signal_identity_fails_closed(self):
+        event = signal()
+
+        with self.assertRaisesRegex(
+            SignalEventContractError, "SIGNAL_HISTORY_IDENTITY_INVALID"
+        ):
+            accept_signal((event, event), event)
+
+        conflicting_event = signal(payload_hash="b" * 64)
+        with self.assertRaisesRegex(
+            SignalEventContractError, "SIGNAL_HISTORY_IDENTITY_INVALID"
+        ):
+            accept_signal((event, conflicting_event), conflicting_event)

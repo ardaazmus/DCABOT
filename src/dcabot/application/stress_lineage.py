@@ -30,18 +30,30 @@ class StressLineage:
     def __post_init__(self) -> None:
         _validate_identifier(self.base_result_id, "STRESS_BASE_RESULT_ID_INVALID")
         _validate_identifier(self.stress_profile_id, "STRESS_PROFILE_ID_INVALID")
-        if _PROFILE_HASH.fullmatch(self.stress_profile_hash) is None:
+        if (
+            type(self.stress_profile_hash) is not str
+            or _PROFILE_HASH.fullmatch(self.stress_profile_hash) is None
+        ):
             raise StressLineageError(
                 "STRESS_PROFILE_HASH_INVALID",
                 "Stress profile hash SHA-256 hexadecimal değer olmalıdır.",
-            )
+        )
         _validate_identifier(self.stress_result_id, "STRESS_RESULT_ID_INVALID")
         if self.stress_result_id == self.base_result_id:
             raise StressLineageError(
                 "STRESS_IDENTITY_CONFLICT",
                 "Stress sonucu base result kimliğini kullanamaz.",
             )
-        if self.label != "STRESS":
+        if self.stress_result_id != _derive_stress_result_id(
+            self.base_result_id,
+            self.stress_profile_id,
+            self.stress_profile_hash,
+        ):
+            raise StressLineageError(
+                "STRESS_RESULT_ID_MISMATCH",
+                "Stress sonucu canonical lineage girdilerinden türemelidir.",
+            )
+        if type(self.label) is not str or self.label != "STRESS":
             raise StressLineageError("STRESS_LABEL_INVALID", "Stress etiketi sabittir.")
 
 
@@ -55,17 +67,20 @@ def new_stress_lineage(
 
     _validate_identifier(base_result_id, "STRESS_BASE_RESULT_ID_INVALID")
     _validate_identifier(stress_profile_id, "STRESS_PROFILE_ID_INVALID")
-    if _PROFILE_HASH.fullmatch(stress_profile_hash) is None:
+    if (
+        type(stress_profile_hash) is not str
+        or _PROFILE_HASH.fullmatch(stress_profile_hash) is None
+    ):
         raise StressLineageError(
             "STRESS_PROFILE_HASH_INVALID",
             "Stress profile hash SHA-256 hexadecimal değer olmalıdır.",
         )
 
-    canonical = "|".join(
-        ("stress-lineage-v1", base_result_id, stress_profile_id, stress_profile_hash)
+    stress_result_id = _derive_stress_result_id(
+        base_result_id,
+        stress_profile_id,
+        stress_profile_hash,
     )
-    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-    stress_result_id = f"stress-v1:{digest}"
     if stress_result_id == base_result_id:
         raise StressLineageError(
             "STRESS_IDENTITY_CONFLICT",
@@ -80,5 +95,17 @@ def new_stress_lineage(
 
 
 def _validate_identifier(value: object, code: str) -> None:
-    if not isinstance(value, str) or _IDENTIFIER.fullmatch(value) is None:
+    if type(value) is not str or _IDENTIFIER.fullmatch(value) is None:
         raise StressLineageError(code, "Kimlik değeri geçersiz.")
+
+
+def _derive_stress_result_id(
+    base_result_id: str,
+    stress_profile_id: str,
+    stress_profile_hash: str,
+) -> str:
+    canonical = "|".join(
+        ("stress-lineage-v1", base_result_id, stress_profile_id, stress_profile_hash)
+    )
+    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return f"stress-v1:{digest}"

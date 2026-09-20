@@ -8,6 +8,11 @@ import re
 from typing import Iterable, Protocol
 
 from dcabot.application.order_attempt import AttemptState, OrderAttempt, OrderAttemptError
+from dcabot.application.order_list_contract import (
+    OrderListStatus,
+    UserDataOrderListEvent,
+    UserDataOrderListResyncAnchor,
+)
 from dcabot.persistence.attempt_store import AttemptStore
 
 
@@ -167,6 +172,10 @@ class ReconciliationCoordinator:
         self._seen_events: dict[str, str] = {}
         self._last_event_time_ms: int | None = None
         self._last_event_id: str | None = None
+        self._seen_order_list_events: dict[str, str] = {}
+        self._last_order_list_cursor: tuple[int, int] | None = None
+        self._order_list_terminal = False
+        self._order_list_resync_required = False
         self._reset_pending = False
         self._snapshot_required = False
 
@@ -175,6 +184,8 @@ class ReconciliationCoordinator:
         return self.state
 
     def public_snapshot_ready(self) -> ConnectionState:
+        if self._snapshot_required or self._order_list_resync_required:
+            return self.state
         self.state = ConnectionState.CONNECTED_READ_ONLY
         return self.state
 
@@ -325,12 +336,67 @@ class ReconciliationCoordinator:
         self._snapshot_required = True
         return self.state
 
+    def hydrate_order_list_continuity(
+        self,
+        observations: Iterable[UserDataOrderListEvent],
+    ) -> ConnectionState:
+        """Restore a durable list cursor without restoring authoritative sync."""
+
+        seen_events: dict[str, str] = {}
+        last_cursor: tuple[int, int] | None = None
+        terminal = False
+        try:
+            iterator = iter(observations)
+        except TypeError as exc:
+            raise ReconciliationError(
+                "ORDER_LIST_HYDRATION_INVALID", "ListStatus hydration gözlemleri iterable olmalıdır."
+            ) from exc
+        for count, event in enumerate(iterator, start=1):
+            if count > 1_000:
+                raise ReconciliationError(
+                    "ORDER_LIST_HYDRATION_LIMIT", "ListStatus hydration gözlem sınırı aşılamaz."
+                )
+            if not isinstance(event, UserDataOrderListEvent):
+                raise ReconciliationError(
+                    "ORDER_LIST_HYDRATION_EVENT_INVALID",
+                    "ListStatus hydration yalnız güvenli event tiplerini kabul eder.",
+                )
+            if terminal:
+                raise ReconciliationError(
+                    "ORDER_LIST_HYDRATION_TERMINAL",
+                    "Terminal listStatus event sonrasında yeni event hydrate edilemez.",
+                )
+            fingerprint = self._order_list_event_fingerprint(event)
+            if event.event_id in seen_events:
+                raise ReconciliationError(
+                    "ORDER_LIST_HYDRATION_CONFLICT",
+                    "ListStatus hydration event kimlikleri tekil olmalıdır.",
+                )
+            cursor = (event.transaction_time_ms, event.event_time_ms)
+            if last_cursor is not None and cursor < last_cursor:
+                raise ReconciliationError(
+                    "ORDER_LIST_HYDRATION_ORDER",
+                    "ListStatus hydration cursor zamanı geriye gidemez.",
+                )
+            seen_events[event.event_id] = fingerprint
+            last_cursor = cursor
+            terminal = event.list_status in {OrderListStatus.ALL_DONE, OrderListStatus.REJECT}
+        self._seen_order_list_events = seen_events
+        self._last_order_list_cursor = last_cursor
+        self._order_list_terminal = terminal
+        self._order_list_resync_required = last_cursor is not None
+        self._snapshot_required = True
+        self.state = ConnectionState.RECONCILIATION_REQUIRED
+        return self.state
+
     def on_disconnect(self) -> ConnectionState:
+        self._order_list_resync_required = self._last_order_list_cursor is not None
         self.state = ConnectionState.STALE
         return self.state
 
     def reconnect(self) -> ConnectionState:
         self.begin_connect()
+        self._order_list_resync_required = self._last_order_list_cursor is not None
         self.state = ConnectionState.RECONCILIATION_REQUIRED
         return self.state
 
@@ -355,14 +421,120 @@ class ReconciliationCoordinator:
         self._last_event_id = event.event_id
         return EventDecision.ACCEPTED
 
+    def accept_order_list_event(self, event: UserDataOrderListEvent) -> EventDecision:
+        """Admit redacted listStatus identity without inventing venue sequence."""
+
+        if not isinstance(event, UserDataOrderListEvent):
+            raise ReconciliationError(
+                "ORDER_LIST_EVENT_INVALID", "User Data Stream order-list olayı güvenli tipte değil."
+            )
+        if self.state not in {ConnectionState.CONNECTED_READ_ONLY, ConnectionState.SYNCED}:
+            return EventDecision.QUARANTINED
+        fingerprint = self._order_list_event_fingerprint(event)
+        prior_fingerprint = self._seen_order_list_events.get(event.event_id)
+        if prior_fingerprint is not None:
+            if prior_fingerprint == fingerprint:
+                return EventDecision.DUPLICATE
+            self._order_list_resync_required = True
+            self.state = ConnectionState.GAP
+            return EventDecision.CONFLICT
+        if self._order_list_terminal:
+            return EventDecision.QUARANTINED
+        cursor = (event.transaction_time_ms, event.event_time_ms)
+        if self._last_order_list_cursor is not None and cursor < self._last_order_list_cursor:
+            self._order_list_resync_required = True
+            self.state = ConnectionState.GAP
+            return EventDecision.OUT_OF_ORDER
+        self._seen_order_list_events[event.event_id] = fingerprint
+        self._last_order_list_cursor = cursor
+        self._order_list_terminal = event.list_status in {OrderListStatus.ALL_DONE, OrderListStatus.REJECT}
+        return EventDecision.ACCEPTED
+
+    @staticmethod
+    def _order_list_event_fingerprint(event: UserDataOrderListEvent) -> str:
+        return hashlib.sha256(
+            json.dumps(
+                {
+                    "event_id": event.event_id,
+                    "event_time_ms": event.event_time_ms,
+                    "transaction_time_ms": event.transaction_time_ms,
+                    "symbol": event.symbol,
+                    "order_list_id": event.order_list_id,
+                    "contingency_type": event.contingency_type,
+                    "list_status": event.list_status.value,
+                    "list_order_status": event.list_order_status.value,
+                    "list_client_order_id": event.list_client_order_id,
+                    "orders": [
+                        {
+                            "symbol": order.symbol,
+                            "order_id": order.order_id,
+                            "client_order_id": order.client_order_id,
+                        }
+                        for order in event.orders
+                    ],
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+
+    def apply_order_list_resync_anchor(
+        self, anchor: UserDataOrderListResyncAnchor
+    ) -> ConnectionState:
+        """Record an offline list cursor; an authoritative snapshot is still required."""
+
+        if not isinstance(anchor, UserDataOrderListResyncAnchor):
+            raise ReconciliationError(
+                "ORDER_LIST_RESYNC_ANCHOR_REQUIRED", "Geçerli listStatus resync anchor gerekir."
+            )
+        if self.state not in {
+            ConnectionState.RECONCILIATION_REQUIRED,
+            ConnectionState.STALE,
+            ConnectionState.GAP,
+        }:
+            raise ReconciliationError(
+                "ORDER_LIST_RESYNC_STATE_INVALID",
+                "Resync anchor yalnız reconciliation, stale veya gap durumunda uygulanabilir.",
+            )
+        if self.state is ConnectionState.GAP and not self._order_list_resync_required:
+            raise ReconciliationError(
+                "ORDER_LIST_RESYNC_STATE_INVALID",
+                "Genel event GAP yalnız listStatus anchor ile temizlenemez.",
+            )
+        if self._reset_pending:
+            raise ReconciliationError(
+                "RESET_REVALIDATION_REQUIRED", "Testnet reset sonrası yeni snapshot doğrulanmalıdır."
+            )
+        cursor = (anchor.event.transaction_time_ms, anchor.event.event_time_ms)
+        if self._last_order_list_cursor is not None and cursor < self._last_order_list_cursor:
+            raise ReconciliationError(
+                "RESYNC_ANCHOR_STALE", "Resync anchor mevcut listStatus cursor’dan eski."
+            )
+        self._seen_order_list_events = {
+            anchor.event.event_id: self._order_list_event_fingerprint(anchor.event)
+        }
+        self._last_order_list_cursor = cursor
+        self._order_list_terminal = anchor.event.list_status in {
+            OrderListStatus.ALL_DONE,
+            OrderListStatus.REJECT,
+        }
+        self._order_list_resync_required = False
+        self._snapshot_required = True
+        self.state = ConnectionState.RECONCILIATION_REQUIRED
+        return self.state
+
     def compare_event_with_lookup(
         self, event: UserDataEvent, lookup: OrderLookup
     ) -> EventDecision:
         """Quarantine a stream/REST identity disagreement instead of choosing one."""
 
-        if not isinstance(lookup, OrderLookup):
-            raise ReconciliationError("LOOKUP_RESULT_INVALID", "REST lookup sonucu güvenli tipte değil.")
-        if lookup.kind is LookupKind.FOUND and lookup.venue_order_id == event.venue_order_id:
+        from dcabot.application.venue_event_binding import (
+            VenueEventEvidenceOutcome,
+            evaluate_venue_event_lookup,
+        )
+
+        evidence = evaluate_venue_event_lookup(event, lookup)
+        if evidence.outcome is VenueEventEvidenceOutcome.MATCHED:
             return EventDecision.ACCEPTED
         self.state = ConnectionState.GAP
         return EventDecision.CONFLICT
@@ -438,6 +610,11 @@ class ReconciliationCoordinator:
             raise ReconciliationError(
                 "RESET_REVALIDATION_REQUIRED", "Testnet reset sonrası yeni snapshot doğrulanmalıdır."
             )
+        if self._order_list_resync_required:
+            raise ReconciliationError(
+                "ORDER_LIST_RESYNC_ANCHOR_REQUIRED",
+                "ListStatus snapshot öncesi explicit resync anchor gerekir.",
+            )
         if self._last_event_id is None:
             if snapshot.event_cursor is not None:
                 raise ReconciliationError(
@@ -461,11 +638,19 @@ class ReconciliationCoordinator:
             raise ReconciliationError(
                 "SNAPSHOT_STALE", "Authoritative snapshot hydrated event cursor’dan eski."
             )
+        if (
+            self._last_order_list_cursor is not None
+            and snapshot.observed_at_ms < max(self._last_order_list_cursor)
+        ):
+            raise ReconciliationError(
+                "SNAPSHOT_STALE", "Authoritative snapshot order-list cursor’dan eski."
+            )
         if self.store is not None and self.store.count_blocking_attempts() > 0:
             raise ReconciliationError(
                 "UNRESOLVED_ATTEMPTS", "Çözülmemiş attempt varken ekonomik state SYNCED olamaz."
             )
         self._snapshot_required = False
+        self._order_list_resync_required = False
         self.state = ConnectionState.SYNCED
         return self.state
 
@@ -484,6 +669,11 @@ class ReconciliationCoordinator:
             raise ReconciliationError(
                 "RESET_REVALIDATION_REQUIRED", "Testnet reset sonrası yeni snapshot doğrulanmalıdır."
             )
+        if self._order_list_resync_required:
+            raise ReconciliationError(
+                "ORDER_LIST_RESYNC_ANCHOR_REQUIRED",
+                "SYNCED öncesi explicit listStatus resync anchor gerekir.",
+            )
         if self.store is not None and self.store.count_blocking_attempts() > 0:
             raise ReconciliationError(
                 "UNRESOLVED_ATTEMPTS", "Çözülmemiş attempt varken ekonomik state SYNCED olamaz."
@@ -492,6 +682,7 @@ class ReconciliationCoordinator:
         return self.state
 
     def stream_terminated(self) -> ConnectionState:
+        self._order_list_resync_required = self._last_order_list_cursor is not None
         self.state = ConnectionState.STALE
         return self.state
 
@@ -499,6 +690,10 @@ class ReconciliationCoordinator:
         self._seen_events.clear()
         self._last_event_time_ms = None
         self._last_event_id = None
+        self._seen_order_list_events.clear()
+        self._last_order_list_cursor = None
+        self._order_list_terminal = False
+        self._order_list_resync_required = False
         self._reset_pending = True
         self.state = ConnectionState.RECONCILIATION_REQUIRED
         return self.state

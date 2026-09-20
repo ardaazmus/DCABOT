@@ -82,6 +82,57 @@ class StopTriggerContractTests(unittest.TestCase):
         self.assertEqual(state.realized, F(0))
         self.assertEqual(state.fees, F(1, 10))
 
+    def test_canceled_stop_keeps_trigger_and_partial_fill_separate(self):
+        config, state = stop_state()
+        state = apply(
+            state,
+            {
+                "type": "INTENT",
+                "order_id": "stop",
+                "role": "STOP",
+                "qty": "1",
+                "limit_price": "100",
+            },
+            config,
+        )
+        state = apply(
+            state,
+            {
+                "type": "FILL",
+                "execution_id": "stop-partial",
+                "order_id": "stop",
+                "side": "SELL",
+                "qty": "0.4",
+                "price": "100",
+                "fee": "0.04",
+                "fee_asset": "USDT",
+            },
+            config,
+        )
+        state = apply(
+            state,
+            {
+                "type": "ORDER_FINAL",
+                "order_id": "stop",
+                "status": "CANCELED",
+                "filled_qty": "0.4",
+                "coverage_complete": True,
+            },
+            config,
+        )
+
+        self.assertEqual(
+            (
+                state.position.qty,
+                state.realized,
+                state.orders["stop"].status,
+                state.orders["stop"].leaves,
+                state.orders["stop"].canceled,
+                decision(state, config),
+            ),
+            (F(3, 5), F(0), "CANCELED", F(0), F(3, 5), ("STOP", F(3, 5))),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -118,7 +118,7 @@ for _state in (
 def advance_two_leg_state(state: str, event: str) -> str:
     """Advance only explicitly allowed lifecycle states; never invent a fill."""
 
-    if state not in _STATES:
+    if not isinstance(state, str) or state not in _STATES:
         raise HedgeTwoLegError("TWO_LEG_STATE_INVALID", "Two-leg state geçersiz.")
     if not isinstance(event, str) or not _IDENTIFIER.fullmatch(event):
         raise HedgeTwoLegError("TWO_LEG_EVENT_INVALID", "Two-leg event geçersiz.")

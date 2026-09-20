@@ -38,14 +38,18 @@ class DataQualityApiContractTests(unittest.TestCase):
     def test_valid_upload_returns_deterministic_report(self):
         response = asyncio.run(create_data_quality(make_request("bars.csv", BAR_CSV)))
 
-        self.assertEqual(response["data"]["status"], "PASS")
-        self.assertEqual(response["data"]["kind"], "bar")
-        self.assertEqual(response["data"]["row_count"], 1)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+        payload = json.loads(response.body)
+        self.assertEqual(payload["data"]["status"], "PASS")
+        self.assertEqual(payload["data"]["kind"], "bar")
+        self.assertEqual(payload["data"]["row_count"], 1)
 
     def test_rejected_quality_report_returns_report_and_422(self):
         response = asyncio.run(create_data_quality(make_request("bars.csv", b"open,high\n100,101\n")))
 
         self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
         payload = json.loads(response.body)
         self.assertEqual(payload["data"]["status"], "REJECTED")
         self.assertEqual(payload["data"]["issues"][0]["code"], "unsupported_schema")

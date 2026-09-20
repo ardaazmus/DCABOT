@@ -92,6 +92,18 @@ class StrategyTemplateTests(unittest.TestCase):
                 declared_capabilities=("DCA", "DCA"),
             )
 
+    def test_direct_template_constructor_rejects_duplicate_capabilities(self):
+        with self.assertRaisesRegex(
+            StrategyTemplateError, "TEMPLATE_CAPABILITY_DUPLICATE"
+        ):
+            StrategyTemplate(
+                template_id="dca-basic",
+                schema_version="strategy-template-v1",
+                payload_json="{}",
+                payload_sha256=hashlib.sha256(b"{}").hexdigest(),
+                declared_capabilities=("DCA", "DCA"),
+            )
+
     def test_schema_and_payload_size_are_bounded(self):
         with self.assertRaisesRegex(
             StrategyTemplateError, "TEMPLATE_SCHEMA_INVALID"
@@ -111,4 +123,3 @@ class StrategyTemplateTests(unittest.TestCase):
                 payload={"note": "x" * 70_000},
                 declared_capabilities=("DCA",),
             )
-

@@ -1,6 +1,7 @@
 import unittest
 
 from dcabot.application.horizon_overlap import (
+    HorizonAssessment,
     HorizonStatus,
     TimeInterval,
     assess_purge_requirement,
@@ -60,6 +61,45 @@ class HorizonOverlapTests(unittest.TestCase):
                 (interval("same", 100, 200),),
                 (interval("same", 200, 300),),
             )
+
+    def test_public_models_reject_custom_equality_and_interval_subclass_bypasses(self):
+        class EqualityString(str):
+            def __eq__(self, other):
+                return True
+
+        with self.assertRaisesRegex(ValueError, "HORIZON_INTERVAL_ID_INVALID"):
+            TimeInterval(EqualityString("label-1"), 100, 200)
+        with self.assertRaisesRegex(ValueError, "HORIZON_STATUS_INVALID"):
+            HorizonAssessment(EqualityString(HorizonStatus.NO_OVERLAP), ())
+        with self.assertRaisesRegex(ValueError, "HORIZON_RESULT_INVALID"):
+            HorizonAssessment(HorizonStatus.NO_OVERLAP, (EqualityString("label-1"),))
+        with self.assertRaisesRegex(ValueError, "HORIZON_RESULT_INVALID"):
+            HorizonAssessment(HorizonStatus.NO_OVERLAP, (object(),))
+        with self.assertRaisesRegex(ValueError, "HORIZON_RESULT_INVALID"):
+            HorizonAssessment(HorizonStatus.NO_OVERLAP, ("label-1",))
+        with self.assertRaisesRegex(ValueError, "HORIZON_RESULT_INVALID"):
+            HorizonAssessment(HorizonStatus.PURGE_REQUIRED, ())
+        with self.assertRaisesRegex(ValueError, "HORIZON_RESULT_INVALID"):
+            HorizonAssessment(
+                HorizonStatus.PURGE_REQUIRED, ("label-1", "label-1")
+            )
+
+        class MalformedInterval(TimeInterval):
+            def __post_init__(self):
+                pass
+
+        malformed = MalformedInterval("label-1", 200, 100)
+        with self.assertRaisesRegex(ValueError, "HORIZON_INTERVAL_INVALID"):
+            assess_purge_requirement((malformed,), ())
+
+        class HiddenTuple(tuple):
+            def __iter__(self):
+                return iter(())
+
+        with self.assertRaisesRegex(ValueError, "HORIZON_INTERVAL_INVALID"):
+            assess_purge_requirement(HiddenTuple((malformed,)), ())
+        with self.assertRaisesRegex(ValueError, "HORIZON_RESULT_INVALID"):
+            HorizonAssessment(HorizonStatus.NO_OVERLAP, HiddenTuple(("label-1",)))
 
 
 if __name__ == "__main__":

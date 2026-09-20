@@ -1,35 +1,78 @@
-# P1.16.g — Local feature/label horizon ve gerçek run binding karar kapısı
+# P1.16.g — Local feature/label horizon ve gerçek run binding
 
 ## Karar
 
-- Durum: `DEFERRED / NO-GO / LOCAL_PASS`
-- Kod değişikliği: yok
-- Bağımsız review: `NOT_RUN`
+- Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`
+- Kod değişikliği: yapıldı; yalnız yerel, deterministik ve salt-okunur historical pipeline
+- Odak red/green kontrat kontrolü: `PASS_WITH_LIMITATION`
+- Ayrı bağımsız review: `NOT_RUN`
 - Production readiness: `NO`
-- Sonraki tek iş: `P1.16.h` bounded real-run lineage binding karar kapısı
+- Sonraki tek iş: `P1.16.i` stress ekonomik modeli ve gerçek senaryo runner karar kapısı
 
-## Gerçek local bulgu
+## Uygulanan minimum dikey dilim
 
-Kaynak ve test ağacında bağımsız bir feature/indicator/label pipeline, lookback hesaplayıcısı, label future horizon sözleşmesi veya bu veriyi historical runner’a bağlayan bir adapter bulunamadı. Mevcut tarihsel runner kapalı OHLCV barlarını doğrudan işler; `signal_readiness.py` ise yalnız event-time, closed-bar, stale ve caller tarafından verilen warmup sayısını sınıflandıran saf bir gate’tir.
+`src/dcabot/application/historical_features.py` içinde bounded ve fail-closed bir
+feature/label pipeline eklendi. Pipeline yalnız şu açık kimlikleri kabul eder:
 
-Bu nedenle feature lookback, label future horizon, settlement horizon veya numeric purge/embargo değeri üretmek mümkün değildir. Bunlardan birini varsayarak kod yazmak veri sızıntısı riskini azaltmaz; aksine doğrulanmamış bir model varsayımını ekonomik akışa sokar.
+- `CLOSE_SMA`: kapanışların exact `Fraction` ortalaması; lookback zorunludur.
+- `CLOSE_RETURN`: kapanıştan kapanışa exact getiri; lookback zorunludur.
+- `FUTURE_CLOSE_RETURN`: yalnız gelecekteki kapanıştan hesaplanan label; horizon zorunludur.
 
-## Uygulanmayan değişiklik
+Pipeline yalnız canonical closed OHLCV barlarını kabul eder; chronology, fiyat
+pozitifliği, bounded bar/lookback/horizon ve exact feature/label kimlikleri
+fail-closed doğrulanır. Feature değerleri float veya UI `Number` değildir; dışa
+canonical ratio metniyle (`numerator/denominator`) taşınır. Bu değerler ekonomik
+posting veya emir authority’sine bağlanmaz.
 
-Yeni indicator/feature/label hesaplama, warmup sayısı, purge/embargo bar sayısı, run identity binding, OOS KPI, optimizer, persistence, API/UI ve ekonomik sonuç kodu açılmadı. Mevcut `TimeInterval` overlap gate’i korunuyor; gerçek horizon kaynağı olmadığı için yalnız `PURGE_REQUIRED`/`NO_OVERLAP` değerlendirmesiyle sınırlı.
+`src/dcabot/application/historical.py` feature binding’i run planına bağlar.
+`src/dcabot/application/historical_simulation.py` binding’i reducer başlamadan
+önce yeniden hesaplayıp doğrular; warmup barlarında action üretilmez ve ekonomik
+runner ilk eligible bar indeksinden başlar. `historical_run_contract.py` capture
+identity’sine binding checksum’ını ve bounded pipeline metadata’sını ekler.
+Dataset id, artifact SHA-256, config hash, pipeline id, feature/label tanımı,
+warmup, horizon, eligible aralık ve deterministic row binding birlikte korunur.
+
+## Kanıtlanan sınırlar
+
+- Warmup: `max(feature lookback) - 1`; ilk eligible bar bu sınırdan sonradır.
+- Label: yalnız gelecekteki bar kapanışından; mevcut/geçmiş bar sızıntısı yoktur.
+- Runner: binding değişirse reducer çalışmadan `HistoricalSimulationError` verir.
+- Capture: binding checksum’ı run identity’ye dahil edilir; farklı pipeline/row
+  binding’i aynı historical run kimliği gibi kabul edilmez.
+- Limitler: en fazla `1000` bar, `500` lookback ve `500` label horizon.
+
+Bu dilim exact numeric purge/embargo, ekonomik KPI/OOS kararları, optimizer,
+stress model, persistence schema, API/UI opt-in profili veya canlı venue
+davranışı seçmez. P1.16.i bu sınırları ayrı karar kapısı olarak taşır.
 
 ## Kontroller
 
-- Local source audit: feature/indicator/label pipeline ve historical runner binding bulunmadı; mevcut `signal_readiness.py` kapsamı ayrıca okundu.
-- Mevcut kanıt yeniden doğrulandı: `uv run --frozen python tools/run_checks.py` → `318/318 PASS`.
-- `uv run --frozen python -m compileall -q src tests` → `PASS`.
-- `uv run --frozen python tools/check_workspace.py` → `PASS`; `136` aktif Python dosyası.
-- Live/testnet, credential, optimizer, economic result ve dış ağ yolu açılmadı.
+- `tests.test_historical_features`: `4/4 PASS`
+- `tests.test_evaluation_run_binding`: `6/6 PASS`
+- historical API regression set: `26/26 PASS`
+- `uv run --frozen --python 3.13 python -m compileall -q src tests`: `PASS`
+- `uv run --frozen --python 3.13 python tools/check_workspace.py`: `PASS`
+  (`288` active Python files)
+- `git diff --check`: `PASS` (yalnız mevcut CRLF dönüşüm uyarıları)
+- `uv run --frozen --python 3.13 python tools/run_checks.py`: `786/788 PASS`;
+  kalan iki hata Windows Credential Manager ortam kapısıdır: credential write
+  error `1312` ve cleanup sırasında `CREDENTIAL_NOT_FOUND`. Bunlar P1.16.g
+  kaynak/feature/runner testleri değildir ve bu ortamda credential provider
+  kurulumu olmadan yeniden üretildi.
 
-## Gerekli sonraki kanıt
+## Güvenlik ve kapsam dışı
 
-Gerçek run binding’e geçmeden önce her feature’ın kullandığı geçmiş aralık, warmup başlangıcı, closed-bar kuralı, label’ın geleceğe taşan aralığı, settlement/observation horizon’ı ve bunların dataset/config/model identity’ye nasıl bağlandığı gerçek kod/fixture üzerinden gösterilmelidir. Bu kanıt gelmeden numeric purge/embargo seçilmeyecek.
+Testnet/live credential, signed request, order mutation, mainnet, public API
+aktivasyonu, feature row persistence, optimizer veya ekonomik fill authority’si
+açılmadı. Historical pipeline salt-okunur ve offline’dır; üretim veya trading
+readiness iddiası değildir.
 
-## Araştırma dayanağı
+## Kaynak ve izlenebilirlik
 
-`docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md` warmup event’lerinin fill üretmemesini ve purge/embargo değerinin local feature/label/event horizon bilgisine bağlı olduğunu belirtir. Bu karar kapısı, mevcut local kapsamın bu gereksinimleri taşımadığını doğrulayarak üretim kodunu güvenli biçimde erteledi.
+- Uygulama: `src/dcabot/application/historical_features.py`
+- Run planı: `src/dcabot/application/historical.py`
+- Historical runner: `src/dcabot/application/historical_simulation.py`
+- Capture identity: `src/dcabot/application/historical_run_contract.py`
+- Odak testleri: `tests/test_historical_features.py`,
+  `tests/test_evaluation_run_binding.py`
+- Araştırma dayanağı: `docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md`

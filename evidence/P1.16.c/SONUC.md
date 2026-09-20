@@ -5,7 +5,7 @@
 - Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`
 - Kod: `src/dcabot/application/horizon_overlap.py`
 - Test: `tests/test_horizon_overlap.py`
-- Bağımsız review: `NOT_RUN`
+- Bağımsız review: `Pauli PASS` (salt-okunur re-review, P1/P2 bulgu yok)
 - Production readiness: `NO`
 - Sonraki tek iş: `P1.16.d` multiple-testing trial registry karar kapısı
 
@@ -25,14 +25,19 @@ Local feature lookback, label future horizon, event settlement horizon, exact pu
 
 ## Kontroller
 
-- Önce test RED: yeni `horizon_overlap` modülü eksik olduğu için `308` testte beklenen import error verdi.
-- İlk GREEN denemesinde pozitif çoklu-overlap fixture’ının input sırası sözleşmeye aykırı olduğu görüldü; fixture düzeltildi, otomatik sıralama eklenmedi.
-- Düzeltme sonrası `uv run --frozen python tools/run_checks.py`: `311/311 PASS`.
-- Bağımsız horizon oracle: adjacent sınır, gerçek overlap ve deterministic ID listesi: `INDEPENDENT_HORIZON_ORACLE_PASS`.
-- `uv run --frozen python -m compileall -q src tests`: `PASS`.
-- `uv run --frozen python tools/check_workspace.py`: `PASS`; `132` aktif Python dosyası.
+- `tests.test_horizon_overlap`: `5/5 PASS`. Public assessment invariant’ları,
+  exact tuple/interval tipleri, custom equality ve malformed subclass
+  bypass’ları regresyon kapsamına alındı.
+- Bağımsız horizon oracle: adjacent sınır, gerçek half-open overlap,
+  deterministic ID listesi, tutarsız status/ID sonuçları ve tuple subclass
+  reddi: `PASS`.
+- Bundled Python `3.12.14` ile `python -m compileall -q src tests`: `PASS`.
+- `tools/run_checks.py` ve `tools/check_workspace.py`: `FAIL`, ikisi de proje
+  gereksinimi olan Python `3.13` yokluğunda durdu (`active_python_files: 286`).
+  Bu nedenle bu oturumda tam-suite/workspace sonucu iddia edilmiyor.
+- `git diff --check`: `PASS` (yalnız mevcut LF/CRLF uyarıları).
 - Live/testnet, credential ve dış ağ yolu açılmadı.
 
 ## Araştırma dayanağı
 
-`docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md` purge/embargo gereğinin feature/label yapısına bağlı olduğunu ve sabit horizon uydurulmaması gerektiğini belirtir. Bu teslim yalnız overlap’i görünür kılan generic kontrolü kapatır; purge/embargo uygulamasının tamamlandığını iddia etmez.
+`docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md` purge/embargo gereğinin feature/label yapısına bağlı olduğunu ve sabit horizon uydurulmaması gerektiğini belirtir. Bu teslim yalnız overlap’i görünür kılan generic kontrolü kapatır; purge/embargo uygulamasının tamamlandığını iddia etmez. Pauli bağımsız re-review’ı P1/P2 bulgu bildirmedi; numeric purge/embargo policy, dataset binding ve ekonomik runner sonraki mikro-fazlara bırakıldı.

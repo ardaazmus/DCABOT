@@ -23,6 +23,27 @@ Bir dilimi tercihen tek oturumda bitir; süre tahmini garanti değildir. 3–7 d
 7. Diff'i görev dışı değişiklik, tersine dönük uyum, sayı/kimlik kaybı ve recovery etkisi için incele. Sadece test sayısını ölçme.
 8. Kabul koşullarını tek tek kapat. Durumu STATE'te güncelle, tamamlanan görev ve kısa kanıtı `evidence/<task-id>/` altında sakla. TASK'ı sıradaki tek iş için değiştir.
 
+### Araştırma-önce ve gerçek kullanıcı blokajı
+
+“Kaynak/oracle yok”, “bu davranış bilinmiyor” veya “araştırma gerekiyor” ifadeleri tek başına durma gerekçesi değildir. Uygulayıcı önce şu sırayla ilerler: (1) aktif kaynak, çağıranlar ve fixture envanteri, (2) mevcut testlerde RED/karşı-örnek, (3) resmi birincil ve güncel dış kaynak taraması, (4) production kodundan bağımsız küçük oracle, (5) sonucu TASK/STATE/evidence'a yazma. Bu araştırma sonucunda implementation için kanıt yetmiyorsa faz `DEFERRED/NO-GO` kalır; fakat “sonraki asistan araştırma adımı” ve kapsamı yazılmadan iş bırakılmaz.
+
+Kullanıcıya yalnız gerçekten dış durum gerektiren işler taşınır: API key/secret veya hesap girişi, CAPTCHA/izin, ücretli/özel kaynağa erişim, fiziksel ya da işletim sistemi üzerinde manuel işlem ve ekonomik sonucu değiştiren açık ürün kararı. Ayrıntılı anonim araştırma gerekirse asistan promptu kendisi üretir; kullanıcıdan prompt beklemek yalnız açıkça seçilmiş bir dış araştırma görevi için geçici durumdur. Güvenli yerel araştırma, resmi web araştırması ve offline test/fixture çalışması otomasyon tarafından yürütülür.
+
+### Sessiz durak yasağı ve sorumluluk sınırı
+
+`DEFERRED`, `NO-GO`, `CONTRACT_REQUIRED`, `IMPLEMENTATION_PENDING` veya
+“oracle eksik” ifadeleri kullanıcı blokajı değildir. Bunlar yalnız mevcut
+implementation kararının sınırını gösterir. Her çalışmada tek bir sonraki
+asistan-owned WIP=1 dilimi seçilir ve aşağıdakilerden biri uygulanır: aktif
+source/fixture envanteri, RED/karşı-örnek, resmi güncel araştırma, production
+kodundan bağımsız offline oracle, fail-closed admission/NOT_SUPPORTED guard veya
+minimum güvenli local implementation. Kanıt yetersizse riskli davranış açılmaz;
+fakat araştırma ve güvenli ilerleme durdurulmaz, sıradaki iş TASK/STATE/evidence’a
+yazılır. Kullanıcıdan teknik kodlama, test, compile, evidence, dokümantasyon veya
+source araştırması istenmez. Kullanıcı eylemi yalnız credential/hesap/CAPTCHA,
+ücretli/özel erişim, fiziksel/OS işlemi veya açık ekonomik/ürün kararı gerçekten
+gerektiğinde talep edilir.
+
 ## Çoklu yapay zekâ düzeni
 
 Varsayılan WIP=1: aynı anda yalnız bir uygulayıcı. Planlayıcı/uygulayıcı/reviewer ayrı sorumluluklardır; aynı anda üç ajan çalıştırma zorunluluğu değildir. Her IDE için farklı plan veya kural üretme. CLAUDE/GEMINI/OPENCODE dosyaları yalnız ortak dosyalara yönlendirsin.

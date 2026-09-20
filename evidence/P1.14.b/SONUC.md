@@ -5,7 +5,7 @@
 - Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`
 - Kod: `src/dcabot/application/signal_event_contract.py`
 - Test: `tests/test_signal_event_contract.py`
-- Bağımsız review: `NOT_RUN`
+- Bağımsız review: `PASS` (Ptolemy salt-okunur Codex incelemesi, düzeltme sonrası)
 - Production readiness: `NO`
 - Sonraki tek iş: `P1.14.c` signal warmup/closed-bar ve stale-policy karar kapısı
 
@@ -17,6 +17,7 @@ Signal kaydı `signal_id`, `source`, integer `event_time_us`, `schema_version=si
 
 - exact aynı identity ve payload için `DUPLICATE` ile no-op döner,
 - aynı `signal_id` farklı immutable payload/metadata ile gelirse `SIGNAL_EVENT_CONFLICT` verir,
+- geçmişte aynı `signal_id` iki kez bulunursa `SIGNAL_HISTORY_IDENTITY_INVALID` ile fail-closed olur,
 - yeni signal’in event zamanı son kabul edilen zamandan eskiyse açık stale policy ile `SIGNAL_EVENT_STALE` verir,
 - geçmişi immutable tuple olarak döndürür ve mevcut event zaman sırasını bozan geçmişi reddeder,
 - processing/wall-clock zamanını ekonomik event zamanı yerine kullanmaz.
@@ -32,6 +33,23 @@ Payload canonicalization/hash üretimi, webhook authentication, replay window/re
 - Bağımsız signal contract control: accepted event, exact duplicate no-op, conflicting duplicate ve stale rejection `PASS`.
 - `uv run --frozen python -m compileall -q src tests`: `PASS`.
 - `uv run --frozen python tools/check_workspace.py`: `PASS`; `114` aktif Python dosyası; backup discovery kapsam dışı.
+
+## 2026-09-18 mevcut checkout doğrulaması
+
+- Bağımsız review’da bulunan duplicate-history açığı düzeltildi: history içinde
+  aynı `signal_id` artık aynı veya çelişkili event olsa da fail-closed reddediliyor.
+- P1.14.b odak testi mevcut checkout üzerinde `6/6 PASS` verdi; readiness ile
+  birlikte ilgili signal kümesi `11/11 PASS` oldu.
+- Ayrı signal oracle; accepted, exact duplicate no-op, conflict ve stale
+  sonuçları ve duplicate-history reddini yeniden `PASS` verdi.
+- Ptolemy salt-okunur Codex incelemesi immutable identity, event-time sırası,
+  fail-closed duplicate/conflict/stale sınırları ve authority yokluğunu `PASS`
+  olarak doğruladı; kritik `BLOCKED` bulgu yok.
+- `python -m compileall -q src` ve `git diff --check` `PASS`.
+- Kapsamlı `tools/run_checks.py` bu oturumda başlatılamadı: proje Python
+  `3.13` isterken kullanılabilir bundled runtime `3.12.14`. Bu, odak testini
+  geçersiz kılmaz; güncel tam-suite sonucu iddia edilmiyor. Önceki `270/270`
+  sonucu tarihsel kanıt olarak korunmuştur.
 
 ## Kanıt sınırı
 

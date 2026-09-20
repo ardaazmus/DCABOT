@@ -4,6 +4,11 @@ from dataclasses import dataclass
 from time import monotonic
 
 from dcabot.data_adapters.historical import CanonicalBar, HistoricalDatasetInput
+from dcabot.application.historical_features import (
+    HistoricalFeatureError,
+    HistoricalFeatureRunBinding,
+    validate_historical_feature_binding,
+)
 from dcabot.application.historical_fixed_slice import (
     HistoricalFixedSliceAction,
     HistoricalFixedSliceResult,
@@ -55,6 +60,7 @@ class HistoricalSimulationResult:
     mark_status: str
     actions: tuple[HistoricalSimulationAction, ...]
     summary: dict[str, object]
+    feature_binding: HistoricalFeatureRunBinding | None = None
 
 
 def simulate_historical_fixed_slice(
@@ -220,6 +226,7 @@ def simulate_historical_ohlcv(
     *,
     config_hash: str,
     timeout_seconds: float = MAX_HISTORICAL_SIMULATION_SECONDS,
+    feature_binding: HistoricalFeatureRunBinding | None = None,
 ) -> HistoricalSimulationResult:
     """Run the first closed-bar model without network, persistence, or randomness."""
 
@@ -231,13 +238,15 @@ def simulate_historical_ohlcv(
         raise HistoricalSimulationError("EXECUTION_BUDGET_EXCEEDED", "Simülasyon çalışma bütçesi geçersiz.")
 
     _validate_dataset(dataset)
+    first_bar_index = _feature_start_index(dataset, config_hash, feature_binding)
     started_at = monotonic()
     state = State()
     actions: list[HistoricalSimulationAction] = []
-    state = _apply_action(state, config, dataset.bars[0], 1, "BASE", config.base_qty, dataset.bars[0].open, actions)
-    state = apply(state, {"type": "MARK", "price": dataset.bars[0].close}, config)
+    first_bar = dataset.bars[first_bar_index]
+    state = _apply_action(state, config, first_bar, first_bar_index + 1, "BASE", config.base_qty, first_bar.open, actions)
+    state = apply(state, {"type": "MARK", "price": first_bar.close}, config)
 
-    for index, bar in enumerate(dataset.bars[1:], start=2):
+    for index, bar in enumerate(dataset.bars[first_bar_index + 1 :], start=first_bar_index + 2):
         _check_budget(started_at, timeout_seconds)
         safety = _next_safety(state, config)
         take_profit = target(state, config) if state.position.qty else None
@@ -254,6 +263,7 @@ def simulate_historical_ohlcv(
                 application_code="AMBIGUOUS_OHLC_PATH",
                 processed_bar_count=index - 1,
                 first_ambiguous_bar_index=index,
+                feature_binding=feature_binding,
             )
         if safety_reachable and safety is not None:
             raw_reference = bar.open if number(bar.open) <= safety.price else exact_text(safety.price)
@@ -274,6 +284,7 @@ def simulate_historical_ohlcv(
         application_code=None,
         processed_bar_count=len(dataset.bars),
         first_ambiguous_bar_index=None,
+        feature_binding=feature_binding,
     )
 
 
@@ -434,6 +445,7 @@ def _result(
     application_code: str | None,
     processed_bar_count: int,
     first_ambiguous_bar_index: int | None,
+    feature_binding: HistoricalFeatureRunBinding | None = None,
 ) -> HistoricalSimulationResult:
     summary = report(state, config)
     position_status = "OPEN_AT_END" if state.position.qty else "CLOSED"
@@ -459,4 +471,19 @@ def _result(
         mark_status="NOT_AVAILABLE",
         actions=tuple(actions),
         summary=summary,
+        feature_binding=feature_binding,
     )
+
+
+def _feature_start_index(
+    dataset: HistoricalDatasetInput,
+    config_hash: str,
+    feature_binding: HistoricalFeatureRunBinding | None,
+) -> int:
+    if feature_binding is None:
+        return 0
+    try:
+        validate_historical_feature_binding(dataset, feature_binding, config_hash=config_hash)
+    except HistoricalFeatureError as exc:
+        raise HistoricalSimulationError(exc.code, str(exc)) from exc
+    return feature_binding.first_eligible_bar_index - 1

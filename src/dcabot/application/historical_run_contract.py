@@ -7,6 +7,11 @@ import re
 
 from dcabot import __version__
 from dcabot.application.historical_simulation import HistoricalSimulationResult
+from dcabot.application.historical_features import (
+    HistoricalFeatureError,
+    HistoricalFeatureRunBinding,
+    validate_historical_feature_binding,
+)
 from dcabot.application.historical_profiles import get_historical_profile
 from dcabot.data_adapters.historical import HistoricalDatasetInput
 from dcabot.domain.config import Config
@@ -71,6 +76,7 @@ class HistoricalRunExecutionIdentity:
     seed_policy: str
     seed: None
     assumption_contract_version: str
+    feature_binding_sha256: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,6 +115,11 @@ def build_historical_run_capture(
         raise HistoricalRunContractError("CONFIG_SNAPSHOT_INVALID", "Config snapshot geçersiz.") from exc
     if set(raw_config) != _CONFIG_FIELDS:
         raise HistoricalRunContractError("CONFIG_SNAPSHOT_INVALID", "Config snapshot allowlist ile eşleşmiyor.")
+    if result.feature_binding is not None:
+        try:
+            validate_historical_feature_binding(dataset, result.feature_binding, config_hash=config_hash)
+        except HistoricalFeatureError as exc:
+            raise HistoricalRunContractError(exc.code, str(exc)) from exc
 
     config_json = _canonical_json(raw_config)
     calculated_config_hash = _sha256(config_json)
@@ -149,6 +160,9 @@ def build_historical_run_capture(
         "seed_policy": SEED_POLICY,
         "seed": None,
         "assumption_contract_version": ASSUMPTION_CONTRACT_VERSION,
+        "feature_binding_sha256": (
+            result.feature_binding.binding_sha256 if result.feature_binding is not None else None
+        ),
     }
     identity_json = _canonical_json(identity_payload)
     identity = HistoricalRunExecutionIdentity(
@@ -166,6 +180,7 @@ def build_historical_run_capture(
         seed_policy=SEED_POLICY,
         seed=None,
         assumption_contract_version=ASSUMPTION_CONTRACT_VERSION,
+        feature_binding_sha256=(result.feature_binding.binding_sha256 if result.feature_binding is not None else None),
     )
     return HistoricalRunCapture(
         record_schema_version=RUN_RECORD_SCHEMA_VERSION,
@@ -321,6 +336,22 @@ def _result_payload(
             if result.first_ambiguous_bar_index is not None
             else None
         ),
+        "feature_binding": _feature_binding_payload(result.feature_binding),
+    }
+
+
+def _feature_binding_payload(binding: HistoricalFeatureRunBinding | None) -> dict[str, object] | None:
+    if binding is None:
+        return None
+    return {
+        "binding_sha256": binding.binding_sha256,
+        "pipeline_id": binding.pipeline_id,
+        "required_lookback_bars": binding.required_lookback_bars,
+        "warmup_bar_count": binding.warmup_bar_count,
+        "label_horizon_bars": binding.label_horizon_bars,
+        "first_eligible_bar_index": binding.first_eligible_bar_index,
+        "last_eligible_bar_index": binding.last_eligible_bar_index,
+        "row_count": len(binding.rows),
     }
 
 

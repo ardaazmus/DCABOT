@@ -269,6 +269,57 @@ class SpotOrderLifecycleTests(unittest.TestCase):
         self.assertIsNone(result.lifecycle.order.leaves_quantity)
         self.assertEqual(result.lifecycle.order.quote_order_quantity, "50")
 
+    def test_market_base_quantity_tracks_fills_without_quote_economics(self):
+        order = create_market_order(
+            self.profile,
+            order_id="order-1",
+            client_order_id="client-1",
+            symbol="BTCUSDT",
+            side=SpotSide.BUY,
+            quantity="1",
+        )
+        lifecycle = new_lifecycle(order)
+        partial = lifecycle.apply(
+            lifecycle.event(
+                event_id="event-1",
+                execution_id="execution-1",
+                event_time_ms=100,
+                status="PARTIALLY_FILLED",
+                last_filled_qty="0.4",
+                cumulative_filled_qty="0.4",
+                last_price="101",
+            )
+        )
+        final = partial.lifecycle.apply(
+            partial.lifecycle.event(
+                event_id="event-2",
+                execution_id="execution-2",
+                event_time_ms=101,
+                status="FILLED",
+                last_filled_qty="0.6",
+                cumulative_filled_qty="1",
+                last_price="99",
+            )
+        )
+
+        self.assertEqual(final.outcome, EventOutcome.ACCEPTED)
+        self.assertEqual(
+            report(final.lifecycle),
+            {
+                "order_id": "order-1",
+                "client_order_id": "client-1",
+                "symbol": "BTCUSDT",
+                "side": "BUY",
+                "order_type": "MARKET",
+                "status": "FILLED",
+                "requested_quantity": "1",
+                "filled_quantity": "1",
+                "leaves_quantity": "0",
+                "quote_order_quantity": None,
+                "reconciliation_required": False,
+            },
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

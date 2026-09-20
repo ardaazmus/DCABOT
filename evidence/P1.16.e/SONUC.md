@@ -5,7 +5,7 @@
 - Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`
 - Kod: `src/dcabot/application/stress_lineage.py`
 - Test: `tests/test_stress_lineage.py`
-- Bağımsız review: `NOT_RUN`
+- İkinci salt-okunur kaynak kontrolü: `PASS_WITH_LIMITATION` (P1/P2 bulgu yok)
 - Production readiness: `NO`
 - Sonraki tek iş: `P1.16.f` warmup leakage ve readiness binding karar kapısı
 
@@ -25,11 +25,18 @@ Spread, slippage, latency, volume participation, partial fill, OHLC best/worst p
 
 ## Kontroller
 
-- Önce test RED: yeni `stress_lineage` modülü eksik olduğu için beklenen import error alındı.
-- Minimal uygulama sonrası `uv run --frozen python tools/run_checks.py`: `318/318 PASS`.
-- Bağımsız production-importsuz kimlik kontrolü: `INDEPENDENT_STRESS_LINEAGE_CONTROL_PASS`.
-- `uv run --frozen python -m compileall -q src tests`: `PASS`.
-- `uv run --frozen python tools/check_workspace.py`: `PASS`; `136` aktif Python dosyası.
+- `tests.test_stress_lineage`: `4/4 PASS`; canonical result identity, collision,
+  custom equality ve geçersiz hash/etiket regresyonları dahil.
+- `tests.test_evaluation_run_binding`: `6/6 PASS`.
+- Bağımsız production-importsuz canonical kimlik kontrolü:
+  `INDEPENDENT_STRESS_LINEAGE_CONTROL_PASS`.
+- Bundled Python `3.12.14` ile `python -m compileall -q src tests`: `PASS`.
+- `tools/run_checks.py` ve `tools/check_workspace.py`: `FAIL`, proje `3.13`
+  istediği halde bundled runtime `3.12.14`; `active_python_files: 286`,
+  `backup_layout: EMPTY_OR_NOT_PLACED`.
+- API read testi bundled runtime’da `starlette` eksikliği nedeniyle çalışmadı;
+  tam-suite/workspace sonucu iddia edilmiyor.
+- `git diff --check`: `PASS` (yalnız mevcut LF/CRLF uyarıları).
 - Live/testnet, credential ve dış ağ yolu açılmadı.
 
 ## Araştırma dayanağı

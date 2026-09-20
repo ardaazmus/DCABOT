@@ -6,6 +6,12 @@ from dataclasses import dataclass
 
 from dcabot.data_adapters.catalog import PublicDatasetSelection
 from dcabot.data_adapters.historical import MAX_BARS, HistoricalDatasetInput, parse_verified_dataset
+from dcabot.application.historical_features import (
+    HistoricalFeaturePipeline,
+    HistoricalFeatureRunBinding,
+    HistoricalFeatureError,
+    build_historical_feature_binding,
+)
 from dcabot.domain.config import Config
 from dcabot.domain.numbers import align, exact_text, number
 
@@ -56,6 +62,7 @@ class HistoricalRunPlan:
     execution_mode: str = "SIMULATED"
     run_status: str = "NOT_STARTED"
     read_only: bool = True
+    feature_binding: HistoricalFeatureRunBinding | None = None
 
 
 def load_verified_dataset(selection: PublicDatasetSelection) -> HistoricalDatasetInput:
@@ -70,6 +77,7 @@ def build_historical_run_plan(
     *,
     simulation_model: str = "historical_ohlcv_v1",
     slice_qty: str | None = None,
+    feature_pipeline: HistoricalFeaturePipeline | None = None,
 ) -> HistoricalRunPlan:
     """Bind one canonical dataset to the active config without running or saving it."""
 
@@ -124,7 +132,15 @@ def build_historical_run_plan(
         simulation_model=simulation_model,
         slice_qty=slice_qty,
     )
-    return HistoricalRunPlan(dataset=dataset, config=config_snapshot)
+    try:
+        feature_binding = (
+            build_historical_feature_binding(dataset, feature_pipeline, config_hash=config_snapshot.config_hash)
+            if feature_pipeline is not None
+            else None
+        )
+    except HistoricalFeatureError as exc:
+        raise HistoricalRunPlanError(str(exc), code=exc.code) from exc
+    return HistoricalRunPlan(dataset=dataset, config=config_snapshot, feature_binding=feature_binding)
 
 
 def validate_historical_run_request(

@@ -125,6 +125,33 @@ class SpotBindingStoreTests(unittest.TestCase):
             self.assertEqual(replay.core_state, self.core_state)
             self.assertEqual(replay.accepted_event_count, 0)
 
+    def test_explicit_core_intent_identity_survives_restart(self):
+        store_class = self._store_class()
+        state = apply(State(), {"type": "MARK", "price": "100"}, self.config)
+        state = apply(
+            state,
+            {
+                "type": "INTENT",
+                "order_id": "order-1",
+                "intent_id": "intent-1",
+                "role": "BASE",
+                "qty": "1",
+                "limit_price": "100",
+            },
+            self.config,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "spot-bindings.sqlite"
+            with store_class.create(
+                path,
+                config=self.config,
+                lifecycle=self.lifecycle,
+                core_state=state,
+            ):
+                pass
+            with store_class.open(path, config=self.config) as reopened:
+                self.assertEqual(reopened.load().core_state.orders["order-1"].intent_id, "intent-1")
+
 
 if __name__ == "__main__":
     unittest.main()

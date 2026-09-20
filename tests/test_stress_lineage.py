@@ -3,8 +3,16 @@ import unittest
 
 from dcabot.application.stress_lineage import (
     StressLineage,
+    StressLineageError,
     new_stress_lineage,
 )
+
+
+class EqualityBypassString(str):
+    def __eq__(self, other):
+        return True
+
+    __hash__ = str.__hash__
 
 
 class StressLineageTests(unittest.TestCase):
@@ -60,6 +68,34 @@ class StressLineageTests(unittest.TestCase):
                 stress_profile_id="profile-1",
                 stress_profile_hash="e" * 64,
                 stress_result_id="result-base-1",
+            )
+
+    def test_public_lineage_rejects_noncanonical_and_custom_values(self):
+        with self.assertRaisesRegex(ValueError, "STRESS_RESULT_ID_MISMATCH"):
+            StressLineage(
+                base_result_id="result-base-1",
+                stress_profile_id="profile-1",
+                stress_profile_hash="e" * 64,
+                stress_result_id="stress-v1:" + "0" * 64,
+            )
+        with self.assertRaisesRegex(ValueError, "STRESS_PROFILE_HASH_INVALID"):
+            new_stress_lineage(
+                "result-base-1",
+                stress_profile_id="profile-1",
+                stress_profile_hash=EqualityBypassString("not-a-hash"),
+            )
+        with self.assertRaisesRegex(StressLineageError, "STRESS_LABEL_INVALID"):
+            lineage = new_stress_lineage(
+                "result-base-1",
+                stress_profile_id="profile-1",
+                stress_profile_hash="e" * 64,
+            )
+            StressLineage(
+                base_result_id="result-base-1",
+                stress_profile_id="profile-1",
+                stress_profile_hash="e" * 64,
+                stress_result_id=lineage.stress_result_id,
+                label=EqualityBypassString("NOT_STRESS"),
             )
 
 

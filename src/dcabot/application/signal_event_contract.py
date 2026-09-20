@@ -90,6 +90,12 @@ def accept_signal(
         raise SignalEventContractError(
             "SIGNAL_EVENT_INVALID", "Signal event kaydı geçersiz."
         )
+    history_ids = [item.signal_id for item in history]
+    if len(history_ids) != len(set(history_ids)):
+        raise SignalEventContractError(
+            "SIGNAL_HISTORY_IDENTITY_INVALID",
+            "Signal geçmişinde aynı signal kimliği iki kez bulunamaz.",
+        )
     if any(
         right.event_time_us < left.event_time_us
         for left, right in zip(history, history[1:])

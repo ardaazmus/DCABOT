@@ -5,7 +5,7 @@
 - Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`
 - Kod: `src/dcabot/application/hedge_two_leg_contract.py`
 - Test: `tests/test_hedge_two_leg_contract.py`
-- Bağımsız review: `NOT_RUN`
+- Bağımsız review: `PASS` (Herschel salt-okunur Codex incelemesi, düzeltme sonrası)
 - Production readiness: `NO`
 - Sonraki tek iş: `P1.15.b` two-leg accepted-fill/recovery projection karar kapısı
 
@@ -26,11 +26,23 @@ Two-leg accepted-fill miktar projection’ı, duplicate/replay persistence, reco
 
 ## Kontroller
 
-- Önce test RED: yeni test dosyası eksik `hedge_two_leg_contract` modülü nedeniyle beklenen import error verdi; suite `291` testte kaldı.
-- En küçük uygulama sonrası `uv run --frozen python tools/run_checks.py`: `294/294 PASS`.
-- Bağımsız hedge/two-leg control: identity ayrımı, first-leg state, partial hedge ve recovery geçişleri `PASS`.
-- `uv run --frozen python -m compileall -q src tests`: `PASS`.
-- `uv run --frozen python tools/check_workspace.py`: `PASS`; `124` aktif Python dosyası.
+- Bağımsız review’da eşitlenen fakat hashlenemeyen custom state girdisinin
+  transition dictionary’sine ulaşarak ham `TypeError` üretebildiği bulundu.
+  Önce regresyon `1` error verdi; `advance_two_leg_state` girişine explicit
+  string guard eklendi ve fail-closed `TWO_LEG_STATE_INVALID` ile düzeltildi.
+- Güncel odak `python -m unittest tests.test_hedge_two_leg_contract`: `4/4 PASS`.
+- İlgili two-leg projection kümesi `python -m unittest tests.test_hedge_two_leg_contract tests.test_two_leg_fill_projection`: `8/8 PASS`.
+- Bağımsız hedge/two-leg oracle: identity ayrımı, frozen scope, whitelist
+  geçişleri, partial/one-leg/recovery/timeout ve unhashable state reddi `PASS`.
+- Herschel salt-okunur Codex review düzeltme sonrası: `PASS`; kritik P1/P2
+  bulgu yok. Review’da `test_matrices/P1.15_TESTS.md` varlık iddiası kontrol
+  edildi ve bu checkout’ta dosyanın bulunmadığı doğrulandı; araştırma belgesi
+  tarihsel girdidir ve değiştirilmedi.
+- `python -m compileall -q src`: `PASS`; `git diff --check`: `PASS`.
+- `tools/run_checks.py` güncel tam-suite için `FAIL`: proje `Python 3.13`
+  isterken kullanılabilir bundled runtime `3.12.14`; bu nedenle güncel
+  tam-suite sonucu iddia edilmiyor.
+- Önceki tarihsel tam-suite sonucu (`294/294`) bu oturumun doğrulaması olarak kullanılmadı.
 - Live/testnet, credential ve gerçek emir yolu açılmadı.
 
 ## Kanıt sınırı

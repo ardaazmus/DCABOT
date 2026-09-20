@@ -5,7 +5,7 @@
 - Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`
 - Kod: `src/dcabot/application/oos_lineage.py`
 - Test: `tests/test_oos_lineage.py`
-- Bağımsız review: `NOT_RUN`
+- Bağımsız review: `Hilbert PASS` (salt-okunur re-review, P1/P2 bulgu yok)
 - Production readiness: `NO`
 - Sonraki tek iş: `P1.16.c` feature/label horizon ve purge/embargo karar kapısı
 
@@ -25,13 +25,18 @@ Yeni experiment üretme, dataset/config/model/kernel/seed lineage binding, persi
 
 ## Kontroller
 
-- Önce test RED: yeni `oos_lineage` modülü eksik olduğu için `304` testte beklenen import error verdi.
-- Minimal uygulama sonrası `uv run --frozen python tools/run_checks.py`: `307/307 PASS`.
-- Bağımsız OOS control: untouched tuning, inspection sonrası touched/new-experiment ve touched lineage geri dönüş reddi: `INDEPENDENT_OOS_FREEZE_CONTROL_PASS`.
-- `uv run --frozen python -m compileall -q src tests`: `PASS`.
-- `uv run --frozen python tools/check_workspace.py`: `PASS`; `130` aktif Python dosyası.
+- `tests.test_oos_lineage`: `5/5 PASS`. Public lineage ve tuning decision
+  modellerinde string-subclass/custom-equality bypass regresyonu kapsandı.
+- Bağımsız OOS freeze oracle: untouched tuning, inspection sonrası
+  touched/new-experiment, touched lineage geri dönüş reddi ve malformed scalar
+  değerlerin reddi: `PASS`.
+- Bundled Python `3.12.14` ile `python -m compileall -q src tests`: `PASS`.
+- `tools/run_checks.py` ve `tools/check_workspace.py`: `FAIL`, ikisi de proje
+  gereksinimi olan Python `3.13` yokluğunda durdu (`active_python_files: 286`).
+  Bu nedenle bu oturumda tam-suite/workspace sonucu iddia edilmiyor.
+- `git diff --check`: `PASS` (yalnız mevcut LF/CRLF uyarıları).
 - Live/testnet, credential ve dış ağ yolu açılmadı.
 
 ## Araştırma dayanağı
 
-`docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md` OOS görüldükten sonra tuning yapılırsa aynı segmentin untouched final evaluation sayılamayacağını ve yeni untouched holdout/yeni evaluation lineage gerektiğini kabul eder. Bu teslim yalnız eski lineage’ın yeniden untouched gösterilmesini önleyen saf sınırı kapatır; P1.16’nın tamamlandığını iddia etmez.
+`docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md` OOS görüldükten sonra tuning yapılırsa aynı segmentin untouched final evaluation sayılamayacağını ve yeni untouched holdout/yeni evaluation lineage gerektiğini kabul eder. Bu teslim yalnız eski lineage’ın yeniden untouched gösterilmesini önleyen saf sınırı kapatır; P1.16’nın tamamlandığını iddia etmez. Hilbert bağımsız re-review’ı P1/P2 bulgu bildirmedi; dataset/run binding, purge/embargo ve ekonomik evaluation sonraki mikro-fazlara bırakıldı.

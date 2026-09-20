@@ -84,6 +84,14 @@ class HedgeTwoLegContractTests(unittest.TestCase):
             )
         with self.assertRaisesRegex(ValueError, "TWO_LEG_TRANSITION_INVALID"):
             advance_two_leg_state(TwoLegState.NONE, "BOTH_LEGS_ACCEPTED")
+        with self.assertRaisesRegex(ValueError, "TWO_LEG_STATE_INVALID"):
+            class UnhashableMatchingState:
+                __hash__ = None
+
+                def __eq__(self, other):
+                    return other == TwoLegState.NONE
+
+            advance_two_leg_state(UnhashableMatchingState(), "LEG_A_SENT")
 
 
 if __name__ == "__main__":

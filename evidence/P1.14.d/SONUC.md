@@ -5,7 +5,7 @@
 - Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`
 - Kod: `src/dcabot/application/rebalance_triggers.py`
 - Test: `tests/test_rebalance_triggers.py`
-- Bağımsız review: `NOT_RUN`
+- Bağımsız review: `PASS` (Mendel salt-okunur Codex incelemesi)
 - Production readiness: `NO`
 - Sonraki tek iş: `P1.14.e` template integrity ve non-authority karar kapısı
 
@@ -26,10 +26,16 @@ Target allocation projection ile trigger’ın birleştirilmesi, asset price con
 ## Kontroller
 
 - Önce test RED: yeni test dosyası eksik `rebalance_triggers` modülü nedeniyle import error verdi.
-- En küçük uygulama sonrası kanonik `uv run --frozen python tools/run_checks.py`: `281/281 PASS`.
-- Bağımsız Decimal/time oracle: threshold deviation ve elapsed interval hesapları `PASS`.
-- `uv run --frozen python -m compileall -q src tests`: `PASS`.
-- `uv run --frozen python tools/check_workspace.py`: `PASS`; `118` aktif Python dosyası; backup discovery kapsam dışı.
+- Güncel odak `python -m unittest tests.test_rebalance_triggers`: `8/8 PASS`.
+- İlgili projection kümesi `python -m unittest tests.test_rebalance_triggers tests.test_rebalance_projection`: `14/14 PASS`.
+- Bağımsız Decimal/time oracle: threshold deviation, inclusive boundary, threshold zero/signed zero,
+  elapsed interval, same timestamp, malformed numeric values ve bool zaman girdileri `PASS`.
+- Mendel salt-okunur Codex review: `PASS`; threshold/time formülleri, input sınırları,
+  immutable kararlar ve order/candidate/fill authority yokluğu uygun bulundu.
+- `python -m compileall -q src`: `PASS`; `git diff --check`: `PASS`.
+- `tools/run_checks.py` güncel tam-suite için `FAIL`: proje `Python 3.13` isterken
+  kullanılabilir bundled runtime `3.12.14`; bu nedenle güncel tam-suite sonucu iddia edilmiyor.
+- Önceki tarihsel tam-suite sonucu (`281/281`) bu oturumun doğrulaması olarak kullanılmadı.
 
 ## Kanıt sınırı
 

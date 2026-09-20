@@ -5,7 +5,7 @@
 - Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`
 - Kod: `src/dcabot/application/chronological_split.py`
 - Test: `tests/test_chronological_split.py`
-- Bağımsız review: `NOT_RUN`
+- Bağımsız review: `Noether PASS_WITH_LIMITATION` (salt-okunur)
 - Production readiness: `NO`
 - Sonraki tek iş: `P1.16.b` OOS freeze ve evaluation lineage karar kapısı
 
@@ -25,13 +25,19 @@ Expanding/rolling walk-forward orkestrasyonu, gerçek dataset binding, feature/l
 
 ## Kontroller
 
-- Önce test RED: yeni `chronological_split` modülü eksik olduğu için `299` testte beklenen import error verdi.
-- Minimal uygulama sonrası `uv run --frozen python tools/run_checks.py`: `303/303 PASS`.
-- Bağımsız chronological oracle: explicit gap, strict `max(train_time) < min(test_time)` ve future row eklenince önceki prefix’in değişmemesi: `INDEPENDENT_CHRONOLOGY_ORACLE_PASS`.
-- `uv run --frozen python -m compileall -q src tests`: `PASS`.
-- `uv run --frozen python tools/check_workspace.py`: `PASS`; `128` aktif Python dosyası.
+- `tests.test_chronological_split`: `7/7 PASS`. Public constructor için ters sıra,
+  bölüm sınırında duplicate, geç gap ve yanlış point tipi regresyonları da aynı
+  test içinde kapsandı.
+- Bağımsız chronological oracle: explicit gap, strict
+  `max(train_time) < min(test_time)`, future row eklenince önceki prefix’in
+  değişmemesi ve malformed public constructor reddi: `PASS`.
+- Bundled Python `3.12.14` ile `python -m compileall -q src tests`: `PASS`.
+- `tools/run_checks.py` ve `tools/check_workspace.py`: `FAIL`, ikisi de proje
+  gereksinimi olan Python `3.13` yokluğunda durdu (`active_python_files: 286`).
+  Bu nedenle bu oturumda tam-suite/workspace sonucu iddia edilmiyor.
+- `git diff --check`: `PASS` (yalnız mevcut LF/CRLF uyarıları).
 - Live/testnet, credential ve dış ağ yolu açılmadı.
 
 ## Araştırma dayanağı
 
-`docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md` chronological split’i `ACCEPT` eder; purge/embargo horizon’unun feature/label yapısına bağlı olduğunu ve local data gerektirdiğini belirtir. Bu teslim yalnız kabul edilen temel zaman sınırını yerel testlerle kapatır; P1.16’nın tamamlandığını iddia etmez.
+`docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md` chronological split’i `ACCEPT` eder; purge/embargo horizon’unun feature/label yapısına bağlı olduğunu ve local data gerektirdiğini belirtir. Bu teslim yalnız kabul edilen temel zaman sınırını yerel testlerle kapatır; P1.16’nın tamamlandığını iddia etmez. Noether incelemesi P1/P2 bulgu bulmadı; leakage-free evaluation, purge/embargo, OOS freeze ve ekonomik runner sonraki mikro-fazlara bırakıldı.

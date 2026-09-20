@@ -5,6 +5,12 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from dcabot.application.order_attempt import AttemptOperation, AttemptState, OrderAttempt, request_fingerprint
+from dcabot.application.order_list_contract import (
+    OrderListError,
+    UserDataOrderListEvent,
+    UserDataOrderListLeg,
+    UserDataOrderListResyncAnchor,
+)
 from dcabot.application.reconciliation import (
     ConnectionState,
     EventDecision,
@@ -31,6 +37,26 @@ def attempt() -> OrderAttempt:
         created_at_us=1_700_000_000_000_000,
         last_transition_at_us=1_700_000_000_000_000,
     )
+
+
+def order_list_event(**overrides) -> UserDataOrderListEvent:
+    values = {
+        "event_id": "list-event-1",
+        "event_time_ms": 100,
+        "transaction_time_ms": 100,
+        "symbol": "BTCUSDT",
+        "order_list_id": 42,
+        "contingency_type": "OCO",
+        "list_status": "EXECUTING",
+        "list_order_status": "EXECUTING",
+        "list_client_order_id": "list-42",
+        "orders": (
+            UserDataOrderListLeg("BTCUSDT", 101, "working-101"),
+            UserDataOrderListLeg("BTCUSDT", 102, "pending-102"),
+        ),
+    }
+    values.update(overrides)
+    return UserDataOrderListEvent(**values)
 
 
 class FakeRest:
@@ -170,6 +196,154 @@ class ReconciliationTests(unittest.TestCase):
         self.assertEqual(coordinator.accept_event(duplicate), EventDecision.DUPLICATE)
         self.assertEqual(coordinator.accept_event(older), EventDecision.OUT_OF_ORDER)
         self.assertEqual(coordinator.state, ConnectionState.GAP)
+
+    def test_list_status_duplicate_and_transaction_order_are_quarantined_without_source_sequence(self):
+        coordinator = ReconciliationCoordinator()
+        coordinator.public_snapshot_ready()
+        first = order_list_event()
+        duplicate = order_list_event()
+        older = order_list_event(
+            event_id="list-event-2",
+            event_time_ms=101,
+            transaction_time_ms=99,
+        )
+
+        self.assertEqual(coordinator.accept_order_list_event(first), EventDecision.ACCEPTED)
+        self.assertEqual(coordinator.accept_order_list_event(duplicate), EventDecision.DUPLICATE)
+        self.assertEqual(coordinator.accept_order_list_event(older), EventDecision.OUT_OF_ORDER)
+        self.assertEqual(coordinator.state, ConnectionState.GAP)
+
+    def test_list_status_reconnect_requires_explicit_reconciliation_before_acceptance(self):
+        coordinator = ReconciliationCoordinator()
+        coordinator.public_snapshot_ready()
+        coordinator.accept_order_list_event(order_list_event())
+        coordinator.on_disconnect()
+        coordinator.reconnect()
+
+        self.assertEqual(
+            coordinator.accept_order_list_event(
+                order_list_event(event_id="list-event-2", event_time_ms=101, transaction_time_ms=101)
+            ),
+            EventDecision.QUARANTINED,
+        )
+
+    def test_public_snapshot_does_not_bypass_list_status_reconciliation(self):
+        coordinator = ReconciliationCoordinator()
+        hydrated = order_list_event()
+        forward = order_list_event(event_id="list-event-2", event_time_ms=101, transaction_time_ms=101)
+
+        self.assertEqual(
+            coordinator.hydrate_order_list_continuity((hydrated,)),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        self.assertEqual(
+            coordinator.public_snapshot_ready(),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        self.assertEqual(coordinator.accept_order_list_event(forward), EventDecision.QUARANTINED)
+
+        coordinator = ReconciliationCoordinator()
+        coordinator.public_snapshot_ready()
+        self.assertEqual(coordinator.accept_order_list_event(hydrated), EventDecision.ACCEPTED)
+        self.assertEqual(coordinator.reconnect(), ConnectionState.RECONCILIATION_REQUIRED)
+        self.assertEqual(
+            coordinator.public_snapshot_ready(),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        self.assertEqual(coordinator.accept_order_list_event(forward), EventDecision.QUARANTINED)
+
+    def test_list_status_anchor_stays_quarantined_until_fresh_snapshot_after_public_callback(self):
+        coordinator = ReconciliationCoordinator()
+        coordinator.public_snapshot_ready()
+        self.assertEqual(coordinator.accept_order_list_event(order_list_event()), EventDecision.ACCEPTED)
+        coordinator.on_disconnect()
+        self.assertEqual(coordinator.reconnect(), ConnectionState.RECONCILIATION_REQUIRED)
+        self.assertEqual(
+            coordinator.public_snapshot_ready(),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+
+        anchor = UserDataOrderListResyncAnchor(
+            anchor_id="resync-public-1",
+            observed_at_ms=120,
+            event=order_list_event(
+                event_id="list-anchor-public-1",
+                event_time_ms=120,
+                transaction_time_ms=120,
+            ),
+        )
+        self.assertEqual(
+            coordinator.apply_order_list_resync_anchor(anchor),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        self.assertEqual(
+            coordinator.public_snapshot_ready(),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        with self.assertRaisesRegex(ReconciliationError, "SNAPSHOT_STALE"):
+            coordinator.apply_authoritative_snapshot(self._snapshot("snapshot-stale-public", 119, None))
+        self.assertEqual(
+            coordinator.public_snapshot_ready(),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        forward = order_list_event(
+            event_id="list-event-public-2",
+            event_time_ms=121,
+            transaction_time_ms=121,
+        )
+        self.assertEqual(coordinator.accept_order_list_event(forward), EventDecision.QUARANTINED)
+        self.assertEqual(
+            coordinator.apply_authoritative_snapshot(self._snapshot("snapshot-fresh-public", 120, None)),
+            ConnectionState.SYNCED,
+        )
+        self.assertEqual(coordinator.accept_order_list_event(forward), EventDecision.ACCEPTED)
+
+    def test_list_status_resync_anchor_stays_quarantined_until_authoritative_snapshot(self):
+        coordinator = ReconciliationCoordinator()
+        coordinator.public_snapshot_ready()
+        coordinator.accept_order_list_event(order_list_event())
+        self.assertEqual(
+            coordinator.accept_order_list_event(
+                order_list_event(event_id="list-event-2", event_time_ms=99, transaction_time_ms=99)
+            ),
+            EventDecision.OUT_OF_ORDER,
+        )
+        anchor = UserDataOrderListResyncAnchor(
+            anchor_id="resync-1",
+            observed_at_ms=120,
+            event=order_list_event(event_id="list-anchor-1", event_time_ms=120, transaction_time_ms=120),
+        )
+
+        self.assertEqual(
+            coordinator.apply_order_list_resync_anchor(anchor),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        self.assertEqual(
+            coordinator.accept_order_list_event(
+                order_list_event(event_id="list-event-3", event_time_ms=121, transaction_time_ms=121)
+            ),
+            EventDecision.QUARANTINED,
+        )
+        self.assertEqual(
+            coordinator.apply_authoritative_snapshot(self._snapshot("snapshot-1", 120, None)),
+            ConnectionState.SYNCED,
+        )
+        self.assertEqual(
+            coordinator.accept_order_list_event(
+                order_list_event(event_id="list-event-4", event_time_ms=121, transaction_time_ms=121)
+            ),
+            EventDecision.ACCEPTED,
+        )
+
+    def test_list_status_reconnect_snapshot_requires_anchor_before_sync(self):
+        coordinator = ReconciliationCoordinator()
+        coordinator.public_snapshot_ready()
+        coordinator.accept_order_list_event(order_list_event())
+        coordinator.on_disconnect()
+        coordinator.reconnect()
+
+        with self.assertRaisesRegex(ReconciliationError, "ORDER_LIST_RESYNC_ANCHOR_REQUIRED"):
+            coordinator.apply_authoritative_snapshot(self._snapshot("snapshot-1", 100, None))
 
     def test_same_event_id_with_different_payload_is_quarantined(self):
         coordinator = ReconciliationCoordinator()
@@ -417,6 +591,23 @@ class ReconciliationTests(unittest.TestCase):
         with self.assertRaisesRegex(ReconciliationError, "SYNC_STATE_INVALID"):
             coordinator.mark_synced(authoritative_snapshot=True)
 
+    def test_hydration_keeps_failed_state_over_less_severe_observations(self):
+        coordinator = ReconciliationCoordinator()
+        first = UserDataEvent.create("event-1", 100, "executionReport", 777)
+        failed = UserDataEvent.create("event-2", 101, "executionReport", 777)
+        later = UserDataEvent.create("event-3", 102, "executionReport", 777)
+
+        self._hydrate(
+            coordinator,
+            (
+                (first, EventDecision.ACCEPTED, ConnectionState.SYNCED),
+                (failed, EventDecision.ACCEPTED, ConnectionState.FAILED),
+                (later, EventDecision.ACCEPTED, ConnectionState.GAP),
+            ),
+        )
+
+        self.assertEqual(coordinator.state, ConnectionState.FAILED)
+
     def test_hydration_rejects_conflicting_accepted_cursor_without_partial_restore(self):
         coordinator = ReconciliationCoordinator()
         first = UserDataEvent.create("event-1", 100, "executionReport", 777)
@@ -437,6 +628,226 @@ class ReconciliationTests(unittest.TestCase):
                 )
             )
         self.assertEqual(coordinator.state, ConnectionState.DISCONNECTED)
+
+    def test_order_list_hydration_rejects_mixed_replay_without_partial_restore(self):
+        coordinator = ReconciliationCoordinator()
+        first = order_list_event()
+
+        with self.assertRaisesRegex(ReconciliationError, "ORDER_LIST_HYDRATION_EVENT_INVALID"):
+            coordinator.hydrate_order_list_continuity((first, object()))
+
+        self.assertEqual(coordinator.state, ConnectionState.DISCONNECTED)
+        coordinator.public_snapshot_ready()
+        self.assertEqual(coordinator.accept_order_list_event(first), EventDecision.ACCEPTED)
+
+    def test_order_list_hydration_rejects_older_cursor_without_partial_restore(self):
+        coordinator = ReconciliationCoordinator()
+        first = order_list_event()
+        older = order_list_event(
+            event_id="list-event-2",
+            event_time_ms=99,
+            transaction_time_ms=99,
+        )
+
+        with self.assertRaisesRegex(ReconciliationError, "ORDER_LIST_HYDRATION_ORDER"):
+            coordinator.hydrate_order_list_continuity((first, older))
+
+        self.assertEqual(coordinator.state, ConnectionState.DISCONNECTED)
+        coordinator.public_snapshot_ready()
+        self.assertEqual(coordinator.accept_order_list_event(first), EventDecision.ACCEPTED)
+
+    def test_empty_order_list_hydration_requires_snapshot_but_not_resync_anchor(self):
+        coordinator = ReconciliationCoordinator()
+
+        self.assertEqual(
+            coordinator.hydrate_order_list_continuity(()),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        self.assertEqual(
+            coordinator.apply_authoritative_snapshot(self._snapshot("empty-list", 0, None)),
+            ConnectionState.SYNCED,
+        )
+
+    def test_duplicate_order_list_hydration_is_rejected_without_partial_restore(self):
+        coordinator = ReconciliationCoordinator()
+        first = order_list_event()
+
+        with self.assertRaisesRegex(ReconciliationError, "ORDER_LIST_HYDRATION_CONFLICT"):
+            coordinator.hydrate_order_list_continuity((first, first))
+
+        self.assertEqual(coordinator.state, ConnectionState.DISCONNECTED)
+
+    def test_order_list_hydration_limit_is_bounded_without_partial_restore(self):
+        coordinator = ReconciliationCoordinator()
+        observations = tuple(
+            replace(
+                order_list_event(),
+                event_id=f"list-event-{index}",
+                event_time_ms=index,
+                transaction_time_ms=index,
+            )
+            for index in range(1_001)
+        )
+
+        with self.assertRaisesRegex(ReconciliationError, "ORDER_LIST_HYDRATION_LIMIT"):
+            coordinator.hydrate_order_list_continuity(observations)
+
+        self.assertEqual(coordinator.state, ConnectionState.DISCONNECTED)
+
+    def test_hydrated_order_list_cursor_requires_anchor_then_fresh_snapshot(self):
+        coordinator = ReconciliationCoordinator()
+        hydrated = order_list_event()
+
+        self.assertEqual(
+            coordinator.hydrate_order_list_continuity((hydrated,)),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        with self.assertRaisesRegex(ReconciliationError, "ORDER_LIST_RESYNC_ANCHOR_REQUIRED"):
+            coordinator.apply_authoritative_snapshot(self._snapshot("before-anchor", 100, None))
+
+        anchor = UserDataOrderListResyncAnchor("hydrated-anchor", 110, hydrated)
+        self.assertEqual(
+            coordinator.apply_order_list_resync_anchor(anchor),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        with self.assertRaisesRegex(ReconciliationError, "SNAPSHOT_STALE"):
+            coordinator.apply_authoritative_snapshot(self._snapshot("stale", 99, None))
+        self.assertEqual(
+            coordinator.apply_authoritative_snapshot(self._snapshot("fresh", 110, None)),
+            ConnectionState.SYNCED,
+        )
+        self.assertEqual(
+            coordinator.accept_order_list_event(
+                order_list_event(event_id="list-event-2", event_time_ms=111, transaction_time_ms=111)
+            ),
+            EventDecision.ACCEPTED,
+        )
+
+    def test_restart_terminal_cursor_requires_snapshot_after_event_time(self):
+        terminal = order_list_event(
+            event_id="terminal-freshness",
+            event_time_ms=124,
+            transaction_time_ms=121,
+            list_status="ALL_DONE",
+            list_order_status="ALL_DONE",
+        )
+        with self.assertRaisesRegex(OrderListError, "USER_STREAM_ORDER_LIST_ANCHOR_STALE"):
+            UserDataOrderListResyncAnchor("stale-terminal-anchor", 123, terminal)
+
+        coordinator = ReconciliationCoordinator()
+        self.assertEqual(
+            coordinator.hydrate_order_list_continuity((terminal,)),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        self.assertEqual(
+            coordinator.apply_order_list_resync_anchor(
+                UserDataOrderListResyncAnchor("fresh-terminal-anchor", 124, terminal)
+            ),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        with self.assertRaisesRegex(ReconciliationError, "SNAPSHOT_STALE"):
+            coordinator.apply_authoritative_snapshot(self._snapshot("stale-terminal-snapshot", 123, None))
+        self.assertEqual(
+            coordinator.apply_authoritative_snapshot(self._snapshot("fresh-terminal-snapshot", 124, None)),
+            ConnectionState.SYNCED,
+        )
+
+    def test_duplicate_and_older_resync_anchor_cannot_open_snapshot_gate(self):
+        coordinator = ReconciliationCoordinator()
+        hydrated = order_list_event()
+        newer = order_list_event(
+            event_id="list-anchor-110",
+            event_time_ms=110,
+            transaction_time_ms=110,
+        )
+        anchor = UserDataOrderListResyncAnchor("anchor-110", 110, newer)
+
+        self.assertEqual(
+            coordinator.hydrate_order_list_continuity((hydrated,)),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        self.assertEqual(
+            coordinator.apply_order_list_resync_anchor(anchor),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        self.assertEqual(
+            coordinator.apply_order_list_resync_anchor(anchor),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        older = UserDataOrderListResyncAnchor(
+            "anchor-109",
+            109,
+            order_list_event(
+                event_id="list-anchor-109",
+                event_time_ms=109,
+                transaction_time_ms=109,
+            ),
+        )
+        with self.assertRaisesRegex(ReconciliationError, "RESYNC_ANCHOR_STALE"):
+            coordinator.apply_order_list_resync_anchor(older)
+        self.assertEqual(coordinator.public_snapshot_ready(), ConnectionState.RECONCILIATION_REQUIRED)
+        with self.assertRaisesRegex(ReconciliationError, "SNAPSHOT_STALE"):
+            coordinator.apply_authoritative_snapshot(self._snapshot("snapshot-109", 109, None))
+        self.assertEqual(
+            coordinator.apply_authoritative_snapshot(self._snapshot("snapshot-110", 110, None)),
+            ConnectionState.SYNCED,
+        )
+        self.assertEqual(
+            coordinator.accept_order_list_event(
+                order_list_event(event_id="list-event-111", event_time_ms=111, transaction_time_ms=111)
+            ),
+            EventDecision.ACCEPTED,
+        )
+
+    def test_resync_anchor_fingerprint_conflict_requires_new_anchor_and_snapshot(self):
+        coordinator = ReconciliationCoordinator()
+        coordinator.public_snapshot_ready()
+        self.assertEqual(coordinator.accept_order_list_event(order_list_event()), EventDecision.ACCEPTED)
+        coordinator.on_disconnect()
+        coordinator.reconnect()
+        anchor_event = order_list_event(
+            event_id="list-anchor-fingerprint",
+            event_time_ms=110,
+            transaction_time_ms=110,
+        )
+        anchor = UserDataOrderListResyncAnchor("fingerprint-anchor", 110, anchor_event)
+        conflict = order_list_event(
+            event_id="list-anchor-fingerprint",
+            event_time_ms=111,
+            transaction_time_ms=111,
+        )
+
+        self.assertEqual(
+            coordinator.apply_order_list_resync_anchor(anchor),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        self.assertEqual(coordinator.accept_order_list_event(conflict), EventDecision.QUARANTINED)
+        self.assertEqual(
+            coordinator.apply_authoritative_snapshot(self._snapshot("fingerprint-snapshot", 110, None)),
+            ConnectionState.SYNCED,
+        )
+        self.assertEqual(coordinator.accept_order_list_event(conflict), EventDecision.CONFLICT)
+        with self.assertRaisesRegex(ReconciliationError, "SYNC_STATE_INVALID"):
+            coordinator.apply_authoritative_snapshot(self._snapshot("conflict-snapshot", 111, None))
+
+        self.assertEqual(
+            coordinator.apply_order_list_resync_anchor(
+                UserDataOrderListResyncAnchor("fingerprint-recovery", 111, conflict)
+            ),
+            ConnectionState.RECONCILIATION_REQUIRED,
+        )
+        self.assertEqual(
+            coordinator.apply_authoritative_snapshot(self._snapshot("fingerprint-recovery-snapshot", 111, None)),
+            ConnectionState.SYNCED,
+        )
+        self.assertEqual(coordinator.accept_order_list_event(order_list_event()), EventDecision.OUT_OF_ORDER)
+        self.assertEqual(coordinator.state, ConnectionState.GAP)
+        self.assertEqual(
+            coordinator.accept_order_list_event(
+                order_list_event(event_id="list-event-fingerprint-forward", event_time_ms=112, transaction_time_ms=112)
+            ),
+            EventDecision.QUARANTINED,
+        )
 
 
 if __name__ == "__main__":

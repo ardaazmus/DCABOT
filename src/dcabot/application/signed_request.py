@@ -1,10 +1,4 @@
-"""Offline signed-request primitives with explicit timing boundaries.
-
-This module deliberately stops before HTTP transport, API-key headers, and
-secret persistence.  It provides deterministic request serialization and an
-in-memory HMAC implementation for tests; asymmetric signer implementations
-can be added behind the same protocol after their key lifecycle is approved.
-"""
+"""Signed-request primitives with explicit timing and secret boundaries."""
 
 from dataclasses import dataclass
 from enum import StrEnum
@@ -91,7 +85,7 @@ class SignedRequest:
 
     @property
     def query_string(self) -> str:
-        """Return the payload plus its encoded signature for a future adapter."""
+        """Return the payload plus its encoded signature for a read-only adapter."""
 
         return f"{self.payload}&signature={quote(self.signature, safe='-_.~')}"
 
@@ -133,6 +127,74 @@ def build_signed_request(
         timestamp_ms=timestamp_ms,
         recv_window_ms=recv_window_ms,
     )
+
+
+def build_signed_user_stream_params(
+    api_key: str,
+    *,
+    clock: Clock,
+    recv_window_ms: int = DEFAULT_RECV_WINDOW_MS,
+    signer: RequestSigner,
+) -> dict[str, str | int]:
+    """Build sorted HMAC parameters for a read-only USER_STREAM subscription."""
+
+    return build_signed_ws_api_params(
+        api_key,
+        (),
+        clock=clock,
+        recv_window_ms=recv_window_ms,
+        signer=signer,
+    )
+
+
+def build_signed_ws_api_params(
+    api_key: str,
+    params: Sequence[tuple[str, str | int]],
+    *,
+    clock: Clock,
+    recv_window_ms: int = DEFAULT_RECV_WINDOW_MS,
+    signer: RequestSigner,
+) -> dict[str, str | int]:
+    """Build sorted HMAC parameters for a signed read-only WebSocket API call."""
+
+    if not isinstance(api_key, str) or not 1 <= len(api_key) <= 256 or any(
+        ord(char) < 0x20 or ord(char) == 0x7F for char in api_key
+    ):
+        raise SignedRequestError("SIGNED_API_KEY_INVALID", "API key bounded metin olmalıdır.")
+    timestamp_ms = _clock_timestamp_ms(clock)
+    recv_window_ms = validate_recv_window_ms(recv_window_ms)
+    _validated_key_type(signer)
+    supplied = tuple(params)
+    if len(supplied) + 3 > MAX_PARAMETER_COUNT:
+        raise SignedRequestError("SIGNED_PARAM_TOO_MANY", "Parametre sayısı sınırı aşıyor.")
+    all_params: list[tuple[str, str | int]] = [
+        ("apiKey", api_key),
+        *supplied,
+        ("recvWindow", recv_window_ms),
+        ("timestamp", timestamp_ms),
+    ]
+    encoded: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for name, value in all_params:
+        if (
+            not isinstance(name, str)
+            or not isinstance(value, (str, int))
+            or type(value) is bool
+            or (type(value) is int and value < 0)
+            or name in seen
+        ):
+            raise SignedRequestError("SIGNED_PARAM_UNSAFE", "WebSocket parametresi geçersiz.")
+        seen.add(name)
+        encoded.append((name, _encode_pair(name, str(value))))
+    payload = "&".join(item for _, item in sorted(encoded))
+    signature = signer.sign(payload.encode("ascii"))
+    if not isinstance(signature, str) or not signature or any(
+        ord(char) < 0x20 or ord(char) == 0x7F for char in signature
+    ):
+        raise SignedRequestError("SIGNED_SIGNATURE_INVALID", "İmza bounded metin olmalıdır.")
+    result: dict[str, str | int] = dict(all_params)
+    result["signature"] = signature
+    return result
 
 
 def validate_recv_window_ms(value: int) -> int:

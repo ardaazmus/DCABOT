@@ -5,7 +5,7 @@
 - Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`
 - Kod: `src/dcabot/application/rebalance_projection.py`
 - Test: `tests/test_rebalance_projection.py`
-- Bağımsız review: `NOT_RUN`
+- Bağımsız review: `PASS` (Erdos salt-okunur Codex incelemesi)
 - Production readiness: `NO`
 - Sonraki tek iş: `P1.14.b` signal identity/dedupe ve event-time karar kapısı
 
@@ -32,6 +32,20 @@ Fiyatla asset-to-valuation dönüşümü, residual cash, eşik/zaman tetikleyici
 - En küçük uygulama sonrası kanonik `uv run --frozen python tools/run_checks.py`: `265/265 PASS`.
 - Bağımsız Decimal oracle: exact BTC/ETH target ve delta değerleri ile allocation input sırası değişmezliği `PASS`.
 - `uv run --frozen python tools/check_workspace.py`: `PASS`; `110` aktif Python dosyası; backup discovery kapsam dışı.
+
+## 2026-09-18 mevcut checkout doğrulaması
+
+- P1.14.a odak testi mevcut checkout üzerinde `6/6 PASS` verdi.
+- Ayrı Decimal oracle, BTC/ETH hedef ve delta değerleri ile allocation sırası
+  değişmezliğini yeniden `PASS` verdi.
+- Erdos salt-okunur Codex incelemesi exact formül, fail-closed sınırlar ve
+  order/economic/persistence/venue authority yokluğunu `PASS` olarak doğruladı;
+  kritik `BLOCKED` bulgu yok.
+- `python -m compileall -q src` ve `git diff --check` `PASS`.
+- Kapsamlı `tools/run_checks.py` bu oturumda başlatılamadı: proje Python
+  `3.13` isterken kullanılabilir bundled runtime `3.12.14`. Bu, odak testini
+  geçersiz kılmaz; güncel tam-suite sonucu iddia edilmiyor. Önceki `265/265`
+  sonucu tarihsel kanıt olarak korunmuştur.
 
 ## Kanıt sınırı
 

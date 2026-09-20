@@ -121,6 +121,23 @@ class SpotLifecycleCoreBindingTests(unittest.TestCase):
         self.assertEqual(result.core_state, State())
         self.assertEqual(result.lifecycle, lifecycle)
 
+    def test_base_quantity_market_event_is_not_mapped_to_limit_core(self):
+        order = create_market_order(
+            self.profile, order_id="order-1", client_order_id="client-1",
+            symbol="BTCUSDT", side=SpotSide.BUY, quantity="1",
+        )
+        lifecycle = new_lifecycle(order)
+        result = bind_spot_event_to_core(
+            State(), self.config, lifecycle,
+            self._event(lifecycle, status="PARTIALLY_FILLED", last="0.5", cumulative="0.5"),
+            fee="0.05", fee_asset="USDT",
+        )
+
+        self.assertEqual(result.outcome, CoreBindingOutcome.CORE_ORDER_TYPE_UNSUPPORTED)
+        self.assertEqual(result.core_events, ())
+        self.assertEqual(result.core_state, State())
+        self.assertEqual(result.lifecycle, lifecycle)
+
     def test_filled_event_posts_final_coverage(self):
         lifecycle = self._limit_lifecycle()
         result = bind_spot_event_to_core(

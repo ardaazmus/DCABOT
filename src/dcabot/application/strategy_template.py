@@ -65,6 +65,11 @@ class StrategyTemplate:
                 "TEMPLATE_HASH_MISMATCH", "Payload hash snapshot ile eşleşmiyor."
             )
         _validate_capabilities(self.declared_capabilities)
+        if len(set(self.declared_capabilities)) != len(self.declared_capabilities):
+            raise StrategyTemplateError(
+                "TEMPLATE_CAPABILITY_DUPLICATE",
+                "Declared capability tekrar edemez.",
+            )
         if tuple(sorted(self.declared_capabilities)) != self.declared_capabilities:
             raise StrategyTemplateError(
                 "TEMPLATE_CAPABILITIES_NOT_CANONICAL",

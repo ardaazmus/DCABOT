@@ -6,7 +6,7 @@
 - Kod değişikliği: yok
 - Bağımsız review: `NOT_RUN`
 - Production readiness: `NO`
-- Sonraki tek iş: `P1.14.a` rebalancing/signal/template çekirdek sınırı ve karar kapısı
+- Sonraki tek iş: `P1.13.f` Futures Grid v1 için ayrı profile ve exact projection karar kapısı
 
 Bu mikro-fazda spot-grid trailing-up/down davranışı ile reverse/infinity grid ailelerinin üretim ekonomik davranışı açılmadı. Araştırma, bu ailelerin aynı spot-grid seviye üreticisine veya mevcut exit-trailing ratchet’ına isim değiştirerek bağlanmasına izin vermiyor.
 
@@ -34,9 +34,14 @@ Reverse/infinity için boundary, inventory conservation, replacement ve kapanı�
 ## Kontroller
 
 - İlk odak test denemesi import yolu ayarlanmadığı için `ModuleNotFoundError` verdi; bu bir ürün davranışı sonucu değildir.
-- Kanonik düzeltme sonrası `uv run --frozen python tools/run_checks.py`: `259/259 PASS`.
-- `uv run --frozen python tools/check_workspace.py`: `PASS`; `110` aktif Python dosyası; backup discovery kapsam dışı.
-- Bu mikro-fazda production grid code, API, UI, order/reserve veya persistence değişikliği yapılmadı.
+- Son doğrulanmış checkout baseline'ında kanonik `tools/run_checks.py` sonucu:
+  `712` test, `710 PASS`, Windows Credential Manager `Windows error 1312`
+  nedeniyle `2` environment error. Bu iki hata faz dışı credential provider
+  ortamına aittir; grid kararını etkilemez.
+- `tools/check_workspace.py`: `PASS`; backup discovery kapsam dışı.
+- `python -m compileall -q src` ve `git diff --check`: `PASS`.
+- Bu mikro-fazda production grid code, API, UI, order/reserve veya persistence
+  değişikliği yapılmadı.
 
 ## Açma koşulları
 

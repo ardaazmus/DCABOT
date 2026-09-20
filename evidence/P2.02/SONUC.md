@@ -179,6 +179,73 @@ clock synchronization, REST/WS reconciliation, order lifecycle, restart
 recovery’nin genişletilmiş matrisi ve açık kullanıcı yetkili Testnet mutation
 hâlâ beklemektedir. Trading activation ve mainnet `NO-GO` kalır.
 
+## P2.02.c — Windows Credential Manager HMAC sağlayıcı sınırı
+
+```text
+P2.02.c_IMPLEMENTATION = IMPLEMENTED_WITH_LIMITATION
+P2.02.c_VERIFICATION = LOCAL_PASS
+SIGNED_ACCOUNT_HTTP = NO-GO
+REAL_TESTNET_MUTATION = NO-GO
+```
+
+Windows’un yerleşik `Advapi32` Credential Manager API’si üzerinden yalnız
+geçerli kullanıcı kapsamındaki generic credential okunup yazılabilir. Target
+adı `DCABOT:BINANCE_SPOT_TESTNET:<credential_id>` ile bounded’dır; API key
+Windows credential kullanıcı alanında, HMAC secret credential blob’ında tutulur.
+Secret hiçbir response, log, durable run/attempt kaydı veya repr içine girmez.
+CLI yardımcı programı değerleri echo etmeden `getpass` ile alır ve yalnız
+redacted kayıt sonucu yazdırır.
+
+Bu dilimde yalnız HMAC key family desteklenir; Ed25519/RSA, signed account
+response parser’ı, API/UI bağlantısı, gerçek HTTP/WS ve Testnet mutation hâlâ
+uygulanmamıştır. Kullanıcının oluşturduğu gerçek anahtar bu test sırasında
+okunmamış ve kullanılmamıştır; odak testi yalnız dummy material ile çalışmıştır.
+
+| Kontrol | Sonuç |
+|---|---|
+| Windows provider dummy round-trip + redaction | PASS |
+| Desteklenmeyen Ed25519 provider family’si | FAIL-CLOSED/PASS |
+| P2.02 credential boundary odak testleri | `8/8 PASS` |
+| Gerçek Binance API key/secret | Kullanılmadı |
+| Signed account HTTP / Testnet mutation | Çalıştırılmadı |
+
+Kullanıcı kurulumu: `uv run --frozen python tools/configure_testnet_credential.py testnet-readonly` komutu yerelde çalıştırılır; API key ve secret terminalde echo edilmeden girilir. Bu komut çalıştırılmadan provider’da gerçek credential bulunması beklenmez.
+
+## P2.02.d — İmzalı Testnet hesap okuması
+
+```text
+P2.02.d_IMPLEMENTATION = IMPLEMENTED_WITH_LIMITATION
+P2.02.d_VERIFICATION = LIVE_READ_ONLY_PASS
+REAL_TESTNET_MUTATION = NO-GO
+TRADING_ACTIVATION = NO-GO
+```
+
+Windows Credential Manager’daki `testnet-readonly` kaydı, yalnız sabit
+`GET https://testnet.binance.vision/api/v3/account` endpoint’ine bağlanan HMAC
+adapter’ında kullanıldı. İmzalı query yalnız `timestamp`, `recvWindow` ve
+`signature` taşıdı; API key yalnız `X-MBX-APIKEY` header’ında gönderildi.
+Adapter, bakiye değerlerini tutmadan yalnız hesap türü, izinler, yetki
+boole’ları, bakiye sayısı, response hash’i ve `SIGNED_ACCOUNT_CONTEXT`
+capability’si döndürür. Sonuç ephemeral’dır; order, persistence, reconciliation
+ve ekonomik posting bağlantısı yoktur.
+
+| Kontrol | Sonuç |
+|---|---|
+| Fake transport, bağımsız HMAC oracle ve secret redaction | `3/3 PASS` |
+| Gerçek Testnet signed account GET | `PASS` |
+| Account type / permission | `SPOT` / `SPOT` |
+| Account flags | `can_trade=True`, `can_withdraw=True`, `can_deposit=True` |
+| Dönen bakiye değerleri | Tutulmadı; yalnız `balances_count=502` |
+| Capability | `SIGNED_ACCOUNT_CONTEXT`, imza doğrulama durumu `True` |
+| Gerçek Testnet order/mutation | Çalıştırılmadı |
+| WebSocket, reconciliation, mainnet | Çalıştırılmadı |
+
+Gerçek çağrı, kullanıcının makinesindeki Credential Manager kaydından yapıldı;
+API key ve secret sohbete, loga, Git’e veya kanıt dosyasına yazılmadı. Response
+hash’i güvenli kanıt kimliğidir; hesap bakiyesi veya finansal posting kanıtı
+değildir. Bu alt faz signed account read-only kabulüdür; full P2.02 ve trading
+activation kapanmamıştır.
+
 ### P2.02.b kapanış kalite kapısı
 
 `P2.02.b` için tam yerel kontrol `387/387 PASS`, Python 3.13

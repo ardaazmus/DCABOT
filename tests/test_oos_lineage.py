@@ -1,7 +1,9 @@
 import unittest
 
 from dcabot.application.oos_lineage import (
+    EvaluationLineage,
     OosStatus,
+    OosTuningDecision,
     inspect_oos,
     new_evaluation_lineage,
     request_tuning,
@@ -40,6 +42,35 @@ class OosLineageTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "OOS_LINEAGE_TRANSITION_INVALID"):
             inspect_oos(touched)
+
+    def test_public_models_reject_string_subclass_equality_bypasses(self):
+        class StringEqualsTo(str):
+            def __eq__(self, other):
+                return True
+
+        with self.assertRaisesRegex(ValueError, "OOS_EXPERIMENT_ID_INVALID"):
+            EvaluationLineage(StringEqualsTo("experiment-1"))
+        with self.assertRaisesRegex(ValueError, "OOS_STATUS_INVALID"):
+            EvaluationLineage("experiment-1", StringEqualsTo(OosStatus.OOS_UNTOUCHED))
+        with self.assertRaisesRegex(ValueError, "OOS_OUTCOME_INVALID"):
+            OosTuningDecision(
+                lineage=new_evaluation_lineage("experiment-1"),
+                outcome=StringEqualsTo("TUNING_ALLOWED"),
+            )
+
+        class MalformedLineage(EvaluationLineage):
+            def __post_init__(self):
+                pass
+
+        malformed = MalformedLineage(
+            "experiment-1", StringEqualsTo(OosStatus.OOS_UNTOUCHED)
+        )
+        with self.assertRaisesRegex(ValueError, "OOS_LINEAGE_INVALID"):
+            inspect_oos(malformed)
+        with self.assertRaisesRegex(ValueError, "OOS_LINEAGE_INVALID"):
+            request_tuning(malformed)
+        with self.assertRaisesRegex(ValueError, "OOS_LINEAGE_INVALID"):
+            OosTuningDecision(lineage=malformed, outcome="TUNING_ALLOWED")
 
 
 if __name__ == "__main__":

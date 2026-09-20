@@ -16,6 +16,7 @@ class Order:
     side: str
     qty: Q
     limit: Q
+    intent_id: str | None = None
     filled: Q = Q(0)
     notional: Q = Q(0)
     status: str = "OPEN"
@@ -92,8 +93,14 @@ def apply(state: State, event: dict, c: Config) -> State:
         _fields(event, {"price"})
         s.mark = positive(event["price"])
     elif kind == "INTENT":
-        _fields(event, {"order_id", "role", "qty", "limit_price"})
+        fields = {"order_id", "role", "qty", "limit_price"}
+        event_fields = set(event)
+        if event_fields != fields | {"type"} and event_fields != fields | {"type", "intent_id"}:
+            raise ValueError("Unexpected or missing event field")
         oid = identifier(event["order_id"])
+        intent_id = event.get("intent_id")
+        if intent_id is not None:
+            intent_id = identifier(intent_id)
         role = event["role"]
         qty = positive(event["qty"])
         price = positive(event["limit_price"])
@@ -145,7 +152,7 @@ def apply(state: State, event: dict, c: Config) -> State:
                 raise ValueError(
                     "Insufficient equity for local initial-margin estimate"
                 )
-        s.orders[oid] = Order(oid, role, side, qty, price)
+        s.orders[oid] = Order(oid, role, side, qty, price, intent_id=intent_id)
     elif kind == "FILL":
         _fields(
             event,

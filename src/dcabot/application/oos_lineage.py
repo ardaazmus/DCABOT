@@ -38,11 +38,11 @@ class EvaluationLineage:
     status: str = OosStatus.OOS_UNTOUCHED
 
     def __post_init__(self) -> None:
-        if not isinstance(self.experiment_id, str) or _IDENTIFIER.fullmatch(self.experiment_id) is None:
+        if type(self.experiment_id) is not str or _IDENTIFIER.fullmatch(self.experiment_id) is None:
             raise OosLineageError(
                 "OOS_EXPERIMENT_ID_INVALID", "Experiment identity geçersiz."
             )
-        if self.status not in _STATUSES:
+        if type(self.status) is not str or self.status not in _STATUSES:
             raise OosLineageError("OOS_STATUS_INVALID", "OOS status geçersiz.")
 
 
@@ -54,9 +54,12 @@ class OosTuningDecision:
     outcome: str
 
     def __post_init__(self) -> None:
-        if not isinstance(self.lineage, EvaluationLineage):
+        if type(self.lineage) is not EvaluationLineage:
             raise OosLineageError("OOS_LINEAGE_INVALID", "Evaluation lineage geçersiz.")
-        if self.outcome not in ("TUNING_ALLOWED", "NEW_EXPERIMENT_REQUIRED"):
+        if type(self.outcome) is not str or self.outcome not in (
+            "TUNING_ALLOWED",
+            "NEW_EXPERIMENT_REQUIRED",
+        ):
             raise OosLineageError("OOS_OUTCOME_INVALID", "OOS tuning kararı geçersiz.")
 
 
@@ -95,5 +98,5 @@ def request_tuning(lineage: EvaluationLineage) -> OosTuningDecision:
 
 
 def _validate_lineage(lineage: EvaluationLineage) -> None:
-    if not isinstance(lineage, EvaluationLineage):
+    if type(lineage) is not EvaluationLineage:
         raise OosLineageError("OOS_LINEAGE_INVALID", "Evaluation lineage geçersiz.")

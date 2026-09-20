@@ -89,6 +89,7 @@ SMALL_JSON_BODY_LIMITS = {
     "/api/dataset-selection": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/historical-runs/simulate": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/historical-runs/simulate-base-limit": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/historical-runs/validate": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/historical-runs": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/dataset-downloads": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/dataset-downloads/{job_id}/cancel": SMALL_JSON_BODY_LIMIT_BYTES,
@@ -864,7 +865,11 @@ def _quality_response(report: dict[str, object]):
     content: dict[str, object] = {"data": report}
     if status_code == 422:
         content.update(_error("Veri kalite kontrolü başarısız.", fields={"file": "Veri kalite raporunda hata var."}))
-    response = JSONResponse(status_code=status_code, content=content)
+    response = JSONResponse(
+        status_code=status_code,
+        content=content,
+        headers={"Cache-Control": "no-store"},
+    )
     if len(response.body) > MAX_QUALITY_RESPONSE_BYTES:
         return _problem(
             422,
@@ -872,9 +877,7 @@ def _quality_response(report: dict[str, object]):
             "Veri kalite raporu çok büyük",
             "Veri kalite raporu izin verilen response byte sınırını aşıyor.",
         )
-    if status_code == 422:
-        return response
-    return content
+    return response
 
 
 def _load_config(profile_id: str = "paper") -> dict[str, Any]:
@@ -999,39 +1002,6 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT"],
     allow_headers=["Content-Type", "X-Filename"],
 )
-
-
-MAX_HISTORICAL_VALIDATION_BODY_BYTES = 4 * 1024
-
-
-@app.middleware("http")
-async def limit_historical_validation_body(request: Request, call_next):
-    if request.url.path != "/api/historical-runs/validate":
-        return await call_next(request)
-    content_length = request.headers.get("content-length")
-    if content_length is not None:
-        try:
-            declared_size = int(content_length)
-        except ValueError:
-            return _problem(400, "MALFORMED_REQUEST", "İstek gövdesi geçersiz", "Content-Length geçersiz.")
-        if declared_size < 0:
-            return _problem(400, "MALFORMED_REQUEST", "İstek gövdesi geçersiz", "Content-Length geçersiz.")
-        if declared_size > MAX_HISTORICAL_VALIDATION_BODY_BYTES:
-            return _problem(
-                413,
-                "REQUEST_TOO_LARGE",
-                "İstek gövdesi çok büyük",
-                "Doğrulama isteği byte sınırını aşıyor.",
-            )
-    body = await request.body()
-    if len(body) > MAX_HISTORICAL_VALIDATION_BODY_BYTES:
-        return _problem(
-            413,
-            "REQUEST_TOO_LARGE",
-            "İstek gövdesi çok büyük",
-            "Doğrulama isteği byte sınırını aşıyor.",
-        )
-    return await call_next(request)
 
 
 @app.exception_handler(RequestValidationError)

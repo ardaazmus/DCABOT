@@ -2,7 +2,7 @@
 
 ## Karar
 
-- Durum: `DEFERRED / NO-GO / LOCAL_PASS`
+- Durum: `DEFERRED / NO-GO / RESEARCH_AUDITED / LOCAL_PASS`
 - Kod değişikliği: yok
 - Bağımsız review: `NOT_RUN`
 - Production readiness: `NO`
@@ -20,11 +20,32 @@ Bu nedenle yeni bir warmup sayısı, indikatör, sinyal authority’si veya “w
 - `tests/test_signal_readiness.py` incomplete warmup’ın `WARMING_UP` kaldığını ve `READY` nesnesinde `orders`/`fills` alanı bulunmadığını doğrular.
 - Bu, saf readiness sınırıdır; gerçek feature/indicator lookback, historical runner, fill reducer veya economic result binding kanıtı değildir.
 
+## Araştırma-önce yeniden doğrulama
+
+Resmî/primer teknik kaynaklar genel sözleşmeyi doğruluyor:
+
+- QuantConnect LEAN warm-up veriyi geçmişten geçirerek indicator/algorithm state hazırlıyor ve warm-up sırasında trade yerleştirilmesine izin vermiyor: <https://www.quantconnect.com/docs/v2/writing-algorithms/historical-data/warm-up-periods>.
+- Freqtrade `startup_candle_count` değerini stabil indicator hesapları için gereken en uzun history olarak kullanıyor; başlangıçtaki unstable period backtest kapsamından çıkarılıyor: <https://www.freqtrade.io/en/latest/strategy-customization/>.
+- Freqtrade akışında candles → indicators → signals → orders ayrımı açıkça tanımlanıyor; signal bulunması bile her durumda order oluşacağı anlamına gelmiyor: <https://www.freqtrade.io/en/stable/strategy-101/>.
+
+Bu kaynaklar DCABOT için sabit bir warmup sayısı seçmeye yetmez. Exact sayı; yerel feature lookback’leri, closed-bar üretimi, label future horizon’ı ve varsa settlement/observation horizon’ı üzerinden türetilmelidir. Freqtrade’in recursive/unstable-period uyarısı da yalnız indicator period’ünü kopyalamanın güvenli bir DCABOT policy’si olmadığını gösterir.
+
+Yerel yeniden tarama sonucu:
+
+- `src/dcabot/application/signal_readiness.py` yalnız caller tarafından verilen warmup sayısını sınıflandırıyor.
+- `src/dcabot/application/historical_simulation.py` OHLCV barlarını mevcut reducer’a doğrudan bağlıyor; feature/indicator/label üretmiyor.
+- `src/dcabot/application/historical.py` dataset + offline config planı kuruyor; feature/label/readiness adapterı bağlamıyor.
+- `src/dcabot/application/historical_run_contract.py` snapshot ve identity kanıtı üretiyor; feature/label horizon authority’si taşımıyor.
+
+Bağımsız stdlib oracle şu sınırları PASS verdi: birden fazla lookback için gereken warmup `max(lookback)` olarak türetilir; feature zamanının future label bitişinden önce olması gerekir; readiness false iken action listesi boş kalır. Bu oracle genel matematik sınırını doğrular, DCABOT’ta eksik olan pipeline’ı üretmez.
+
 ## Kontroller
 
-- Mevcut kanıt yeniden doğrulandı: `uv run --frozen python tools/run_checks.py` → `318/318 PASS`.
-- `uv run --frozen python -m compileall -q src tests` → `PASS`.
-- `uv run --frozen python tools/check_workspace.py` → `PASS`; `136` aktif Python dosyası.
+- `tests.test_signal_readiness` → `6/6 PASS`.
+- Bağımsız stdlib warmup/lookahead oracle → `PASS`.
+- Bundled Python `3.12.14` ile `python -m compileall -q src tests` → `PASS`.
+- `tools/run_checks.py` ve `tools/check_workspace.py` → `FAIL: Python 3.13 is required`; `active_python_files: 286`, `backup_layout: EMPTY_OR_NOT_PLACED`, `scope: SCAFFOLD_WORKSPACE_ONLY`.
+- `git diff --check` → `PASS` (yalnız mevcut CRLF dönüşüm uyarıları).
 - Live/testnet, credential, optimizer, economic result ve dış ağ yolu açılmadı.
 
 ## Açık kanıt gereksinimi

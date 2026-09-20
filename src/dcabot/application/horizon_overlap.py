@@ -31,7 +31,7 @@ class TimeInterval:
     end_time_us: int
 
     def __post_init__(self) -> None:
-        if not isinstance(self.interval_id, str) or _IDENTIFIER.fullmatch(self.interval_id) is None:
+        if type(self.interval_id) is not str or _IDENTIFIER.fullmatch(self.interval_id) is None:
             raise HorizonOverlapError(
                 "HORIZON_INTERVAL_ID_INVALID", "Interval identity geçersiz."
             )
@@ -53,11 +53,29 @@ class HorizonAssessment:
     overlapping_interval_ids: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        if self.status not in (HorizonStatus.NO_OVERLAP, HorizonStatus.PURGE_REQUIRED):
+        if type(self.status) is not str or self.status not in (
+            HorizonStatus.NO_OVERLAP,
+            HorizonStatus.PURGE_REQUIRED,
+        ):
             raise HorizonOverlapError("HORIZON_STATUS_INVALID", "Horizon sonucu geçersiz.")
-        if not isinstance(self.overlapping_interval_ids, tuple) or tuple(
-            sorted(self.overlapping_interval_ids)
-        ) != self.overlapping_interval_ids:
+        if (
+            type(self.overlapping_interval_ids) is not tuple
+            or not all(
+                type(interval_id) is str
+                and _IDENTIFIER.fullmatch(interval_id) is not None
+                for interval_id in self.overlapping_interval_ids
+            )
+            or tuple(sorted(self.overlapping_interval_ids)) != self.overlapping_interval_ids
+            or len(set(self.overlapping_interval_ids)) != len(self.overlapping_interval_ids)
+            or (
+                self.status == HorizonStatus.NO_OVERLAP
+                and self.overlapping_interval_ids
+            )
+            or (
+                self.status == HorizonStatus.PURGE_REQUIRED
+                and not self.overlapping_interval_ids
+            )
+        ):
             raise HorizonOverlapError(
                 "HORIZON_RESULT_INVALID", "Overlap identity sıralı tuple olmalıdır."
             )
@@ -90,8 +108,8 @@ def assess_purge_requirement(
 
 
 def _validate_intervals(intervals: tuple[TimeInterval, ...]) -> None:
-    if not isinstance(intervals, tuple) or not all(
-        isinstance(interval, TimeInterval) for interval in intervals
+    if type(intervals) is not tuple or not all(
+        type(interval) is TimeInterval for interval in intervals
     ):
         raise HorizonOverlapError(
             "HORIZON_INTERVAL_INVALID", "Intervals tuple[TimeInterval] olmalıdır."

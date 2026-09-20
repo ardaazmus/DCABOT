@@ -5,7 +5,7 @@
 - Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`
 - Kod: `src/dcabot/application/strategy_template.py`
 - Test: `tests/test_strategy_template.py`
-- Bağımsız review: `NOT_RUN`
+- Bağımsız review: `PASS` (Turing salt-okunur Codex incelemesi, düzeltme sonrası)
 - Production readiness: `NO`
 - Sonraki tek iş: `P1.14.f` template activation/capability gate karar kapısı
 
@@ -28,11 +28,21 @@ Template’in payload hash’ini dış bir webhook body’sinden üretme, imza/a
 ## Kontroller
 
 - Önce test RED: yeni test dosyası eksik `strategy_template` modülü nedeniyle import error verdi.
-- En küçük uygulama sonrası kanonik `uv run --frozen python tools/run_checks.py`: `286/286 PASS`.
-- Bağımsız canonical/hash/non-authority control: mapping/capability sırası değişmezliği ve snapshot hash eşleşmesi `PASS`.
-- Bağımsız kontrolde ilk command quoting hatası düzeltildi; düzeltilmiş kontrol `PASS`.
-- `uv run --frozen python -m compileall -q src tests`: `PASS`.
-- `uv run --frozen python tools/check_workspace.py`: `PASS`; `120` aktif Python dosyası; backup discovery kapsam dışı.
+- Bağımsız review’da public `StrategyTemplate(...)` kurucusunun duplicate
+  capability’yi kabul edebildiği bulundu. Önce eklenen regresyon `6` testte
+  `1` failure verdi; `__post_init__` içine fail-closed duplicate guard eklendi.
+- Güncel odak `python -m unittest tests.test_strategy_template`: `6/6 PASS`.
+- İlgili projection kümesi `python -m unittest tests.test_strategy_template tests.test_rebalance_triggers`: `14/14 PASS`.
+- Bağımsız canonical/hash/non-authority oracle: mapping/capability sırası,
+  snapshot hash, direct-constructor duplicate guard, forbidden alanlar,
+  float/NaN/Infinity reddi ve immutability `PASS`.
+- Turing salt-okunur Codex review düzeltme sonrası: `PASS`; kritik P1/P2
+  bulgu yok.
+- `python -m compileall -q src`: `PASS`; `git diff --check`: `PASS`.
+- `tools/run_checks.py` güncel tam-suite için `FAIL`: proje `Python 3.13`
+  isterken kullanılabilir bundled runtime `3.12.14`; bu nedenle güncel
+  tam-suite sonucu iddia edilmiyor.
+- Önceki tarihsel tam-suite sonucu (`286/286`) bu oturumun doğrulaması olarak kullanılmadı.
 
 ## Kanıt sınırı
 

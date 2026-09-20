@@ -34,7 +34,7 @@ class TrialRecord:
 
     def __post_init__(self) -> None:
         _validate_identifier(self.trial_id, "TRIAL_ID_INVALID")
-        if self.status not in _STATUSES:
+        if type(self.status) is not str or self.status not in _STATUSES:
             raise TrialRegistryError("TRIAL_STATUS_INVALID", "Trial status geçersiz.")
 
 
@@ -58,8 +58,8 @@ class TrialStudy:
             raise TrialRegistryError(
                 "TRIAL_LIMIT_INVALID", "max_trials 1 ile 1000 arasında integer olmalıdır."
             )
-        if not isinstance(self.trials, tuple) or not all(
-            isinstance(trial, TrialRecord) for trial in self.trials
+        if type(self.trials) is not tuple or not all(
+            type(trial) is TrialRecord for trial in self.trials
         ):
             raise TrialRegistryError("TRIAL_HISTORY_INVALID", "Trial history geçersiz.")
         if len(self.trials) > self.max_trials:
@@ -107,9 +107,9 @@ def register_trial(
 ) -> tuple[TrialStudy, str]:
     """Append one attempt or return DUPLICATE; never drops failed attempts."""
 
-    if not isinstance(study, TrialStudy):
+    if type(study) is not TrialStudy:
         raise TrialRegistryError("TRIAL_STUDY_INVALID", "Trial study geçersiz.")
-    if not isinstance(trial, TrialRecord):
+    if type(trial) is not TrialRecord:
         raise TrialRegistryError("TRIAL_INVALID", "Trial kaydı geçersiz.")
     for prior in study.trials:
         if prior.trial_id == trial.trial_id:
@@ -134,5 +134,5 @@ def register_trial(
 
 
 def _validate_identifier(value: object, code: str) -> None:
-    if not isinstance(value, str) or _IDENTIFIER.fullmatch(value) is None:
+    if type(value) is not str or _IDENTIFIER.fullmatch(value) is None:
         raise TrialRegistryError(code, "Kimlik değeri geçersiz.")

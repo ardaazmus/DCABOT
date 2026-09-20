@@ -1,14 +1,1759 @@
 # DCABOT Task History
 
-# Current task status — 2026-09-15
+# Current task status — 2026-09-19
 
-Audit baseline: `7965392`; target branch is public `origin/main`. P2.05 read-only acceptance passed `29/29`; the current audit-remediation regression target is `437/437`, with compileall, workspace, release-manifest and frontend production build gates required before closing.
+- 2026-09-19 P2.04 post-gap mixed cursor repeated conflict stale old anchor
+  final replay parity `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: transaction-
+  forward `(211,199)` ve event-forward `(209,211)` recovery anchor’larından
+  sonra tekrarlı fingerprint conflict ile `GAP` açıldı; tuple sırasına göre
+  eski mixed-component anchor’lar `(210,212)` ve `(208,212)`
+  `RESYNC_ANCHOR_STALE` kaldı. Aynı terminal boundary anchor yeniden kabul
+  edildi; `SNAPSHOT_STALE` → `SYNCED`, exact replay `DUPLICATE`, eski
+  recovery/conflict/anchor event’leri `QUARANTINED`, boş SQLite journal
+  değişmedi. Odak 1/1, komşu 90/90, tam checker 865/865 PASS; compileall,
+  workspace (296 aktif Python dosyası) ve diff check PASS. Kanıt
+  `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`; sıradaki tek güvenli iş
+  stale mixed-anchor reddinden sonra güncel cursor’ın snapshot retry ve final
+  replay boyunca korunması regresyonudur.
 
-The P2.03 lifecycle-to-core binding exists in `a60ef1f`; the current working slice adds its offline durable replay journal, redacted reconciliation association, fail-closed coordinator restart hydration, explicit authoritative snapshot gate, AttemptStore recovery orchestration, bounded post-recovery lookup handoff, and verified external-review fixes. Neither activates live Binance REST/WS, signed account, mutation, live recovery, or mainnet.
+- 2026-09-19 P2.04 post-gap mixed cursor repeated conflict stale old anchor
+  final replay parity `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`:
+  transaction-forward `(211,199)` ve event-forward `(209,211)` recovery
+  anchor’larından sonra tekrarlı fingerprint conflict ile `GAP` açıldı; tuple
+  sırasına göre eski mixed-component anchor’lar `(210,212)` ve `(208,212)`
+  `RESYNC_ANCHOR_STALE` kaldı. Aynı terminal boundary anchor’ı yeniden kabul
+  edildi; eşik altı `SNAPSHOT_STALE`, eşik snapshot `SYNCED`, exact replay
+  `DUPLICATE`, eski recovery/conflict/anchor event’leri `QUARANTINED`, boş
+  SQLite journal değişmedi. Odak 1/1, komşu 90/90, tam checker 865/865 PASS.
+  Compileall, workspace (296 aktif Python dosyası) ve diff check PASS. Kanıt
+  `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`; sıradaki tek
+  asistan-owned güvenli iş stale mixed-anchor reddinden sonra güncel cursor’ın
+  yeni snapshot retry ve final replay boyunca korunması regresyonudur.
 
-Current gate: External-review remediation is the active WIP; full P2.03/P2.04 remain `IN_PROGRESS`; trading activation `NO-GO`.
+- 2026-09-19 P2.04 post-gap mixed cursor forward terminal repeated
+  fingerprint conflict re-entry freshness ve quarantine parity
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: transaction-forward `(212,211)`
+  ve event-forward `(211,212)` akışlarında aynı forward boundary’de tekrarlı
+  fingerprint conflict `CONFLICT/GAP`, aynı boundary terminal recovery anchor,
+  eşik altı `SNAPSHOT_STALE`, eşik snapshot `SYNCED`, exact replay `DUPLICATE`,
+  eski conflict/re-entry/terminal/replacement event’leri `QUARANTINED`, boş
+  SQLite journal değişmiyor. Odak 1/1, komşu 89/89, tam checker 864/864 PASS.
+  Compileall, workspace (296 aktif Python dosyası) ve diff check PASS. Kanıt
+  `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`; sıradaki tek
+  asistan-owned güvenli iş tekrarlı conflict sonrası eski mixed-component anchor
+  monotonicity ve final replay parity regresyonudur.
 
-Next safe action: define offline reconciliation-result evidence binding; lookup outcomes must remain separate from economic fill/core posting until an explicit venue-event contract is proven. Keep live signed integration and Testnet mutation closed; mutation requires explicit authorization.
+- 2026-09-19 P2.04 post-gap mixed cursor forward terminal repeated
+  fingerprint conflict re-entry freshness ve quarantine parity
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: transaction-forward `(212,211)`
+  ve event-forward `(211,212)` akışlarında aynı forward boundary’de tekrarlı
+  fingerprint conflict `CONFLICT/GAP`, aynı boundary terminal recovery anchor,
+  eşik altı `SNAPSHOT_STALE`, eşik snapshot `SYNCED`, exact replay `DUPLICATE`,
+  eski conflict/re-entry/terminal/replacement event’leri `QUARANTINED`, boş
+  SQLite journal değişmiyor. Odak 1/1, komşu 89/89, tam checker 864/864 PASS.
+  Compileall, workspace (296 aktif Python dosyası) ve diff check PASS. Kanıt
+  `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`; sıradaki tek
+  asistan-owned güvenli iş tekrarlı conflict sonrası eski mixed-component anchor
+  monotonicity ve final replay parity regresyonudur.
+
+- 2026-09-19 P2.04 post-gap mixed cursor forward terminal equal-cursor
+  re-entry freshness ve stale-event quarantine parity `IMPLEMENTED_WITH_LIMITATION /
+  LOCAL_PASS`: transaction-forward `(212,211)` ve event-forward `(211,212)`
+  terminal anchor’larından sonra aynı cursor’lı re-entry conflict, eşit terminal
+  anchor re-entry, eşik altı `SNAPSHOT_STALE`, eşik snapshot `SYNCED`, terminal
+  exact replay `DUPLICATE`, önceki re-entry/terminal/replacement event’leri
+  `QUARANTINED`, boş SQLite journal değişmiyor. Odak 1/1, komşu 89/89, tam
+  checker 864/864 PASS. Compileall, workspace (296 aktif Python dosyası) ve
+  diff check PASS. Kanıt `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`;
+  sıradaki tek asistan-owned güvenli iş aynı forward boundary’de tekrarlı
+  fingerprint conflict sonrası re-entry freshness ve quarantine parity
+  regresyonudur.
+
+- 2026-09-19 P2.04 post-gap mixed cursor forward terminal duplicate
+  quarantine parity `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: transaction-forward
+  `(212,211)` ve event-forward `(211,212)` terminal anchor’larında eşik altı
+  snapshot `SNAPSHOT_STALE`, eşik snapshot `SYNCED`, terminal exact replay
+  `DUPLICATE`, önceki recovery/re-entry/replacement event’leri `QUARANTINED`,
+  boş SQLite journal değişmiyor. Odak 1/1, komşu 88/88, tam checker 863/863
+  PASS. Compileall, workspace (296 aktif Python dosyası) ve diff check PASS.
+  Kanıt `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`; sıradaki tek
+  asistan-owned güvenli iş forward terminal anchor sonrası equal-cursor re-entry
+  freshness ve stale-event quarantine parity regresyonudur.
+
+- 2026-09-19 P2.04 post-gap mixed cursor equal re-entry terminal snapshot
+  parity `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: eşit terminal anchor
+  re-entry sonrasında yeniden kabul ediliyor; `210` snapshot `SNAPSHOT_STALE`,
+  `211` snapshot `SYNCED`. Aynı `max(cursor)=211` değerine sahip fakat tuple
+  sırasına göre eski cross-component anchor `(209,211)`, mevcut `(211,199)`
+  anchor’ı geriye alamıyor ve `RESYNC_ANCHOR_STALE` ile kapanıyor; gerçek ileri
+  `(212,211)` anchor kabul ediliyor, `211` snapshot stale ve `212` snapshot fresh.
+  Final recovery exact replay `DUPLICATE`, eski/re-entry event `QUARANTINED`,
+  boş SQLite journal değişmiyor. Odak 1/1, komşu 87/87, tam checker 862/862
+  PASS. Compileall, workspace (296 aktif Python dosyası) ve diff check PASS.
+  Kanıt `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`; sıradaki tek
+  asistan-owned güvenli iş post-gap mixed cursor forward anchor sonrası terminal
+  duplicate ve stale-event quarantine parity regresyonudur.
+
+- 2026-09-19 P2.04 post-gap repeated replacement anchor equal-boundary
+  freshness ve duplicate quarantine parity `IMPLEMENTED_WITH_LIMITATION /
+  LOCAL_PASS`: tekrarlı replacement conflict sonrası eşit cursor’lı terminal
+  recovery anchor kabul ediliyor; `209` snapshot `SNAPSHOT_STALE`, eşik `210`
+  snapshot `SYNCED`; terminal recovery exact replay `DUPLICATE`, önceki
+  non-terminal recovery ve forward event `QUARANTINED`, boş SQLite journal
+  değişmiyor. Odak 1/1, komşu 82/82, tam checker 856/856 PASS. Compileall,
+  workspace (296 aktif Python dosyası) ve diff check PASS. Kanıt
+  `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`; sıradaki tek asistan-owned
+  güvenli iş post-gap equal-boundary repeated recovery fingerprint conflict
+  re-entry parity regresyonudur.
+
+- 2026-09-19 P2.04 post-gap repeated replacement conflict anchor monotonicity
+  ve terminal quarantine parity `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`:
+  ilk replacement conflict sonrası non-terminal recovery anchor ile yeniden
+  `SYNCED` açıldı; aynı recovery identity’nin tekrarlı fingerprint conflict’i
+  yeniden `CONFLICT/GAP` açıyor. Daha eski `209` recovery anchor
+  `RESYNC_ANCHOR_STALE`, monoton `211` terminal anchor kabul ediliyor; `210`
+  snapshot `SNAPSHOT_STALE`, `211` snapshot `SYNCED`; terminal recovery replay
+  `DUPLICATE`, eski recovery ve forward event `QUARANTINED`, boş SQLite journal
+  değişmiyor. Odak 1/1, komşu 80/80, tam checker 855/855 PASS. Compileall,
+  workspace (296 aktif Python dosyası) ve diff check PASS. Kanıt
+  `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`; sıradaki tek asistan-owned
+  güvenli iş post-gap repeated replacement anchor equal-boundary freshness ve
+  duplicate quarantine parity regresyonudur.
+
+- 2026-09-19 P2.04 post-gap replacement fingerprint conflict ve re-entry
+  quarantine parity `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: GAP sonrası
+  aynı replacement identity’nin farklı fingerprint’i `CONFLICT/GAP` açıyor;
+  doğrudan snapshot `SYNC_STATE_INVALID`; transaction-ileri/event-geride ve
+  event-ileri/transaction-geride recovery anchor sonrası `209` snapshot
+  `SNAPSHOT_STALE`, `210` snapshot `SYNCED`; recovery exact replay
+  `DUPLICATE`, eski replacement ve forward event `QUARANTINED`, boş SQLite
+  journal değişmiyor. Odak 1/1, komşu 79/79, tam checker 854/854 PASS.
+  Compileall, workspace (296 aktif Python dosyası) ve diff check PASS. Kanıt
+  `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`; sıradaki tek asistan-owned
+  güvenli iş post-gap repeated replacement conflict anchor monotonicity ve
+  terminal quarantine parity regresyonudur.
+
+- 2026-09-19 P2.04 recovery anchor post-gap re-entry ve paired snapshot gate
+  parity `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: GAP sonrası doğrudan
+  snapshot `SYNC_STATE_INVALID`, iki paired recovery anchor yönü yeniden
+  `RECONCILIATION_REQUIRED`, `209` snapshot `SNAPSHOT_STALE`, `210` snapshot
+  `SYNCED`; recovery replay `DUPLICATE`, boş SQLite journal değişmiyor. Odak
+  1/1, komşu 78/78, tam checker 853/853 PASS. Compileall, workspace (296
+  aktif Python dosyası) ve diff check PASS. Kanıt
+  `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`; sıradaki tek asistan-owned
+  güvenli iş post-gap replacement fingerprint conflict ve re-entry quarantine
+  parity regresyonudur.
+
+- 2026-09-19 P2.04 equal-cursor replacement anchor sonrası same-cursor
+  replacement fingerprint conflict ve snapshot gate parity
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: aynı replacement identity’nin
+  farklı fingerprint’i `CONFLICT/GAP` açıyor; doğrudan snapshot reddediliyor;
+  yalnız yeni equal-cursor recovery anchor ve taze snapshot ile `SYNCED` açılıyor,
+  exact recovery replay `DUPLICATE`, boş SQLite journal değişmiyor. Odak 1/1,
+  komşu 73/73, tam checker 848/848 PASS. Compileall, workspace (296 aktif
+  Python dosyası) ve diff check PASS. Kanıt
+  `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`; sıradaki tek asistan-owned
+  güvenli iş equal-cursor recovery anchor sonrası snapshot freshness boundary
+  ve terminal quarantine parity regresyonudur.
+
+- 2026-09-19 P2.04 equal-cursor replacement anchor sonrası terminal identity
+  ve late-event quarantine parity `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`:
+  exact replacement replay `DUPLICATE`, terminal öncesi geç kalan event ve
+  terminal sonrası ileri event `QUARANTINED` kalıyor; coordinator `SYNCED`
+  durumunu koruyor ve boş SQLite journal değişmiyor. Odak 1/1, komşu 72/72,
+  tam checker 847/847 PASS. Compileall, workspace (296 aktif Python dosyası)
+  ve diff check PASS. Kanıt `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`;
+  sıradaki tek asistan-owned güvenli iş terminal replacement anchor sonrası
+  same-cursor replacement fingerprint conflict ve snapshot gate parity
+  regresyonudur.
+
+- 2026-09-19 P2.04 terminal replacement anchor sonrası equal-cursor resync
+  identity ve snapshot gate re-entry parity `IMPLEMENTED_WITH_LIMITATION /
+  LOCAL_PASS`: equal cursor’lı yeni replacement identity stale sayılmadan
+  `RECONCILIATION_REQUIRED` durumuna dönüyor; snapshot olmadan `mark_synced`
+  `AUTHORITATIVE_SNAPSHOT_REQUIRED` ile fail-closed kalıyor; taze snapshot
+  sonrası aynı replacement `DUPLICATE`, boş SQLite journal değişmiyor. Odak
+  1/1, komşu 71/71, tam checker 846/846 PASS. Compileall, workspace (296
+  aktif Python dosyası) ve diff check PASS. Kanıt
+  `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`; sıradaki tek asistan-owned
+  güvenli iş equal-cursor replacement anchor sonrası terminal identity ve
+  late-event quarantine parity regresyonudur.
+
+- 2026-09-19 P2.04 terminal replacement anchor sonrası stale resync anchor
+  ve snapshot gate re-entry parity `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`:
+  stale cursor anchor `RESYNC_ANCHOR_STALE` ile reddediliyor; bu hata sonrası
+  `GAP` durumunda doğrudan snapshot uygulanamıyor; yalnız monotonic replacement
+  anchor ve taze authoritative snapshot ile `SYNCED` açılıyor, boş SQLite journal
+  değişmiyor. Odak 1/1, komşu 70/70, tam checker 845/845 PASS. Compileall,
+  workspace (296 aktif Python dosyası) ve diff check PASS. Kanıt
+  `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`; sıradaki tek asistan-owned
+  güvenli iş terminal replacement anchor sonrası equal-cursor resync identity
+  ve snapshot gate re-entry parity regresyonudur.
+
+- 2026-09-19 P2.04 terminal replacement anchor sonrası snapshot cursor
+  freshness ve stale-boundary parity `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`:
+  terminal anchor’ın transaction zamanı veya event zamanı snapshot cursor’ının
+  en büyük bileşeni olarak kullanılıyor; `209` snapshot `SNAPSHOT_STALE`, eşit
+  `210` snapshot fresh kabul ediliyor. Odak 1/1, komşu 69/69, tam checker
+  844/844 PASS. Compileall, workspace (296 aktif Python dosyası) ve diff check
+  PASS. Kanıt evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md; sıradaki tek
+  asistan-owned güvenli iş terminal replacement anchor sonrası stale resync
+  anchor ve snapshot gate re-entry parity regresyonudur.
+
+- 2026-09-19 P2.04 empty/reopen replacement anchor sonrası terminal cursor
+  ve late-event quarantine parity `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`:
+  terminal `REJECT` anchor sonrası exact replay `DUPLICATE`, terminalden önce
+  kalan late event ve terminalden sonra gelen yeni event `QUARANTINED` kalıyor;
+  coordinator yanlışlıkla `SYNCED` durumundan çıkmıyor ve boş SQLite journal
+  değişmiyor. Odak 1/1, komşu 68/68, tam checker 843/843 PASS. Compileall,
+  workspace (296 aktif Python dosyası) ve diff check PASS. Kanıt
+  evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md; sıradaki tek asistan-owned
+  güvenli iş terminal replacement anchor sonrası snapshot cursor freshness ve
+  stale-boundary parity regresyonudur.
+
+- 2026-09-19 P2.04 empty/reopen aynı cursor identity conflict ve snapshot
+  gate parity `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: boş SQLite journal
+  yeniden açıldıktan sonra resync anchor ile kurulan event exact duplicate
+  olarak kalıyor; aynı event kimliğinin farklı fingerprint’i `CONFLICT` açıp
+  `GAP` durumuna geçiriyor. Snapshot bu durumda doğrudan uygulanamıyor;
+  replacement anchor ve fresh snapshot olmadan `SYNCED` açılamıyor. Journal
+  anchor işlemleriyle değişmiyor ve boş kalıyor. Odak 1/1, komşu 67/67, tam
+  checker 842/842 PASS. Compileall, workspace (296 aktif Python dosyası) ve
+  diff check PASS. Kanıt evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md;
+  sıradaki tek asistan-owned güvenli iş empty/reopen replacement anchor
+  sonrası terminal cursor ve late-event quarantine parity regresyonudur.
+
+- 2026-09-19 P2.04 empty/reopen cursor freshness ve resync-anchor parity
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: boş SQLite journal yeniden
+  açıldığında cursor `()` kalıyor ve authoritative snapshot kapısı korunuyor;
+  boş başlangıçtan uygulanan anchor için cursor çiftinden eski snapshot
+  reddediliyor, taze snapshot ile `SYNCED` açılıyor. Odak 1/1, komşu 66/66,
+  tam checker 841/841 PASS. Compileall, workspace (296 aktif Python dosyası)
+  ve diff check PASS. Kanıt evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md;
+  sıradaki tek asistan-owned güvenli iş empty/reopen sonrası aynı cursor
+  identity conflict ve snapshot gate parity regresyonudur.
+
+- 2026-09-19 P2.04 restart terminal cursor freshness ve authoritative
+  snapshot sınır parity `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`:
+  restart ile hydrate edilen terminal cursor için anchor gözlem zamanı hem
+  transaction hem event zamanını kapsıyor; authoritative snapshot da cursor
+  çiftinin en güncel bileşeninden eskiyse `SNAPSHOT_STALE` ile reddediliyor.
+  Odak 1/1, komşu 65/65, tam checker 840/840 PASS. Compileall, workspace
+  (296 aktif Python dosyası) ve diff check PASS. Kanıt
+  evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md; sıradaki tek
+  asistan-owned güvenli iş empty/reopen cursor freshness ile resync-anchor
+  parity regresyonudur.
+
+- 2026-09-19 P2.04 terminal replay conflict ve restart snapshot parity
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: ikinci açılışta terminal
+  snapshot değişmeden kalıyor; terminal event exact duplicate, aynı event
+  kimliğinin farklı fingerprint’i `CONFLICT` ve coordinator’da GAP oluyor.
+  Odak 1/1, komşu 64/64, tam checker 839/839 PASS. Compileall, workspace
+  (296 aktif Python dosyası) ve diff check PASS. Kanıt
+  evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md; sıradaki tek
+  asistan-owned güvenli iş restart sonrası terminal cursor freshness ve
+  authoritative snapshot sınır parity regresyonudur.
+
+- 2026-09-18 P2.04 read-only listStatus sequence/gap quarantine ve
+  reconnect sınırı IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS: yeni venue
+  sequence icat edilmeden transaction_time_ms,event_time_ms cursor’ı
+  non-decreasing doğrulanıyor; exact duplicate/no-op, aynı event ID için
+  fingerprint conflict ve out-of-order GAP fail-closed uygulanıyor.
+  RECONCILIATION_REQUIRED, STALE ve GAP durumlarında yeni listStatus
+  olayı kabul edilmiyor; reconnect sonrası açık reconciliation olmadan
+  acceptance yok. Bu yalnız in-memory offline kapıdır; REST catch-up, canlı
+  reconnect, durable cursor hydration, core/economic binding, mutation ve
+  mainnet authority açılmadı. Odak 37/37 PASS; tam checker 812/812 PASS.
+  Compileall, workspace (296 aktif Python dosyası) ve diff check PASS. Kanıt
+  evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md; sıradaki tek
+  asistan-owned güvenli iş explicit offline reconciliation anchor/resync
+  contract’ını aynı fail-closed sınırda doğrulamaktır.
+
+- 2026-09-18 P2.04 listStatus → bounded SQLite journal sınırı (önceki dilim)
+
+- 2026-09-18 P2.04 `listStatus` → bounded SQLite journal sınırı
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: parser çıktısı ayrı
+  `USER_STREAM_LIST_STATUS` observation olarak `OrderListEventStore` içine
+  bağlandı. Canonical JSON + SHA-256 checksum, transaction-time monotonic
+  sıra, restart replay, exact duplicate/no-op, identity conflict ve
+  out-of-order/terminal fail-closed davranışı korunuyor. Parser’ın taşımadığı
+  leg status/role/type, fiyat, miktar, fee veya fill çıkarılmıyor; observation
+  `OrderListVenueEvent` veya ekonomik/core event’e yükseltilmiyor. P2.04
+  parser+journal odak kümesi `25/25 PASS`; tam checker `810` testte `808 PASS`,
+  iki Windows Credential Manager ortam hatası (`1312` ve cleanup
+  `CREDENTIAL_NOT_FOUND`) kaldı. Compileall, workspace (`296` aktif Python
+  dosyası) ve diff check PASS. Kanıt
+  `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`; sıradaki tek
+  asistan-owned güvenli iş read-only stream sequence/gap quarantine ve
+  reconnect/catch-up sınırının offline doğrulanmasıdır.
+
+- 2026-09-18 P2.03 durable venue-event journal ve cancel-replace observation
+  sequencing karar kapısı
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: exact OCO/leg eşleşmesiyle
+  kabul edilen venue event’leri ve cancel-replace identity gözlemleri
+  `OrderListEventStore` ile bounded SQLite journal’a bağlandı. Canonical JSON +
+  SHA-256 checksum, monotonic sequence, restart replay, exact duplicate/no-op,
+  conflict, out-of-order/terminal red ve `BEGIN IMMEDIATE` rollback birlikte
+  korunuyor. Journal yalnız redacted venue-fact observation taşır; fill, core
+  event, economic state, order mutation veya signed transport üretmez. Odak
+  `18/18 PASS`; tam checker `806` testte `804 PASS`; iki Windows Credential
+  Manager ortam hatası (`1312` ve cleanup `CREDENTIAL_NOT_FOUND`) kaldı.
+  Compileall, workspace (`296` aktif Python dosyası) ve diff check PASS. Kanıt
+  `evidence/P2.03/MARKET_CONDITIONAL_ORDER_LIST_CONTRACT_SONUC.md`; sıradaki
+  tek asistan-owned güvenli iş read-only User Data Stream order-list event
+  parser/adapter contract kapısıdır.
+
+- 2026-09-18 P2.03 venue event reconciliation ve cancel-replace identity
+  karar kapısı (önceki dilim)
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: OCO venue event’leri exact
+  `orderListId` + `listClientOrderId` ve exact leg `orderId` +
+  `clientOrderId` ile redacted evidence’a bağlandı; liste veya bacak kimliği
+  uyuşmazlığı `CONFLICT` olarak kalıyor. Binance’in cancel-replace
+  `cancelResult`/`newOrderResult` ayrımı immutable prior/replacement identity
+  ile sınıflandırılıyor; eksik veya tutarsız sonuç `UNKNOWN`,
+  `CANCEL_REJECTED_NEW_CONFIRMED` ise yeniden reconciliation gerektiriyor.
+  Hiçbir sonuç fill, core event, economic state, order mutation veya signed
+  transport üretmiyor. Odak `5/5 PASS`; tam checker `801` testte `799 PASS`;
+  iki Windows Credential Manager ortam hatası (`1312` ve cleanup
+  `CREDENTIAL_NOT_FOUND`) kaldı. Kanıt
+  `evidence/P2.03/MARKET_CONDITIONAL_ORDER_LIST_CONTRACT_SONUC.md`.
+
+- 2026-09-18 P2.03 SQLite atomic durable replay owner (önceki dilim)
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`: Offline OCO identity ve bounded
+  venue-fact observation projection’ı `OrderListStore` ile SQLite’a bağlandı.
+  Identity ve her observation canonical JSON + SHA-256 checksum ile tutuluyor;
+  `BEGIN IMMEDIATE` transaction içinde append, duplicate/conflict kontrolü,
+  sıralı replay ve rollback birlikte korunuyor. Restart sonrası projection
+  aynı snapshot olarak yeniden kuruluyor; checksum, sıra, identity, terminal
+  koordinasyon ve bounded `128` observation sınırı fail-closed. Odak OCO
+  contract + durable store `8/8 PASS`; tam checker `796` testte `794 PASS`,
+  iki hata Windows Credential Manager ortamı (`1312` ve cleanup
+  `CREDENTIAL_NOT_FOUND`) nedeniyle kaldı. Compileall, workspace (`292` aktif
+  Python dosyası) ve diff check PASS. Fiyat, miktar, fill, fee, reserve, core
+  event, cancel-replace, venue reconciliation, signed transport, User Data
+  Stream orchestration, Testnet mutation ve mainnet açılmadı. Kanıt
+  `evidence/P2.03/MARKET_CONDITIONAL_ORDER_LIST_CONTRACT_SONUC.md`; sıradaki
+  tek iş venue event reconciliation ve cancel-replace identity karar kapısıdır.
+
+- 2026-09-18 P1.16.g local feature/label horizon ve historical runner binding
+  tamamlandı: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, production readiness
+  `NO`. Bounded exact `CLOSE_SMA`, `CLOSE_RETURN` ve
+  `FUTURE_CLOSE_RETURN` pipeline’ı closed-bar, chronology, lookback/horizon ve
+  1.000 bar limitleriyle fail-closed uygulandı. Feature binding run planına,
+  historical reducer’a ve capture identity’sine bağlandı; warmup barlarında
+  action üretilmiyor, binding değişirse reducer başlamadan reddediliyor.
+  `4/4` feature testi, `6/6` evaluation binding testi, `26/26` historical API
+  regresyonu, compile, workspace ve diff kontrolleri geçti. Tam checker
+  `786/788 PASS`; iki hata Windows Credential Manager ortamı (`1312` ve
+  cleanup `CREDENTIAL_NOT_FOUND`) nedeniyle kaldı. Kanıt
+  `evidence/P1.16.g/SONUC.md`. Sıradaki tek iş `P1.16.i` stress ekonomik
+  modeli ve gerçek senaryo runner karar kapısıdır.
+
+- 2026-09-18 P1.16.f araştırma-önce yeniden doğrulama tamamlandı:
+  QuantConnect warm-up sırasında trade yerleştirilmediğini, Freqtrade ise
+  stabil indicator history’sinin local strategy lookback’inden türetilmesi ve
+  unstable başlangıç bölümünün backtestten çıkarılması gerektiğini doğruluyor.
+  Local source audit `signal_readiness.py`nin yalnız caller warmup sayısını
+  sınıflandırdığını, mevcut historical simulation/plan/contract zincirinin
+  feature/indicator/label adapterı taşımadığını gösterdi. Bağımsız stdlib
+  warmup/lookahead oracle `PASS`. Kod değişmedi; faz
+  `DEFERRED / NO-GO / RESEARCH_AUDITED / LOCAL_PASS`, production readiness
+  `NO`. Kanıt `evidence/P1.16.f/SONUC.md`; resmî kaynaklar kanıt dosyasında
+  kayıtlı. Sıradaki tek iş `P1.16.g` local feature/label horizon ve gerçek run
+  binding karar kapısıdır.
+
+- 2026-09-18 P1.16.a chronological split sınırı tamamlandı:
+  public `ChronologicalSplit` kurucusunun bölüm sırası, gap/test sınırı,
+  duplicate sample identity ve yanlış point tipi bypass’ları fail-closed
+  doğrulanıyor; `ChronologicalPoint` exact string ve non-negative integer
+  event-time sınırını koruyor. Odak `7/7 PASS`, bağımsız chronological oracle
+  `PASS`, Noether salt-okunur Codex review `PASS_WITH_LIMITATION` (P1/P2 bulgu
+  yok), compile ve diff `PASS`. `tools/run_checks.py` ile
+  `tools/check_workspace.py` Python `3.13` gereksinimi nedeniyle bu oturumda
+  çalışmadı; bundled runtime `3.12.14`, `active_python_files: 286`; güncel
+  tam-suite/workspace sonucu iddia edilmiyor. Faz
+  `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, production readiness `NO`;
+  gap yalnız yapısal ayrımdır, purge/embargo, OOS freeze, feature/label
+  leakage, persistence, API/UI, ekonomik hesap ve venue authority açılmadı.
+  Kanıt `evidence/P1.16.a/SONUC.md`. Sıradaki tek güvenli iş `P1.16.b`
+  OOS freeze ve evaluation lineage karar kapısıdır.
+
+- 2026-09-18 P1.16.b OOS freeze ve evaluation lineage sınırı tamamlandı:
+  public `EvaluationLineage` ve `OosTuningDecision` modellerinde exact string
+  doğrulaması eklendi; custom equality/string-subclass ile status, experiment ID
+  veya outcome allowlist bypass’ı fail-closed. OOS görülmeden tuning
+  `TUNING_ALLOWED`, inspection sonrası eski lineage `TOUCHED` ve
+  `NEW_EXPERIMENT_REQUIRED`; touched lineage tekrar untouched/inspected
+  gösterilemiyor. Odak `5/5 PASS`, bağımsız OOS freeze oracle `PASS`, Hilbert
+  salt-okunur Codex re-review `PASS` (P1/P2 bulgu yok), compile ve
+  diff `PASS`. Python `3.13` gereksinimi nedeniyle
+  `tools/run_checks.py`/`tools/check_workspace.py` bundled `3.12.14` ile
+  çalışmadı (`active_python_files: 286`); güncel tam-suite/workspace sonucu
+  iddia edilmiyor. Faz `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, production
+  readiness `NO`; dataset/run binding, purge/embargo, feature/label leakage,
+  persistence, API/UI, ekonomik hesap ve venue authority açılmadı. Kanıt
+  `evidence/P1.16.b/SONUC.md`. Sıradaki tek güvenli iş `P1.16.c`
+  feature/label horizon ve purge/embargo karar kapısıdır.
+
+- 2026-09-18 P1.16.c feature/label horizon overlap ve purge kararı tamamlandı:
+  `TimeInterval` half-open `[start,end)` sınırı ve deterministic overlap
+  assessment korunuyor; adjacent aralık `NO_OVERLAP`, gerçek kesişim
+  `PURGE_REQUIRED`. Public assessment constructor’ında status/ID tutarlılığı,
+  duplicate ID, exact tuple/interval tipi ve custom equality bypass’ları
+  fail-closed. Odak `5/5 PASS`, bağımsız horizon oracle `PASS`, Pauli
+  salt-okunur Codex re-review `PASS` (P1/P2 bulgu yok), compile ve diff
+  `PASS`. Python `3.13` gereksinimi nedeniyle
+  `tools/run_checks.py`/`tools/check_workspace.py` bundled `3.12.14` ile
+  çalışmadı (`active_python_files: 286`); güncel tam-suite/workspace sonucu
+  iddia edilmiyor. Faz `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, production
+  readiness `NO`; numeric purge/embargo, feature/label dataset binding,
+  OOS/trial/stress lineage, persistence, API/UI, ekonomik hesap ve venue
+  authority açılmadı. Kanıt `evidence/P1.16.c/SONUC.md`. Sıradaki tek güvenli
+  iş `P1.16.d` multiple-testing trial registry karar kapısıdır.
+
+- 2026-09-18 P1.16.d multiple-testing trial registry sınırı tamamlandı:
+  `TrialStudy` explicit parameter-space/objective/selection-rule kimliğini ve
+  en fazla 1.000 trial sınırını taşıyor; `SUCCEEDED`, `FAILED`, `INVALID`
+  denemelerin tamamı sayılıyor. Duplicate aynı payload için idempotent,
+  conflict ve limit aşımı fail-closed. Public registry/model subclass,
+  tuple-subclass ve custom-equality bypass’ları exact type kontrolleriyle
+  kapatıldı. Odak `6/6 PASS`, evaluation-binding `6/6 PASS`, bağımsız trial
+  control `PASS`, ikinci salt-okunur kaynak kontrolü `PASS_WITH_LIMITATION`
+  (P1/P2 bulgu yok), compile ve diff `PASS`. Python `3.13` gereksinimi ve
+  bundled `3.12.14` nedeniyle checker’lar `FAIL` (`active_python_files: 286`),
+  API read testi `starlette` eksikliği nedeniyle çalışmadı; tam-suite/workspace
+  sonucu iddia edilmiyor. Faz `COMPLETE_WITH_LIMITATION / LOCAL_PASS`,
+  production readiness `NO`; optimizer, score/KPI, winner selection,
+  persistence, dataset binding, OOS/stress result, purge/embargo, API/UI ve
+  ekonomik hesap açılmadı. Kanıt `evidence/P1.16.d/SONUC.md`. Sıradaki tek
+  güvenli iş `P1.16.e` stress lineage ve ayrı sonuç kimliği karar kapısıdır.
+
+- 2026-09-18 P1.16.e stress lineage ve ayrı sonuç kimliği tamamlandı:
+  `StressLineage` base result, stress profile ve profile hash girdilerinden
+  deterministic ayrı `stress_result_id` türetiyor; public kurucu canonical
+  kimlik eşleşmesini, sabit `STRESS` etiketini ve exact string/hash tiplerini
+  fail-closed doğruluyor. Odak `4/4 PASS`, evaluation-binding `6/6 PASS`,
+  bağımsız canonical kimlik kontrolü `PASS`, ikinci salt-okunur kaynak
+  kontrolü `PASS_WITH_LIMITATION` (P1/P2 bulgu yok), compile ve diff `PASS`.
+  Python `3.13` gereksinimi nedeniyle checker’lar bundled `3.12.14` ile
+  `FAIL` (`active_python_files: 286`); API read testi `starlette` eksikliği
+  nedeniyle çalışmadı, tam-suite/workspace sonucu iddia edilmiyor. Faz
+  `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, production readiness `NO`; spread,
+  slippage, latency, volume, partial fill, OHLC ekonomik modeli, seed/RNG,
+  persistence, dataset/config/model binding, optimizer, API/UI ve purge/
+  embargo açılmadı. Kanıt `evidence/P1.16.e/SONUC.md`. Sıradaki tek güvenli
+  iş `P1.16.f` warmup leakage ve readiness binding karar kapısıdır.
+
+- 2026-09-18 P1.15.c two-leg persistence/replay/recovery karar kapısı
+  yeniden doğrulandı: `LifecycleStore` metadata’sı
+  `NON_ECONOMIC_LIFECYCLE_ONLY`; lifecycle şeması hedge leg/side, quantity,
+  effective-time veya recovery alanlarını taşımıyor. Generic economic
+  `Store` event/posting batch, hash ve `execution_id` dedup sağlıyor ancak
+  two-leg identity/state, effective-time, model lineage veya iki store arasında
+  atomic binding sağlamıyor. P1.15.b projection’ını bağlayan mevcut adapter
+  bulunmadı; bu nedenle migration, yeni schema veya persistence implementation
+  açılmadı. Persistence sınır regresyonu `30/30 PASS`, bağımsız storage schema
+  control `PASS`, Beauvoir salt-okunur Codex review `DEFERRED / NO-GO` kararını
+  doğruladı, compile/diff `PASS`. `tools/run_checks.py` ve
+  `tools/check_workspace.py` Python `3.13` gereksinimi nedeniyle bu oturumda
+  tam-suite/workspace sonucu veremedi; güncel tam-suite sonucu iddia edilmiyor.
+  Faz `DEFERRED / NO-GO / LOCAL_PASS`, production readiness `NO`; recovery,
+  cross ownership, margin/liquidation, API/UI ve venue mutation açılmadı.
+  `docs/P1_KRITIK_ARASTIRMA_FINAL/test_matrices/P1.15_TESTS.md` mevcut fakat
+  `SPECIFIED_NOT_EXECUTED_AGAINST_LOCAL_CODE`. Kanıt
+  `evidence/P1.15.c/SONUC.md`. Sıradaki tek güvenli iş `P1.16.a`
+  chronological split ve leakage-free evaluation karar kapısıdır.
+
+- 2026-09-18 P1.15.b accepted two-leg fill projection tamamlandı:
+  public projection constructor’ı state, identity pair, fill history, exact
+  aggregate ve status tutarlılığını yeniden doğruluyor; aynı side/scope
+  çakışmaları ve tamamlanmış leg sonrası history bozulması fail-closed.
+  State/leg/status whitelist’lerinde exact string tipi zorunlu. Kırmızı
+  regresyonla bulunan iki bulgu düzeltildi. Odak `7/7 PASS`, ilgili hedge
+  projection kümesi `11/11 PASS`, bağımsız accepted-fill/malformed-constructor
+  oracle `PASS`, Bohr salt-okunur Codex review düzeltme sonrası `PASS`; kritik
+  P1/P2 bulgu yok. Compile/diff `PASS`. `tools/run_checks.py` ve
+  `tools/check_workspace.py` proje Python `3.13` istediği ve kullanılabilir
+  bundled runtime `3.12.14` olduğu için bu oturumda tam-suite/workspace sonucu
+  veremedi; güncel tam-suite sonucu iddia edilmiyor. Faz
+  `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, production readiness `NO`;
+  persistence/replay/recovery, order/reserve/fill posting, cross/margin/
+  liquidation, API/UI ve venue mutation açılmadı. Kanıt
+  `evidence/P1.15.b/SONUC.md`. Sıradaki tek güvenli iş `P1.15.c`
+  two-leg persistence/replay/recovery karar kapısıdır.
+
+- 2026-09-18 P1.15.a hedge identity/two-leg state sınırı tamamlandı:
+  unhashable ve yanlış tipte state girdisinin ham `TypeError` üretmemesi için
+  `advance_two_leg_state` string guard’ı eklendi; kırmızı regresyonla
+  doğrulanıp fail-closed `TWO_LEG_STATE_INVALID` olarak düzeltildi. Odak
+  `4/4 PASS`, ilgili two-leg projection kümesi `8/8 PASS`, bağımsız hedge/
+  two-leg oracle `PASS`, Herschel salt-okunur Codex review düzeltme sonrası
+  `PASS`; kritik P1 bulgu yok. Compile/diff `PASS`. `tools/run_checks.py` bu
+  oturumda proje Python `3.13` istediği ve kullanılabilir bundled runtime
+  `3.12.14` olduğu için güncel tam-suite çalıştırılamadı; tam-suite sonucu
+  iddia edilmiyor. Faz `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, production
+  readiness `NO`; identity/state boundary order/reserve/fill posting,
+  persistence, recovery ledger, cross/margin/liquidation, API/UI ve venue
+  mutation açmaz. Kanıt `evidence/P1.15.a/SONUC.md`. Sıradaki tek güvenli iş
+  `P1.15.b` accepted two-leg fill projection karar kapısıdır.
+
+- 2026-09-18 P1.14.f template activation/capability gate kapısı tamamlandı:
+  mevcut gate bağımsız review ve activation oracle ile doğrulandı. Odak
+  `4/4 PASS`, ilgili template/projection kümesi `10/10 PASS`, bağımsız oracle
+  `PASS`, Singer salt-okunur Codex review `PASS`, kritik P1/P2 bulgu yok;
+  compile/diff `PASS`. `PENDING`/`APPROVED`, unsupported capability precedence,
+  duplicate/bool allowlist ve non-authority sınırları doğrulandı. `tools/run_checks.py`
+  bu oturumda proje Python `3.13` istediği ve kullanılabilir bundled runtime
+  `3.12.14` olduğu için güncel tam-suite çalıştırılamadı; tam-suite sonucu
+  iddia edilmiyor. Faz `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, production
+  readiness `NO`; gate activation, candidate/order/reserve/fill, persistence,
+  API/UI veya venue mutation açmaz. Kanıt `evidence/P1.14.f/SONUC.md`.
+  Sıradaki tek güvenli iş `P1.15.a` hedge/cross/two-leg kapsam karar kapısıdır.
+
+- 2026-09-18 P1.14.e strategy template integrity ve non-authority kapısı
+  tamamlandı: public `StrategyTemplate(...)` kurucusundaki duplicate capability
+  bypass’ı bağımsız review’da bulundu, kırmızı regresyonla doğrulandı ve
+  `__post_init__` fail-closed guard’ıyla düzeltildi. Odak `6/6 PASS`, ilgili
+  projection kümesi `14/14 PASS`, bağımsız canonical/hash/non-authority oracle
+  `PASS`, Turing salt-okunur Codex review düzeltme sonrası `PASS`, kritik P1/P2
+  bulgu yok. Compile/diff `PASS`. `tools/run_checks.py` bu oturumda proje
+  Python `3.13` istediği ve kullanılabilir bundled runtime `3.12.14` olduğu
+  için güncel tam-suite çalıştırılamadı; tam-suite sonucu iddia edilmiyor.
+  Faz `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, production readiness `NO`;
+  template inert configuration artifact olarak kalır, activation/candidate/
+  order/reserve/fill, persistence, API/UI ve venue mutation yok. Kanıt
+  `evidence/P1.14.e/SONUC.md`. Sıradaki tek güvenli iş `P1.14.f` template
+  activation/capability gate karar kapısıdır.
+
+- 2026-09-18 P1.14.d threshold/time rebalancing trigger kapısı tamamlandı:
+  mevcut projection bağımsız inceleme ve exact Decimal/time oracle ile
+  doğrulandı. Odak `8/8 PASS`, ilgili projection kümesi `14/14 PASS`,
+  bağımsız oracle `PASS`, Mendel salt-okunur Codex review `PASS`, kritik
+  `BLOCKED` bulgu yok. NaN/Infinity/exponent/malformed decimal, threshold=0,
+  signed zero, aynı timestamp ve tüm bool zaman girdileri regresyon kapsamına
+  alındı. Compile/diff `PASS`. `tools/run_checks.py` bu oturumda proje
+  Python `3.13` istediği ve kullanılabilir bundled runtime `3.12.14` olduğu
+  için güncel tam-suite çalıştırılamadı; tam-suite sonucu iddia edilmiyor.
+  Faz `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, production readiness `NO`;
+  trigger yalnız salt-okunur aday kapısıdır, order/candidate/fill,
+  persistence, API/UI ve venue mutation yok. Kanıt `evidence/P1.14.d/SONUC.md`.
+  Sıradaki tek güvenli iş `P1.14.e` template integrity ve non-authority karar
+  kapısıdır.
+
+- 2026-09-18 P1.14.c signal warmup/closed-bar ve stale readiness kapısı
+  tamamlandı: mevcut implementation bağımsız inceleme ve sınır oracle’ıyla
+  doğrulandı. Odak `6/6 PASS`, readiness ile ilgili küme `12/12 PASS`,
+  bağımsız readiness oracle `PASS`, Locke salt-okunur Codex review `PASS`,
+  kritik `BLOCKED` bulgu yok. Stale eşik eşitliği ve tüm gate bool tipleri
+  için regresyon kapsaması eklendi. Compile/diff `PASS`. `tools/run_checks.py`
+  bu oturumda proje Python `3.13` istediği ve kullanılabilir bundled runtime
+  `3.12.14` olduğu için güncel tam-suite çalıştırılamadı; tam-suite sonucu
+  iddia edilmiyor. Faz `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, production
+  readiness `NO`; candidate/order/fill, adapter, trigger, persistence, API/UI
+  ve venue mutation yok. Kanıt `evidence/P1.14.c/SONUC.md`. Sıradaki tek
+  güvenli iş `P1.14.d` threshold/time rebalancing trigger karar kapısıdır.
+
+- 2026-09-18 P1.14.b signal identity/event-time/dedupe kapısı tamamlandı:
+  bağımsız review’da bulunan duplicate-history açığı fail-closed guard ve
+  regresyon testiyle düzeltildi. Odak `6/6 PASS`, readiness ile ilgili küme
+  `11/11 PASS`, ayrı signal oracle `PASS`, Ptolemy salt-okunur Codex review
+  düzeltme sonrası `PASS`, kritik `BLOCKED` bulgu yok. Compile/diff `PASS`.
+  Kapsamlı
+  `tools/run_checks.py` bu oturumda proje Python `3.13` istediği ve kullanılabilir
+  bundled runtime `3.12.14` olduğu için başlatılamadı; güncel tam-suite sonucu
+  iddia edilmiyor. Faz `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, production
+  readiness `NO`; signal candidate/order/fill, auth/replay window, warmup,
+  closed-bar, persistence, API/UI ve venue mutation yok. Kanıt
+  `evidence/P1.14.b/SONUC.md`. Sıradaki tek güvenli iş `P1.14.c` signal
+  warmup/closed-bar ve stale-policy karar kapısıdır.
+
+- 2026-09-18 P1.14.a mevcut checkout doğrulaması ve bağımsız kapısı tamamlandı:
+  exact target/delta projection kaynak ve testleri mevcut durumda çalışır;
+  odak `6/6 PASS`, ayrı Decimal oracle `PASS`, Erdos salt-okunur Codex review
+  `PASS`, kritik `BLOCKED` bulgu yok. Compile/diff `PASS`. Kapsamlı
+  `tools/run_checks.py` bu oturumda proje Python `3.13` istediği ve kullanılabilir
+  bundled runtime `3.12.14` olduğu için başlatılamadı; bu nedenle güncel tam-suite
+  sonucu iddia edilmiyor. Faz `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, production
+  readiness `NO`; order/reserve/fill, fee/rounding, conversion, balance,
+  persistence, signal/template, API/UI ve venue mutation yok. Kanıt
+  `evidence/P1.14.a/SONUC.md`. Sıradaki tek güvenli iş `P1.14.b` signal
+  identity/dedupe ve event-time karar kapısıdır.
+
+- 2026-09-17 P1.13.h.d Reverse/Infinity boundary bağımsız inceleme ve kritik
+  regresyon kapısı tamamlandı: Erdos salt-okunur Codex incelemesi h.a–h.c
+  sınırını PASS olarak doğruladı; kritik BLOCKED bulgu yok. Literal boundary
+  oracle `3/3`, h.a+h.c gate kümesi `6/6`, hedefli sınır kümesi `9/9`, geniş
+  Futures Grid doğrulama kümesi `53/53 PASS`; compile/diff PASS. Exact
+  Reverse/Infinity source/oracle yokluğu sürdüğü için vendor-eşdeğer
+  implementation `DEFERRED / NO-GO`, availability `NOT_SUPPORTED`, admission
+  `BLOCKED`, authority alanları `NONE`. Kanıt `evidence/P1.13.h.d/SONUC.md`;
+  order, economic, persistence, API/UI, Binance/Testnet mutation ve mainnet
+  yok. Sıradaki tek güvenli iş `P1.14.c` signal warmup/closed-bar ve
+  stale-policy karar kapısıdır.
+
+- 2026-09-17 P1.13.h.c Reverse/Infinity `NOT_SUPPORTED` admission sınırı
+  tamamlandı: h.a’nın typed fail-closed gate’i ürün katmanına bağlandı. Exact
+  source/oracle olmadan her iki varyant `availability=NOT_SUPPORTED`,
+  `admission=BLOCKED`, `order_authority=NONE` ve `economic_authority=NONE`
+  döndürüyor; Reverse Futures short’a, Infinity generic Futures Grid’e sessiz
+  map edilmiyor. Alt faz `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`,
+  vendor-eşdeğer implementation `DEFERRED / NO-GO`. Kanıt
+  `evidence/P1.13.h.c/SONUC.md`; yeni odak `3/3 PASS`, h.a+h.c `6/6 PASS`,
+  Futures Grid ilgili doğrulama kümesi `50/50 PASS`, compile/diff PASS. Order,
+  level, reserve, persistence, API/UI, Binance/Testnet mutation ve mainnet yok.
+  Sıradaki tek güvenli iş `P1.13.h.d` h.a–h.c boundary’si için bağımsız
+  inceleme ve kritik regresyon kapısıdır.
+
+- 2026-09-17 P1.13.h.b Reverse/Infinity Futures Grid araştırma karşı-auditi
+  tamamlandı: mevcut 3Commas/Pionex ürün raporları ve primary-source lifecycle
+  audit’i karşılaştırıldı. Reverse Grid’in ayrı spot ürün oluşu ve Futures
+  short olmadığı doğrulandı; Infinity’nin sabit üst limit olmamasının
+  inventory/sermaye/lower-bound/fill garantisi olmadığı doğrulandı. Buna karşın
+  exact range transition, reserve, replacement identity, late-fill ve replay
+  sözleşmeleri kapanmadı. Alt faz `COMPLETE_WITH_LIMITATION /
+  RESEARCH_AUDITED`, vendor-eşdeğer implementation `DEFERRED / NO-GO`.
+  Kanıt `evidence/P1.13.h.b/SONUC.md`; rapor hash’leri ve kapsamı orada kayıtlı.
+  h.a gate’i korunuyor: her iki varyant `BLOCKED_CONTRACT_REQUIRED`, authority
+  alanları `NONE`; order, economic, persistence, API/UI, Binance/Testnet
+  mutation ve mainnet yok. Odak h.a ilgili kümesi `24/24 PASS`, compile/diff
+  PASS. Sıradaki tek güvenli iş `P1.13.h.c` local `NOT_SUPPORTED`/admission
+  sınırıdır.
+
+- 2026-09-17 P1.13.h.a Reverse/Infinity Futures Grid varyant güvenlik kapısı
+  tamamlandı: `REVERSE_GRID` ve `INFINITY_GRID` ayrı typed varyantlar olarak
+  sınıflandırıldı; exact contract/oracle olmadan ikisi de
+  `BLOCKED_CONTRACT_REQUIRED`, `order_authority=NONE` ve
+  `economic_authority=NONE`. Reverse Grid Futures short’a sessizce map edilmedi;
+  Infinity “sınırsız” ifadesi inventory/sermaye/lower-bound/fill garantisi
+  sayılmadı. Karar `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`, vendor-eşdeğer
+  implementation `DEFERRED / NO-GO`; odak `3/3 PASS`, ilgili g.a–g.c, g.f–g.h,
+  h.a kümesi `24/24 PASS`, compile/diff PASS. Kanıt
+  `evidence/P1.13.h.a/SONUC.md`; order, reserve, persistence, API/UI,
+  Binance/Testnet mutation ve mainnet yok. Sıradaki tek güvenli iş
+  `P1.13.h.b` mevcut araştırma kaynaklarının exact Reverse/Infinity
+  sözleşmelerini kapatıp kapatmadığının karşı-auditidir.
+
+- 2026-09-17 P1.13.g.h Futures Grid offline lifecycle bağımsız oracle ve
+  conflict/replay regresyon kapısı tamamlandı: g.g reducer’ı bağımsız literal
+  transition matrisiyle OPEN→CANCEL_PENDING→CANCELED, cancel sonrası
+  FILL→FILLED, cancel ack sonrası replacement, erken replacement quarantine,
+  duplicate/conflict kimlik, invalid sequence ve deterministic replay sınırları
+  üzerinden doğrulandı. Alt faz `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, local
+  oracle `ORACLE_PASS`, vendor-eşdeğer implementation `DEFERRED / NO-GO`.
+  Odak `4/4 PASS`; g.a–g.c, g.f–g.h ilgili küme `21/21 PASS`; compile/diff
+  PASS. Kanıt `evidence/P1.13.g.h/SONUC.md`; gerçek order/fill/replacement,
+  reserve/economic/persistence/venue authority, Binance/Testnet mutation ve
+  mainnet yok. Sıradaki tek güvenli iş `P1.13.h` Reverse/Infinity varyantları
+  için ayrı karar/kaynak kapısıdır.
+
+- 2026-09-17 P1.13.g.g Futures Grid offline lifecycle transition simülasyonu
+  tamamlandı: g.f’de ilan edilen DCABOT yerel politikası immutable in-memory
+  reducer ile uygulandı. Cancel request/confirmation sırası, cancel sonrası
+  fill’in önceliği, cancel ack olmadan replacement’ın quarantine edilmesi,
+  exact duplicate fill’in state değiştirmemesi, unknown/conflict quarantine ve
+  deterministic replay kanıtlandı. Bu `FILL_ACCEPTED` yalnız local observation;
+  gerçek fill/order/replacement/reserve/economic posting/persistence/venue
+  authority değildir. Karar `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`, local
+  simulation `CONTRACT_READY`, vendor-eşdeğer implementation `DEFERRED /
+  NO-GO`, kapsam `DCABOT_OFFLINE_SIMULATION_ONLY`. Odak `5/5 PASS`, g.a–g.c
+  gate kümesi `10/10 PASS`, g.f `2/2 PASS`, compile ve diff PASS. Kanıt
+  `evidence/P1.13.g.g/SONUC.md`; canlı/API key/secret, order/mutation yok.
+  Sıradaki tek güvenli iş local event matrix için bağımsız oracle ve
+  conflict/replay regresyon kapısıdır.
+
+- 2026-09-17 P1.13.g.f DCABOT yerel Futures Grid lifecycle politika sözleşmesi
+  tamamlandı: vendor-eşdeğerliği iddia etmeyen offline politika; fill-wins-over-
+  cancel, cancel-ack-before-replacement, terminal-event reserve release,
+  exact-duplicate trade ignore, unknown/conflict quarantine ve deterministic
+  replay gereksinimi açık typed değer olarak kayda alındı. Tüm order/economic/
+  persistence/venue authority alanları `NONE`; kapsam
+  `DCABOT_OFFLINE_SIMULATION_ONLY`. Karar `COMPLETE_WITH_LIMITATION /
+  LOCAL_PASS`, yerel kontrat `CONTRACT_DECLARED`, vendor lifecycle implementation
+  `DEFERRED / NO-GO`. Odak `2/2 PASS`; mevcut g.a–g.c gate kümesi `10/10
+  PASS`, g.d/g.e araştırma kontrolleri ayrı ayrı `3/3 PASS`,
+  compile ve diff PASS. `tools/check_workspace.py` bundled Python 3.12 ile
+  Python 3.13 önkoşulunda çalışmadı; ortam sınırlaması. Kanıt
+  `evidence/P1.13.g.f/SONUC.md`; canlı/API key/secret, order/mutation yok.
+  Sıradaki tek güvenli iş: explicit politika üzerine offline lifecycle
+  transition simülasyonu; vendor parity ve gerçek venue davranışı açılmayacak.
+
+- 2026-09-17 P1.13.g.e dış Futures Grid lifecycle araştırma raporu karşı-auditi
+  tamamlandı: 3Commas’ın 2-step/1-step Trailing Up/Down ve Expansion
+  kuralları high-level ürün davranışı olarak, Binance `ORDER_TRADE_UPDATE`,
+  Modify/amendment ve sınırlı E/T ordering exchange primitive olarak yeniden
+  doğrulandı; Pionex public Orders API’nin SPOT non-strategic ile sınırlı
+  olduğu ve Futures Grid strategic lifecycle oracle’ı olmadığı doğrulandı.
+  Exact range transition, replacement identity, pending/reserve lifecycle,
+  late-fill authority ve deterministic replay oracle birlikte kapanmadı.
+  Karar `COMPLETE_WITH_LIMITATION / RESEARCH_AUDITED`; ileri implementation
+  `DEFERRED / NO-GO`. P1.13.g.c `BLOCKED_CONTRACT_REQUIRED` ve
+  `order_authority=NONE` aynen korunuyor. Dış rapor ve hash:
+  `C:\Users\nefer\Downloads\futures_grid_lifecycle_primary_sources_research.md`,
+  `807333B14D07CCAFC7376480E9BF97D55B79ECD8E5001AB6FC02B85BCD97AEF0`.
+  Kanıt `evidence/P1.13.g.e/SONUC.md`; odak `3/3 PASS`, canlı/API key/secret,
+  order veya mutation yok. Production readiness `NO`; kalan advanced davranışlar
+  `CONTRACT_REQUIRED`.
+
+- 2026-09-17 P1.13.g.d Futures Grid primary-source lifecycle audit tamamlandı:
+  3Commas/Pionex ürün belgeleri trailing/expansion davranışını yalnız yüksek
+  seviyede destekliyor; Binance kaynakları exchange-level order/event
+  gözlemlerini sağlıyor. Exact range transition, replacement identity,
+  pending/reserve lifecycle, late-fill authority ve deterministic replay
+  oracle birlikte doğrulanmadı. Karar `COMPLETE_WITH_LIMITATION /
+  RESEARCH_AUDITED`; ileri implementation `DEFERRED / NO-GO`. P1.13.g.c’nin
+  `BLOCKED_CONTRACT_REQUIRED` ve `order_authority=NONE` sınırı korunuyor.
+  Rapor `docs/P1.13_FUTURES_GRID_LIFECYCLE_PRIMARY_SOURCE_AUDIT.md`, kanıt
+  `evidence/P1.13.g.d/SONUC.md`. Checkout karşı kontrolü, odak `3/3 PASS`,
+  compile/workspace/diff PASS; gerçek API key/secret, order veya mutation yok.
+  Tam son doğrulama `749` testte `747 PASS`, faz dışı Windows Credential
+  Manager `1312` nedeniyle `2` environment error. Production readiness `NO`;
+  P1.13.g’nin kalan ileri davranışları `CONTRACT_REQUIRED`.
+
+- 2026-09-17 P1.13.g.c Futures Grid replacement/replay ve late-fill identity
+  karar kapısı tamamlandı: `RANGE_REVISION`, `CANCEL_REPLACE`, `LATE_FILL` ve
+  `REPLAY` sınırları typed olarak ayrıldı; her sınır için exact range transition,
+  replacement identity, pending/reserve lifecycle, late-fill authority ve
+  deterministic replay oracle gereksinimleri açıkça listelendi. Exact kaynak ve
+  oracle doğrulanana kadar karar `BLOCKED_CONTRACT_REQUIRED`,
+  `order_authority=NONE`; order ID, replacement ID, candidate level, state
+  mutation, persistence, API/UI ve Binance/Testnet mutation yok. Odak `3/3
+  PASS`; P1.13.a–d, f.a–f.d, g.a–g.c ilişkili küme `55/55 PASS`; tam proje
+  `749` testte `747 PASS`, Windows Credential Manager `Windows error 1312`
+  nedeniyle `2` environment error. Compile/workspace/diff PASS. Durum
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`, ana P1.13.g `IN_PROGRESS /
+  IMPLEMENTATION_PENDING`, bağımsız review `NOT_RUN`, production readiness
+  `NO`. Kanıt: `evidence/P1.13.g.c/SONUC.md`. P1.13.g’nin kalan advanced
+  davranışları exact source/oracle kanıtı gelene kadar `CONTRACT_REQUIRED`.
+
+- 2026-09-17 P1.13.g.b Futures Grid advanced variant safety gate tamamlandı:
+  trailing-up/down, expansion, reversal, range revision, cancel/replace ve
+  replay typed enum ile ayrı sözleşmeler olarak sınıflandırıldı. Exact
+  transition, replacement identity, reserve, late-fill ve replay oracle’ı
+  doğrulanana kadar her varyant `BLOCKED_CONTRACT_REQUIRED`; `order_authority`
+  `NONE`. Level/order ID/candidate order/state mutation, persistence, API/UI ve
+  Binance/Testnet mutation yok. Odak `3/3 PASS`; P1.13.a–d, f.a–f.d, g.a ve
+  g.b ilişkili küme `52/52 PASS`; tam proje `746` testte `744 PASS`, Windows
+  Credential Manager `Windows error 1312` nedeniyle `2` environment error.
+  Compile/workspace/diff PASS. Durum `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`,
+  ana P1.13.g `IN_PROGRESS / IMPLEMENTATION_PENDING`, bağımsız review
+  `NOT_RUN`, production readiness `NO`. Kanıt: `evidence/P1.13.g.b/SONUC.md`.
+  P1.13.g.c ile replacement/replay ve late-fill identity karar kapısı
+  kapatıldı; güncel kayıt `evidence/P1.13.g.c/SONUC.md` içindedir.
+
+- 2026-09-17 P1.13.g.a Futures Grid dynamic order placement boundary
+  tamamlandı: `STATIC` + `FIXED` yalnız daha önce exact üretilmiş seviyeleri
+  inert candidate listesi olarak döndürüyor. `DYNAMIC` placement ve
+  `RANGE_REVISION`, exact current-price selection, range transition, reserve,
+  cancel/replace identity ve replay sözleşmesi yokluğu nedeniyle
+  `BLOCKED_CONTRACT_REQUIRED` kalıyor. `order_authority=NONE`; order ID,
+  request, mutation, accepted fill, persistence, API/UI ve canlı emir yok.
+  Odak `4/4 PASS`; P1.13.a–d, f.a–f.d ve g.a ilişkili küme `49/49 PASS`; tam
+  proje `743` testte `741 PASS`, Windows Credential Manager `Windows error 1312`
+  nedeniyle `2` environment error. Compile/workspace/diff PASS. Durum
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`, ana P1.13.g
+  `IN_PROGRESS / IMPLEMENTATION_PENDING`, bağımsız review `NOT_RUN`,
+  production readiness `NO`. Kanıt: `evidence/P1.13.g.a/SONUC.md`.
+  P1.13.g.b ile advanced variant safety gate kapatıldı; güncel kayıt
+  `evidence/P1.13.g.b/SONUC.md` içindedir.
+
+- 2026-09-17 P1.13.f.d Futures Grid funding/mark/P&L projection tamamlandı:
+  accepted fill’lerden realized gross P&L, caller-supplied reference mark ile
+  unrealized P&L ve signed funding cashflow ayrı projection olarak üretiliyor.
+  `matched_cycle_profit` açık inventory’yi dışarıda bırakıyor; `total_pnl`
+  mark hareketini ekliyor. Event identity/asset/time/snapshot sınırları
+  fail-closed. `total_equity`, venue mark/funding authority, fee conversion,
+  maintenance margin, liquidation, reserve mutation, persistence, API/UI ve
+  Binance/Testnet mutation yok. Odak `5/5 PASS`; P1.13.a–d, f.a–f.d ilişkili
+  küme `45/45 PASS`; tam proje `739` testte `737 PASS`, Windows Credential
+  Manager `Windows error 1312` nedeniyle `2` environment error.
+  Compile/workspace/diff PASS. Durum `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`,
+  ana P1.13.f `IN_PROGRESS / IMPLEMENTATION_PENDING`, bağımsız review
+  `NOT_RUN`, production readiness `NO`. Kanıt: `evidence/P1.13.f.d/SONUC.md`.
+  P1.13.g.a ile dynamic order placement ve grid range/trailing ayrımı kapatıldı;
+  güncel kayıt `evidence/P1.13.g.a/SONUC.md` içindedir.
+
+- 2026-09-17 P1.13.f.c Futures Grid isolated margin/leverage ve reserve
+  projection tamamlandı: P1.13.f.b ile açılmış LONG/SHORT state üzerinden
+  caller-supplied exact contract-size ve reference price ile notional ve
+  `notional / leverage` initial-margin projection uygulanıyor. Available margin
+  yoksa kapasite `UNVERIFIED`; verilirse yalnız local `ELIGIBLE` veya
+  `INSUFFICIENT_AVAILABLE_MARGIN` sonucu üretiliyor. Contract-size `1`
+  varsayımı, venue balance/reservation authority, maintenance margin, fee,
+  funding, mark/liquidation, P&L, persistence, API/UI ve Binance/Testnet
+  mutation yok. Non-terminating initial margin rounding yapılmadan fail-closed.
+  Odak `6/6 PASS`; P1.13.a–d, f.a, f.b ve f.c ilişkili küme `40/40 PASS`; tam
+  proje `734` testte `732 PASS`, Windows Credential Manager `Windows error 1312`
+  nedeniyle `2` environment error. Compile/workspace/diff PASS. Durum
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`, ana P1.13.f
+  `IN_PROGRESS / IMPLEMENTATION_PENDING`, bağımsız review `NOT_RUN`,
+  production readiness `NO`. Kanıt: `evidence/P1.13.f.c/SONUC.md`.
+  P1.13.f.d ile funding/mark/liquidation ve grid profit/total-P&L projection
+  kapatıldı.
+
+- 2026-09-17 P1.13.f.b Futures Grid one-way position ve accepted-fill state
+  tamamlandı: selected isolated one-way profile içinde yalnız FLAT başlangıç,
+  LONG/SHORT yön, exact quantity ve weighted average-entry projection
+  uygulanıyor. Close overflow, ters flat açılış, position flip’i, duplicate
+  conflict ve geriye giden effective time fail-closed. Odak `9/9 PASS`;
+  P1.13.a–d, f.a ve f.b ilişkili küme `34/34 PASS`; tam proje `728` testte
+  `726 PASS`, Windows Credential Manager `Windows error 1312` nedeniyle `2`
+  environment error. Compile/workspace/diff PASS. Neutral netleme, non-flat
+  initial, P&L, margin/leverage effect, funding/liquidation,
+  order/replacement, persistence, API/UI ve Binance/Testnet mutation yok.
+  Durum `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`, ana P1.13.f
+  `IN_PROGRESS / IMPLEMENTATION_PENDING`, bağımsız review `NOT_RUN`,
+  production readiness `NO`. Kanıt: `evidence/P1.13.f.b/SONUC.md`.
+  P1.13.f.c ile isolated margin/leverage ve reserve projection kapatıldı;
+  güncel kayıt `evidence/P1.13.f.c/SONUC.md` içindedir.
+
+- 2026-09-17 P1.13.f.a Futures Grid v1 profile-bound exact level projection
+  tamamlandı: Spot Grid’den ayrı `BINANCE/USD_M/USDT/PERPETUAL/ONE_WAY/
+  ISOLATED` profile, explicit leverage alanı, `LONG`/`SHORT`/`NEUTRAL`
+  direction ve yalnız `FLAT` initial-position policy tanımlandı. Arithmetic
+  ve geometric seviyeler exact decimal/rational kök ile
+  `price_tick`/`tick_origin` doğrulamasından geçiyor; off-grid, non-perfect
+  root ve desteklenmeyen policy fail-closed. Odak `7/7 PASS`; P1.13.a–d ve
+  f.a ilişkili küme `25/25 PASS`; tam proje `719` testte `717 PASS`, Windows
+  Credential Manager `Windows error 1312` nedeniyle `2` environment error.
+  Compile/workspace/diff PASS. Position/fill, margin/leverage effect,
+  funding/liquidation, grid-profit/total-equity, order/replacement,
+  persistence, API/UI ve Binance/Testnet mutation yok. Durum
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`, ana P1.13.f
+  `IN_PROGRESS / IMPLEMENTATION_PENDING`, bağımsız review `NOT_RUN`,
+  production readiness `NO`. Kanıt: `evidence/P1.13.f.a/SONUC.md`.
+  P1.13.f.b ile position/initial-position ve accepted-fill state projection
+  kapatıldı; güncel kayıt `evidence/P1.13.f.b/SONUC.md` içindedir.
+
+- 2026-09-17 P1.13.e Grid trailing-up/down ve reverse/infinity karar kapısı
+  tamamlandı; yeni ürün kodu açılmadı. Araştırma exact range/version geçişi,
+  pending order/reserve yaşam döngüsü, cancel-replace identity, late-fill,
+  replay ve precision sahipliğini doğrulamadı; reverse/infinity exact
+  semantics `NOT_VERIFIED / DEFER` durumda. Durum `DEFERRED / NO-GO /
+  LOCAL_PASS`, bağımsız review `NOT_RUN`, production readiness `NO`. Son
+  doğrulanmış checkout baseline'ı `712` testte `710 PASS` ve Windows
+  Credential Manager `Windows error 1312` nedeniyle `2` environment error;
+  compile/workspace/diff kontrolleri PASS. Kanıt: `evidence/P1.13.e/SONUC.md`.
+  Sıradaki tek iş `P1.13.f` Futures Grid v1 için ayrı profile ve exact
+  projection karar kapısıdır.
+
+- 2026-09-17 P1.13.d Spot Grid geometric precision/quantization kapısı
+  tamamlandı: exact rational `N`-inci kökü ve explicit `price_tick`/
+  `tick_origin` ile yalnız tam temsil edilebilen geometric seviyeler üretiliyor;
+  non-perfect root ve off-tick seviye sessiz yuvarlama olmadan `BLOCKED`.
+  Odak `9/9 PASS`; P1.13.a–d ilişkili küme `18/18 PASS`; tam proje `712`
+  testte `710 PASS`, faz dışı Windows Credential Manager `Windows error 1312`
+  nedeniyle `2` environment error. Bağımsız literal oracle, compile,
+  read-only source-surface, workspace ve `git diff --check` PASS. Fee,
+  inventory/fill, replacement, trailing/reverse/infinity, API/UI, Store veya
+  Binance/Testnet mutation açılmadı. Kanıt: `evidence/P1.13.d/SONUC.md`.
+  Durum `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`; production readiness `NO`.
+  P1.13.e kararı `DEFERRED / NO-GO` olarak kapatıldı; sıradaki tek iş
+  `P1.13.f` Futures Grid v1 için ayrı profile ve exact projection karar
+  kapısıdır.
+
+- 2026-09-17 P1.13.c Spot Grid fee asset/rounding ve matched cycle profit-total
+  equity ayrımı tamamlandı: ilk offline profil yalnız quote-asset fee ve
+  explicit `EXACT_NO_ROUNDING` sözleşmesi kabul ediyor; base/third fee asset’i
+  ve venue quantization fail-closed. Accepted BUY/SELL çifti exact inventory
+  projection üzerinden doğrulanıyor; matched cycle profit ile explicit mark
+  fiyatına bağlı total equity ayrı alanlarda hesaplanıyor. Odak `5/5 PASS`;
+  P1.13.a–c ilişkili küme `13/13 PASS`; tam proje `707` testte `705 PASS`,
+  faz dışı Windows Credential Manager `Windows error 1312` nedeniyle `2`
+  environment error. Bağımsız Decimal oracle, compile, read-only source
+  surface, workspace ve `git diff --check` PASS. Store/persistence,
+  pending reserve/replacement, API/UI, üçüncü fee asset dönüşümü, Binance/
+  Testnet mutation veya canlı order açılmadı. Kanıt: `evidence/P1.13.c/SONUC.md`.
+  Durum `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`; production readiness `NO`.
+  Sıradaki tek iş `P1.13.d` geometric seviye precision/quantization karar
+  kapısıdır.
+
+- 2026-09-17 P1.12.h.d Futures DCA recovery snapshot ile immutable
+  profile-source provenance cross-check ve publish/migration NO-GO gate’i
+  tamamlandı: recovery ve provenance profile revision eşleşmesi, tekil
+  `ACCEPTED` source snapshot, manifest hash ve reopened target oracle’ı
+  salt-okunur karşılaştırılıyor. Stale snapshot, profile mismatch, eksik/bozuk
+  provenance veya önceki gate/oracle başarısızlığı `NO_GO`; temiz fixture
+  sonucu yalnız `READY_FOR_REVIEW`, `publish_action=BLOCKED` ve
+  `migration_action=BLOCKED`. Odak `4/4 PASS`; h.a–h.d ilişkili odak
+  `51/51 PASS`; provenance/manifest/reopen oracle kümesi `18/18 PASS`; tam
+  proje `702` testte `700 PASS`, faz dışı Windows Credential Manager
+  `Windows error 1312` nedeniyle `2` environment error. Compile ve
+  read-only source-surface PASS. Gerçek source export, migration/publish,
+  CORE01 economic admission, order/fill mutation veya Binance/Testnet
+  mutation açılmadı. Kanıt: `evidence/P1.12.h.d/SONUC.md`.
+  Sıradaki tek iş `P1.13.c` Spot Grid fee asset/rounding ve matched cycle
+  profit-total equity ayrımının karar ve salt-okunur projection kapısıdır.
+
+- 2026-09-17 P1.12.h.c Futures DCA durable profile recovery snapshot ve stale
+  quarantine boundary tamamlandı: seçilen profile ait event, posting, release
+  ve replay receipt kimlikleri deterministik salt-okunur snapshot olarak
+  projekte ediliyor; active profile revision farklıysa snapshot `QUARANTINED`,
+  bilinmiyorsa veya journal bozuksa `BLOCKED` kalıyor. Odak `4/4 PASS`; h.a ve
+  h.b ile ilişkili odak `47/47 PASS`; tam proje `698` testte `696 PASS`, faz dışı
+  Windows Credential Manager `Windows error 1312` nedeniyle `2` environment
+  error. Compile, read-only source-surface, byte-oracle ve `git diff --check`
+  PASS. CORE01 economic admission, order/fill mutation, Binance/Testnet
+  mutation veya mainnet açılmadı. Kanıt: `evidence/P1.12.h.c/SONUC.md`.
+  P1.12.h.d ile immutable profile-source provenance cross-check ve
+  publish/migration NO-GO gate kapatıldı; sıradaki tek iş `P1.13.c` Spot Grid
+  fee asset/rounding ve matched cycle profit-total equity ayrımının karar ve
+  salt-okunur projection kapısıdır.
+
+- 2026-09-17 P1.12.h.b Futures DCA profile-bound recovery capability ve CORE01
+  admission boundary gate’i tamamlandı: tek profile revision için durable
+  profile/event/posting/release/receipt kapsamı birebir doğrulanıyor; eksik
+  receipt/release, bozuk journal ve cross-profile transition fail-closed
+  `BLOCKED` kalıyor. Odak `4/4 PASS`; h.a ile ilişkili odak `43/43 PASS`; tam
+  proje `694` testte `692 PASS`, faz dışı Windows Credential Manager
+  `Windows error 1312` nedeniyle `2` environment error. Compile, read-only
+  byte-oracle ve `git diff --check` PASS. CORE01 economic admission, order/fill
+  mutation, Binance/Testnet mutation veya mainnet açılmadı. Kanıt:
+  `evidence/P1.12.h.b/SONUC.md`. P1.12.h.c ve P1.12.h.d ile recovery snapshot,
+  immutable profile-source provenance cross-check ve publish/migration NO-GO
+  gate kapatıldı; sıradaki tek iş `P1.13.c` Spot Grid fee asset/rounding ve
+  matched cycle profit-total equity ayrımının karar kapısıdır.
+
+- 2026-09-17 P1.12.h.a Futures DCA durable recovery/replay readiness gate’i
+  tamamlandı: mevcut greenfield journal v4 profile, event, reservation, release,
+  economic posting ve CORE01 replay receipt sahiplerini ayrı ve izlenebilir
+  tutuyor. Restart replay sequence/checksum/link doğrulaması yapıyor; receipt
+  preflight eksik schema/constraint’i salt-okunur `BLOCKED` döndürüyor; atomic
+  failure rollback, exact duplicate ve conflict sınırları kanıtlandı. Odak
+  `39/39 PASS`; tam proje `690` testte `688 PASS`, faz dışı Windows Credential
+  Manager `Windows error 1312` nedeniyle `2` environment error. Compile,
+  independent restart oracle ve `git diff --check` PASS. CORE01 economic
+  admission, order/fill mutation, Binance/Testnet mutation veya mainnet
+  açılmadı. Kanıt: `evidence/P1.12.h.a/SONUC.md`. P1.12.h.b ile profile-bound
+  recovery capability ve CORE01 admission boundary, P1.12.h.c ile durable
+  profile recovery snapshot ve P1.12.h.d immutable profile-source provenance
+  cross-check kapatıldı; sıradaki tek iş `P1.13.c` Spot Grid fee asset/rounding
+  ve matched cycle profit-total equity ayrımının karar kapısıdır.
+
+- 2026-09-17 P1.12.g.h Futures DCA fee-aware exit-candidate ve quantization
+  boundary contract’ı tamamlandı: g.d’nin explicit fee/funding profilinden çıkan
+  exact fee-aware breakeven yalnız `TAKE_PROFIT` adayına bağlandı. Fee profili
+  eksikliği, settlement mismatch, off-grid hedef ve kapasite aşımı fail-closed;
+  sessiz rounding, STOP/Trailing’a yanlış breakeven bağlama ve order authority
+  yok. Odak `9/9 PASS`; tam proje `690` testte `688 PASS`, faz dışı Windows
+  Credential Manager `Windows error 1312` nedeniyle `2` environment error.
+  Bağımsız Fraction capacity oracle, compile, AST/write-surface ve
+  `git diff --check` PASS. Gerçek order/fill, OCO/cancel-replace, reserve
+  mutation, persistence veya Binance/Testnet mutation açılmadı
+  (`order_authority=NONE`). Kanıt: `evidence/P1.12.g.h/SONUC.md`. P1.12.h.a
+  ile durable recovery/replay readiness, P1.12.h.b ile profile-bound recovery
+  capability, P1.12.h.c ile durable profile recovery snapshot ve P1.12.h.d ile
+  immutable profile-source provenance cross-check kapatıldı; sıradaki tek iş
+  `P1.13.c` Spot Grid fee asset/rounding ve matched cycle profit-total equity
+  ayrımının karar kapısıdır.
+
+- 2026-09-17 P1.12.g.g Futures DCA candidate identity ve late-fill
+  ayrım contract’ı tamamlandı: g.f adayından deterministic SHA-256 snapshot
+  identity üretildi; identity trigger, fiyat, requested miktar, kalan kapasite,
+  açık miktar ve gözlem zamanına bağlı. Late fill yalnız aynı candidate
+  identity’ye bağlı, sıralı ve requested miktarı aşmayan salt-okunur observation
+  olarak kaydediliyor; execution order identity veya economic posting üretmiyor.
+  Odak `7/7 PASS`; tam proje `681` testte `679 PASS`, faz dışı Windows
+  Credential Manager `Windows error 1312` nedeniyle `2` environment error.
+  Bağımsız identity/tamper oracle, compile, AST/write-surface ve
+  `git diff --check` PASS. Conditional execution, order/fill mutation,
+  persistence veya Binance/Testnet mutation açılmadı (`order_authority=NONE`).
+  Kanıt: `evidence/P1.12.g.g/SONUC.md`. P1.12.g.h ile tamamlandı; P1.12.h.a ile
+  durable recovery/replay readiness, P1.12.h.b ile profile-bound recovery
+  capability, P1.12.h.c ile durable profile recovery snapshot ve P1.12.h.d ile
+  immutable profile-source provenance cross-check kapatıldı; sıradaki tek iş
+  `P1.13.c` Spot Grid fee asset/rounding ve matched cycle profit-total equity
+  ayrımının karar kapısıdır.
+
+- 2026-09-17 P1.12.g.f Futures DCA exit-candidate and capacity contract
+  tamamlandı: g.e’nin seçtiği `CLOSE` trigger’ı exact tick-grid trigger fiyatı,
+  requested quantity ve gözlenmiş açık pozisyon kapasitesine bağlandı. TP,
+  stop-loss ve trailing-stop adayları üretilebiliyor; breakeven adjustment ve
+  trigger yok durumu fail-closed. Accepted fill + committed exit + yeni aday
+  toplamı açık pozisyonu aşamıyor; bağımsız Fraction oracle ile doğrulandı.
+  Odak `9/9 PASS`; tam proje `674` testte `672 PASS`, faz dışı Windows
+  Credential Manager `Windows error 1312` nedeniyle `2` environment error.
+  Compile, AST/write-surface ve `git diff --check` PASS. Gerçek order/fill,
+  OCO/cancel-replace, reserve mutation, persistence veya Binance/Testnet
+  mutation açılmadı (`order_authority=NONE`). Kanıt:
+  `evidence/P1.12.g.f/SONUC.md`. P1.12.g.g ile tamamlandı; sıradaki tek iş
+  `P1.12.g.h` fee-aware exit-candidate ve quantization boundary contract’ıdır.
+
+- 2026-09-17 P1.12.g.e Futures DCA exit priority contract
+  tamamlandı: aynı gözlemde `STOP_LOSS > TRAILING_STOP > TAKE_PROFIT >
+  BREAKEVEN_ADJUSTMENT` önceliği deterministik seçiliyor; breakeven tek başına
+  `ADJUST_STOP`, diğerleri `CLOSE` kararı üretiyor. Input sırası sonucu
+  değiştirmiyor, duplicate trigger fail-closed. Odak `9/9 PASS`; tam proje
+  `665` testte `663 PASS`, faz dışı Windows Credential Manager `Windows error
+  1312` nedeniyle `2` environment error. Bağımsız alt-küme oracle, compile ve
+  AST/write-surface PASS. Order/fill/candidate/OCO/cancel-replace/reserve,
+  persistence veya Binance/Testnet mutation açılmadı (`order_authority=NONE`).
+  Kanıt: `evidence/P1.12.g.e/SONUC.md`. P1.12.g.f ile tamamlandı; sıradaki
+  tek iş `P1.12.g.g` candidate identity ve late-fill/conditional execution
+  ayrım contract’ıdır.
+
+- 2026-09-17 P1.12.g.d Futures DCA fee-aware breakeven contract
+  tamamlandı: fee/funding profili olmadan yalnız gross average-entry boundary
+  gösteriliyor; settlement asset dışı fee asset’i, asset mismatch ve tick dışı
+  fee-aware hedef fail-closed kalıyor. Explicit settlement-notional modelinde
+  LONG/SHORT ve signed funding exact hesaplanıyor. Odak `9/9 PASS`; tam proje
+  `656` testte `654 PASS`, faz dışı Windows Credential Manager `Windows error
+  1312` nedeniyle `2` environment error. Bağımsız Fraction oracle, compile ve
+  AST/write-surface PASS. Fee conversion/rounding, funding source/schedule,
+  TP/SL/trailing execution, OCO/cancel-replace, persistence veya
+  Binance/Testnet mutation açılmadı (`order_authority=NONE`). Kanıt:
+  `evidence/P1.12.g.d/SONUC.md`. P1.12.g.e ile tamamlandı; sıradaki tek iş
+  `P1.12.g.f` seçilmiş trigger’ı exact exit-candidate ve kapasite contract’ına
+  bağlamaktır.
+
+- 2026-09-17 P1.12.g.c Futures DCA average-entry TP/split-TP projection
+  tamamlandı: gözlenmiş fill projection’dan LONG/SHORT yönüne göre exact
+  average-entry hedefi hesaplanıyor; tick dışı hedef sessiz yuvarlanmadan
+  reddediliyor; split TP toplamı açık pozisyonu aşamıyor ve kalan miktar exact
+  gösteriliyor. Odak `18/18 PASS`; tam proje `647` testte `645 PASS`, faz dışı
+  Windows Credential Manager `Windows error 1312` nedeniyle `2` environment
+  error. Compile, AST/write-surface, bağımsız exact oracle ve
+  `git diff --check` PASS. TP emri/OCO/cancel-replace, fill, reserve,
+  persistence veya Binance/Testnet mutation açılmadı (`order_authority=NONE`).
+  Kanıt: `evidence/P1.12.g.c/SONUC.md`. `P1.12.g.d` ile tamamlandı; sıradaki
+  tek iş `P1.12.g.e` exit priority ve eşzamanlı trigger karar contract’ıdır.
+
+- 2026-09-17 P1.12.g.b Futures DCA max-DCA/stop/`EXHAUSTED` contract
+  tamamlandı: tüketilmemiş ladder için `CONTINUE`, ladder kalırken max-DCA
+  sınırında `STOP`, dış stop nedenleri için ayrı `STOP` ve full ladder için
+  `EXHAUSTED` kararı salt-okunur değerlendiriliyor. Odak `19/19 PASS`; tam
+  proje `640` testte `638 PASS`, faz dışı Windows Credential Manager
+  `Windows error 1312` nedeniyle `2` environment error. Compile,
+  AST/write-surface, bağımsız contract oracle ve `git diff --check` PASS. Yeni order/recovery talebi,
+  lifecycle mutation, fill, reserve, persistence veya Binance/Testnet
+  mutation açılmadı (`order_authority=NONE`). Kanıt:
+  `evidence/P1.12.g.b/SONUC.md`. Sıradaki tek iş `P1.12.g.c` average-entry
+  TP ve split-TP miktar conservation projection’ıdır.
+
+- 2026-09-17 P1.12.g.a Futures DCA start-condition gate tamamlandı:
+  `IMMEDIATE`, `CLOSED_CANDLE` ve mevcut `SignalReadiness` sonucuna bağlı
+  `SIGNAL` başlangıcı source-time sınırlarıyla salt-okunur değerlendiriliyor.
+  Odak `20/20 PASS`; tam proje `634` testte `632 PASS`, faz dışı Windows
+  Credential Manager `Windows error 1312` nedeniyle `2` environment error.
+  Compile, AST/write-surface ve `git diff --check` PASS. Start gate
+  lifecycle/order/fill/reserve/persistence veya Binance/Testnet mutation
+  authority taşımıyor (`order_authority=NONE`). Kanıt:
+  `evidence/P1.12.g.a/SONUC.md`. Sıradaki tek iş `P1.12.g.b` max-DCA/stop
+  koşulları ve `EXHAUSTED` terminal sınırının explicit contract’ıdır.
+
+- 2026-09-17 P1.12.f.i.d custom candidate offline sizing/pre-acceptance
+  köprüsü tamamlandı: quote-notional custom candidate’ın ilk seviyesi mevcut
+  `SizingCandidate`, kalan seviyeleri mevcut `LadderBinding` olarak salt-okunur
+  pre-acceptance kapısına bağlandı. Acceptance identity yeniden doğrulanıyor;
+  eligible quote budget aşımı ve acceptance conflict fail-closed. BASE_QTY için
+  örtük quote bütçesi üretilmiyor. Odak `23/23`, ilişkili sizing dahil `27/27`
+  PASS; tam proje `626/628` PASS, faz dışı Windows Credential Manager
+  `Windows error 1312` nedeniyle iki environment error; compile, write-surface ve
+  `git diff --check` PASS. `order_authority=NONE`, persistence, reserve, order
+  attempt, Binance/Testnet mutation ve mainnet açılmadı. Kanıt:
+  `evidence/P1.12.f.i.d/SONUC.md`. Sıradaki tek iş `P1.12.g` DCA
+  start/stop/TP/trailing/breakeven lifecycle sözleşmesidir.
+
+- 2026-09-17 P1.12.f.i.c immutable custom candidate acceptance-boundary
+  sözleşmesi tamamlandı: candidate projection yeniden doğrulanıp Futures DCA
+  profili, instrument filter metadata’sı, ladder seviyeleri ve post-quantization
+  conservation alanlarını kapsayan deterministik SHA-256 identity ile snapshot’a
+  bağlandı. Tamper/conflict fail-closed; `order_authority=NONE`. Odak 20/20,
+  ilişkili 55/55, tam proje 625/625 PASS, compile/workspace PASS (240 aktif
+  Python dosyası), `git diff --check` PASS. Persistence, order attempt,
+  Binance/Testnet mutation ve mainnet açılmadı. Kanıt:
+  evidence/P1.12.f.i.c/SONUC.md. Sıradaki tek iş P1.12.f.i.d custom candidate
+  acceptance’ını offline sizing/pre-acceptance köprüsüne bağlamaktır.
+
+- 2026-09-17 P1.12.f.i.b bağımsız candidate/oracle incelemesi ve kritik gate
+  tamamlandı: BASE_QTY ve QUOTE_NOTIONAL post-quantization sonuçları bağımsız
+  Decimal oracle ile eşleşti; candidate binding AST/write-surface kontrolünde
+  persistence/SQLite/HTTP mutation çağrısı bulunmadı. Odak 17/17, ilişkili
+  52/52, tam proje 622/622 PASS, compile/workspace PASS (239 aktif Python
+  dosyası), `git diff --check` PASS. Gerçek venue metadata, emir, persistence,
+  Binance/Testnet mutation ve mainnet açılmadı. Kanıt:
+  evidence/P1.12.f.i.b/SONUC.md. Sıradaki tek iş P1.12.f.i.c immutable
+  custom candidate acceptance-boundary sözleşmesiydi; i.c ile tamamlandı.
+
+- 2026-09-17 P1.12.f.i.a quantity-step ve quote/base candidate sözleşmesi
+  tamamlandı: mevcut instrument filter profiline bağlanan read-only candidate
+  projection, BASE_QTY ve QUOTE_NOTIONAL için post-quantization gerçek allocation,
+  quantity-step, min-quantity ve min-notional doğruluyor. Tick mismatch ve
+  quantity collapse fail-closed; requested/actual allocation ayrımı korunuyor.
+  Odak 14/14, ilişkili 49/49, tam proje 619/619 PASS, compile/workspace PASS
+  (239 aktif Python dosyası). Emir, persistence, Binance/Testnet mutation ve
+  mainnet açılmadı. Kanıt: evidence/P1.12.f.i.a/SONUC.md. Sıradaki tek iş
+  P1.12.f.i.b bağımsız candidate/oracle incelemesi ve kritik gate’ti; i.b ile
+  tamamlandı.
+
+- 2026-09-17 P1.12.f.i Pionex DIY per-safety-order deviation/allocation
+  profile sözleşmesi tamamlandı: custom ladder her safety order için anchor’a
+  göre cumulative deviation, strict index/order ve explicit BASE_QTY veya
+  QUOTE_NOTIONAL allocation taşıyor; tick hizası ve exact budget conservation
+  doğrulanıyor. Bağımsız Decimal oracle dahil odak 5/5, ilişkili küme 43/43,
+  tam proje 616/616 PASS, compile/workspace PASS (239 aktif Python dosyası).
+  SHARE semantiği, quantity-step/venue quantization, min-notional, persistence
+  ve canlı mutation açılmadı. Kanıt: evidence/P1.12.f.i/SONUC.md. Sıradaki
+  tek iş i.a quantity-step ve quote/base candidate sözleşmesiydi; i.a ile
+  tamamlandı.
+
+- 2026-09-17 P1.12.f.h.av bağımsız replay integrity incelemesi ve kritik gate
+  tamamlandı: h.au read-only restart oracle’ı bağımsız AST/write-surface
+  kontrolünden geçti; SQLite yazma/append çağrısı yok, schema corruption
+  exception’ı fail-closed BLOCKED’a çevriliyor. Odak 15/15, tam proje
+  611/611 PASS, compile/workspace PASS (238 aktif Python dosyası),
+  `git diff --check` hata vermedi. CORE01 durable owner, Binance/venue
+  mutation, mainnet, secret, migration ve publish açılmadı. Kanıt:
+  evidence/P1.12.f.h.av/SONUC.md. Sıradaki tek iş P1.12.f.i Pionex DIY
+  per-safety-order deviation/allocation profilinin exact sözleşmesidir.
+
+- 2026-09-17 P1.12.f.h.au durable replay integrity oracle
+  tamamlandı: read-only restart oracle artık durable event, economic posting,
+  release history ve reservation projection checksum/consistency kontrollerini
+  kullanıyor; bozuk durable veri exception olarak dışarı taşınmadan BLOCKED
+  kalıyor. Pure duplicate boundary, retry duplicate/conflict boundary ve aynı
+  scope farklı receipt fingerprint conflict’i kanıtlandı. Odak 15/15,
+  ilişkili küme 55/55 PASS, tam proje 611/611 PASS, compile/workspace PASS
+  (238 aktif Python dosyası). Oracle durable yazmıyor; Binance/venue mutation,
+  mainnet, secret, migration veya publish açılmadı. Kanıt:
+  evidence/P1.12.f.h.au/SONUC.md. Sıradaki bağımsız inceleme ve kritik gate
+  h.av ile tamamlandı; sonraki tek iş P1.12.f.i profil sözleşmesidir.
+
+- 2026-09-17 P1.12.f.h.at read-only CORE01 replay projection oracle
+  tamamlandı: restart oracle durable accepted event, economic posting, release
+  transition ve receipt satırlarını read-only loader’larla doğruluyor; aynı
+  immutable girdilerle pure CORE01 replay decision/projection yeniden
+  hesaplanıyor. Receipt fingerprint/scope ve pure decision eşleşirse READY,
+  receipt eksikliği veya stale CORE01 admission BLOCKED. Odak 12/12, ilişkili
+  küme 52/52 PASS, tam proje 608/608 PASS, compile/workspace PASS (238 aktif
+  Python dosyası). CORE01 durable owner, venue mutation, Binance ve canlı emir
+  açılmadı. Kanıt: evidence/P1.12.f.h.at/SONUC.md. Sıradaki tek iş durable
+  reservation/posting/release checksum ve duplicate/conflict sınırlarını
+  genişleten read-only oracle kapısıydı; bu iş h.au ile tamamlandı.
+
+- 2026-09-17 P1.12.f.h.as atomic CORE01 replay receipt binding tamamlandı:
+  accepted Futures DCA fill event’i, release transition, economic posting ve
+  replay receipt tek SQLite transaction’ında birlikte yazılıyor. Dört kayıt
+  birlikte ACCEPTED veya DUPLICATE; receipt scope mismatch ve injected receipt
+  failure event/release/reservation/posting kayıtlarının tümünü rollback
+  ediyor. Restart load exact receipt bağlantılarını koruyor. Odak 25/25,
+  ilişkili küme 49/49 PASS, tam proje 605/605 PASS, compile/workspace PASS
+  (236 aktif Python dosyası). Binance/Testnet mutation, mainnet, secret,
+  legacy migration/publish ve yeni economic authority açılmadı. Kanıt:
+  evidence/P1.12.f.h.as/SONUC.md. Sıradaki tek iş atomik receipt binding’in
+  read-only CORE01 replay projection oracle’ıyla restart sonrası eşitliğini
+  kanıtlamaktır.
+
+- 2026-09-17 P1.12.f.h.ar durable CORE01 replay receipt append/load
+  tamamlandı: greenfield journal schema revision 4 içine receipt owner tablosu,
+  fingerprint primary key ve mapping/event/posting/transition/release scope
+  unique contract’ı eklendi. Accepted event, posting, release transition ve
+  reservation projection bağlantıları append öncesi doğrulanıyor; exact
+  duplicate DUPLICATE, scope/fingerprint çakışması CONFLICT; restart
+  sonrasında load ve link doğrulaması çalışıyor. Odak 16/16, ilişkili küme
+  46/46 PASS, tam proje 602/602 PASS, compile/workspace PASS (235 aktif
+  Python dosyası). Bu faz eski schema migration’ı veya canlı venue/mutation
+  açmıyor; receipt append mevcut durable kayıtların ardından ayrı transaction.
+  Kanıt: evidence/P1.12.f.h.ar/SONUC.md. Sıradaki tek iş receipt +
+  event/release/posting bağını tek transaction’da kuran atomik binding ve
+  rollback kapısıdır.
+
+- 2026-09-17 P1.12.f.h.aq durable CORE01 replay receipt Store preflight’i
+  tamamlandı: mevcut greenfield journal read-only kontrol edildi; gerekli
+  `core_replay_receipts` tablosu, fingerprint identity ve mapping/event/
+  posting/release unique scope sözleşmesi tanımlandı. Mevcut schema’da tablo
+  bulunmadığı kanıtlandı ve preflight `BLOCKED`; tablo/migration/receipt yazımı
+  kendisi tarafından yapılmadı. Fixture READY ve malformed/eksik constraint
+  RED kontrolleri var. Odak `3/3`, ilişkili küme `43/43 PASS`, tam proje
+  `599/599 PASS`, compile/workspace PASS (`235` aktif Python dosyası). Kanıt:
+  `evidence/P1.12.f.h.aq/SONUC.md`. Sıradaki tek iş greenfield schema
+  revision/migration ve exact append/load contract’ıdır.
+
+- 2026-09-17 P1.12.f.h.ap offline replay idempotency sözleşmesi tamamlandı:
+  accepted CORE01 + Futures DCA replay kararından event/posting/release/
+  mapping alanlarıyla bounded canonical fingerprint ve frozen receipt üretiliyor.
+  Aynı scope + aynı fingerprint `DUPLICATE`; same-scope payload/fee/commitment/
+  transition farkı `CONFLICT`; farklı scope `BLOCKED`. Receipt yalnız accepted
+  kararından oluşuyor ve durable Store/journal/restart authority’si taşımıyor.
+  Odak `17/17`, ilişkili küme `68/68 PASS`, tam proje `596/596 PASS`,
+  compile/workspace PASS (`233` aktif Python dosyası). Kanıt:
+  `evidence/P1.12.f.h.ap/SONUC.md`. Sıradaki tek iş receipt’in bounded
+  durable Store/restart sözleşmesi için karar kapısıdır.
+
+- 2026-09-17 P1.12.f.h.ao offline CORE01 + Futures DCA replay karar kapısı
+  tamamlandı: h.an reducer projection’ı accepted event, projected posting ve
+  partial/full release transition ile aynı salt-okunur kararda birleşiyor.
+  Event/transition/posting identity, FILL türü, commitment, fee ve release
+  consumed-delta exact doğrulanıyor; DUPLICATE yeniden CORE01 economics
+  üretmiyor. Kabul sonucu CORE state projection, reservation projection ve
+  posting kimliğini taşıyor; Store/journal/posting/venue mutation yok. Odak
+  `14/14`, ilişkili küme `65/65 PASS`, tam proje `593/593 PASS`,
+  compile/workspace PASS (`233` aktif Python dosyası). Kanıt:
+  `evidence/P1.12.f.h.ao/SONUC.md`. Sıradaki tek iş bounded
+  idempotency/replay sözleşmesini durable Store’a yazmadan doğrulamaktır.
+
+- 2026-09-17 P1.12.f.h.an offline CORE01 FILL reducer projection tamamlandı:
+  h.am admission’ından gelen immutable FILL tuple yalnız kopya CORE01 state
+  üzerinde reducer’a uygulanıyor; position quantity, entry notional, fee ve
+  order filled/notional exact projection olarak doğrulanıyor. Girdi state,
+  durable Store, journal, posting ve venue transport değişmiyor. BLOCKED veya
+  bozuk/tekrarlı tuple reducer’a girmeden fail-closed kalıyor; reducer hatası
+  ham hata taşımadan `BLOCKED` oluyor. Odak `12/12`, ilişkili küme `50/50
+  PASS`, tam proje `591/591 PASS`, compile/workspace PASS (`233` aktif Python
+  dosyası). Kanıt: `evidence/P1.12.f.h.an/SONUC.md`. Sıradaki tek iş
+  reducer projection’ını Futures DCA posting/release replay kararına salt-
+  okunur bağlamaktır.
+
+- 2026-09-17 P1.12.f.h.am Futures DCA → CORE01 economic FILL boundary
+  admission kapısı tamamlandı: explicit admitted mapping, accepted fill
+  envelope ve projected posting identity/commitment/fee/funding/profile
+  eşleşmeleri birlikte doğrulanıyor. Gross commitment CORE01 `qty * price`
+  olarak temsil edilemiyorsa, order terminal/UNKNOWN ise, overfill veya
+  off-grid quantity/price varsa `BLOCKED`; contract-size ya da ekonomik
+  varsayım üretilmiyor. Kabul halinde yalnız immutable CORE01 `FILL` tuple
+  önerisi dönüyor; reducer, Store, persistence, posting ve venue mutation yok.
+  Odak `10/10`, ilişkili küme `48/48 PASS`, tam proje `589/589 PASS`,
+  compile/workspace PASS (`233` aktif Python dosyası). Kanıt:
+  `evidence/P1.12.f.h.am/SONUC.md`. Sıradaki tek iş kabul edilmiş tuple’ın
+  kopya CORE01 state üzerinde exact reducer projection kapısıdır.
+
+- 2026-09-17 P1.12.f.h.al CORE01 intent identity authority sözleşmesi
+  tamamlandı: `Order` modeli explicit `intent_id` taşıyabiliyor; eski INTENT
+  payload’ları korunuyor, yeni kimlikler sentetik üretilmiyor ve Spot binding
+  serializer’ında restart sonrası korunuyor. h.ak admission oracle’ı artık
+  `core_order_id`, role, side, exact limit ve intent identity birlikte
+  eşleşirse yalnız salt-okunur `ADMISSIBLE` kararı veriyor; eksik/conflict
+  `BLOCKED`. Economic FILL/posting, Store binding ve venue mutation açılmadı.
+  Odak `8/8`, tam proje `587/587 PASS`, compile/workspace PASS (`233` aktif
+  Python dosyası). Kanıt: `evidence/P1.12.f.h.al/SONUC.md`. Sıradaki tek iş
+  admitted mapping’i Futures DCA fill envelope ile CORE01 economic FILL
+  boundary’sine bağlayan offline karar kapısıdır.
+
+- 2026-09-17 P1.12.f.h.ak read-only CORE01 mapping admission oracle’ı
+  tamamlandı: mevcut `State` içindeki order scope’u `core_order_id`, role, side
+  ve exact limit ile karşılaştırılıyor. Order yoksa veya scope çatışıyorsa
+  `BLOCKED`; scope tam eşleşse bile mevcut CORE01 `Order` modeli intent kimliği
+  taşımadığı için `core_order_intent` authority’si eksik ve admission açılmıyor.
+  State/Store/economic projection mutation’ı veya sentetik intent üretilmedi.
+  Odak `7/7`, ilişkili guard kümesi `16/16 PASS`, tam proje `585/585 PASS`,
+  compile/workspace PASS (`233` aktif Python dosyası). Kanıt:
+  `evidence/P1.12.f.h.ak/SONUC.md`. Sıradaki tek iş CORE01 intent identity
+  authority’sinin mutasyonsuz karar ve sözleşme kapısıdır.
+
+- 2026-09-17 P1.12.f.h.aj immutable Futures DCA → CORE01 mapping contract’ı
+  tamamlandı: accepted event/posting için profile revision, core order/intent,
+  role, side ve exact limit alanları açıkça zorunlu. Source/commitment/fee,
+  profile ve BUY/SELL limit eşleşmeleri fail-closed; candidate non-economic ve
+  CORE01 Store mutation yapmıyor. Odak `5/5`, hedefli küme `28/28 PASS`, tam
+  proje `583/583 PASS`, compile/workspace PASS (`233` aktif Python dosyası).
+  Kanıt: `evidence/P1.12.f.h.aj/SONUC.md`. Sıradaki tek iş mapping candidate’ın
+  mevcut CORE01 state ile mutasyonsuz admission oracle’ıdır.
+
+- 2026-09-17 P1.12.f.h.ai CORE01 economic authority boundary preflight’i
+  tamamlandı: durable Futures DCA event/posting replay read-only doğrulanıyor,
+  fakat mevcut envelope’ta CORE01 `FILL` için gereken `side`, `core_order_intent`,
+  `role` ve `limit_price` bulunmadığı için binding `BLOCKED` kalıyor. CORE01
+  Store’a yazma, sentetik intent/side üretme veya cross-database atomicity iddiası
+  yok. Odak `3/3`, release+posting kümesi `23/23 PASS`, tam proje
+  `578/578 PASS`, compile/workspace PASS (`231` aktif Python dosyası). Kanıt:
+  `evidence/P1.12.f.h.ai/SONUC.md`. Sıradaki tek iş Futures DCA → CORE01
+  immutable mapping contract’ıdır.
+
+- 2026-09-17 P1.12.f.h.ah durable Futures DCA release + economic-posting
+  atomic binding tamamlandı: accepted partial/full fill event’i, release
+  history, reservation projection ve economic posting aynı SQLite transaction’ında
+  bağlandı. Event/transition/posting identity, source, commitment, fee ve
+  consumed-delta eşleşmeleri fail-closed; injected posting failure tümünü
+  rollback ediyor; tam retry `DUPLICATE`. Odak `20/20 PASS`; tam proje
+  `575/575 PASS`, compile/workspace PASS (`229` aktif Python dosyası). Cancel,
+  late/UNKNOWN ekonomik posting’e bağlanmadı; canlı Binance ve CORE01 canlı
+  binding açılmadı. Kanıt: `evidence/P1.12.f.h.ah/SONUC.md`. Sıradaki tek iş
+  durable economic posting replay’sinin CORE01 ekonomik authority sınırıdır.
+
+- 2026-09-17 P1.12.f.h.ag durable Futures DCA release update tamamlandı:
+  schema revision `3` içindeki `reservation_releases` history’si reservation
+  projection ile aynı transaction’da yazılıyor. Optimistic version, monotonic
+  release cursor, checksum/replay, duplicate/conflict ve injected failure
+  rollback doğrulandı. Odak `17/17 PASS`; tam proje `572/572 PASS`,
+  compile/workspace PASS (`228` aktif Python dosyası). Economic posting ile
+  release’in birleşmesi, canlı Binance ve legacy migration/publish açılmadı.
+  Kanıt: `evidence/P1.12.f.h.ag/SONUC.md`. Sıradaki tek iş release + economic
+  posting cursor’ının aynı transaction’da bağlanmasıdır.
+
+- 2026-09-17 P1.12.f.h.af Futures DCA release transition state machine
+  tamamlandı: partial/full fill, cancel, late ve UNKNOWN için exact conservation,
+  quarantine, monotonic release cursor, version gate ve duplicate/conflict
+  davranışı eklendi. Saf projection testleri `4/4 PASS`; tam proje
+  `569/569 PASS`, compile/workspace PASS (`226` aktif Python dosyası).
+  Durable journal update ve transition history henüz açılmadı; legacy
+  migration/publish `NOT_APPLICABLE`, canlı Binance açılmadı. Kanıt:
+  `evidence/P1.12.f.h.af/SONUC.md`. Sıradaki tek iş release transition’ın
+  bounded journal’da optimistic version + cursor ile durable atomic update’idir.
+
+- 2026-09-17 P1.12.f.h.ae greenfield journal binding tamamlandı:
+  schema revision 2’de ayrı release cursor, exact economic posting projection
+  ve event + reservation + posting tek transaction akışı eklendi. ACCEPTED
+  dışı event posting’e bağlanmıyor; source/commitment/fee mismatch ve cursor
+  boşluğu fail-closed; duplicate replay idempotent. Odak `13/13 PASS`, tam
+  proje `565/565 PASS`, compile/workspace PASS (`224` aktif Python dosyası).
+  Legacy migration/publish `NOT_APPLICABLE`; canlı Binance açılmadı. Kanıt:
+  `evidence/P1.12.f.h.ae/SONUC.md`. Sıradaki tek iş partial/cancel/late/UNKNOWN
+  release transition ve release-cursor state machine kapısıdır.
+
+- 2026-09-17 P1.12.f.h.ad greenfield ürün teslim sınırı kararı tamamlandı:
+  ürün yeni kurulacağı için kullanıcıdan eski source DB/export, test çalışması
+  veya gerçek işlem kaydı beklenmeyecek. Önceki provenance/migration/publish
+  zinciri yalnız gelecekteki legacy import için opsiyonel güvenlik sınırı;
+  aktif ürün bağımlılığı değil. Eski başarısız DCA projesi ve yedekler de
+  yalnız seçici teknik/UI/UX referansıdır; doğrulama ve reuse kaydı olmadan
+  runtime’a alınmaz. Durum `COMPLETE_WITH_LIMITATION / LOCAL_PASS`,
+  legacy migration/publish `NOT_APPLICABLE`. Kanıt:
+  `evidence/P1.12.f.h.ad/SONUC.md`. Sıradaki tek iş greenfield journal’da
+  event + reservation + fill-release + economic-posting cursor binding’idir.
+
+- 2026-09-17 P1.12.f.h.ac bağımsız inceleme + kapsamlı kabul kapısı tamamlandı:
+  iki ayrı Standards/Spec incelemesinde bulunan iki P1 düzeltildi. Önceki
+  `NO_GO` gate artık readiness’e taşınıyor; manifest mapping’leri evaluation
+  sırasında canonical olarak yeniden doğrulanıyor. Güncel odak `14/14`, tam
+  proje `562/562 PASS`; migration/publish `NO-GO`. Kanıt:
+  `evidence/P1.12.f.h.ac/SONUC.md`. Legacy import yolu ürün teslimatının
+  önkoşulu değildir; greenfield journal binding yoluna dönülmüştür.
+
+- 2026-09-17 P1.12.f.h.ab insan kontrollü publish-readiness karar kapısı
+  tamamlandı: target validation, manifest eşleşmesi ve bağımsız oracle tek
+  kararda birleşiyor. Teknik kanıtlar geçerse `READY_FOR_REVIEW`, fakat
+  `approval_state=REQUIRED` ve `publish_action=BLOCKED` korunuyor; oracle
+  eksik/başarısızsa `NO_GO`. Migration/publish çalıştırılmadı. Kanıt:
+  `evidence/P1.12.f.h.ab/SONUC.md`; odak `13/13`, tam proje `561/561 PASS`.
+  Sıradaki tek iş bağımsız inceleme ve kapsamlı kabul kapısıdır.
+
+- 2026-09-17 P1.12.f.h.aa manifest reopen + bağımsız hash/eşleme oracle kapısı
+  tamamlandı: production hash yardımcısından bağımsız stdlib oracle reopen
+  edilmiş target satırını ve canonical SHA-256 manifestini doğruluyor; target
+  veya manifest tahrifi `NO_GO`, target satırı değişmeden kalıyor. Durum
+  `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; migration/publish açılmadı. Kanıt:
+  `evidence/P1.12.f.h.aa/SONUC.md`; odak `11/11`, tam proje `559/559 PASS`.
+  Sıradaki tek iş insan kontrollü publish-readiness karar kapısıdır.
+
+- 2026-09-17 P1.12.f.h.z source-to-target eşleme ve immutable migration
+  manifest kapısı tamamlandı: source/target row identity, profile revision,
+  payload hash, schema revision, observed time ve state canonical SHA-256
+  manifest’e bağlandı. Manifest-target read-only birebir eşleşme `READY`,
+  UNKNOWN/duplicate/conflict/empty/mismatch `NO_GO` veriyor. Migration/publish
+  çalıştırılmadı. Kanıt: `evidence/P1.12.f.h.z/SONUC.md`; odak `8/8`, tam
+  proje `556/556 PASS`. Sıradaki tek iş reopen + bağımsız hash/eşleme oracle
+  kapısıdır.
+
+- 2026-09-17 P1.12.f.h.y read-only provenance validation + publish karar kapısı
+  tamamlandı: profile checksum/replay, source snapshot identity/hash/state,
+  profile FK, tekil ACCEPTED kaynak ve UNKNOWN/QUARANTINED/missing/conflict
+  durumları doğrulanıyor. Geçerli target `READY/READY`, sorunlu target
+  `NO_GO/NO_GO` dönüyor; otomatik publish ve migration açılmadı. Kanıt:
+  `evidence/P1.12.f.h.y/SONUC.md`; odak `5/5`, tam proje `553/553 PASS`.
+  Sıradaki tek iş read-only source-to-target eşleme ve immutable migration
+  manifest karar kapısıdır.
+
+- 2026-09-17 P1.12.f.h.x bounded provenance target initializer + failure/restart
+  kapısı tamamlandı: mevcut v1 dosyasını yerinde değiştirmeyen yeni target,
+  `profile_source_snapshots` owner’ı, profile FK, ACCEPTED unique kuralı,
+  duplicate/conflict/UNKNOWN ve rollback/reopen sınırları doğrulandı. Durum
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`; migration ve publish `NO-GO`.
+  Kanıt: `evidence/P1.12.f.h.x/SONUC.md`; odak `3/3`, tam proje
+  `551/551 PASS`. Sıradaki tek iş read-only profile/provenance validation ve
+  publish karar kapısıdır.
+
+- 2026-09-17 P1.12.f.h.w provenance target schema/migration taslağı hazırlandı:
+  mevcut v1 dosyalarını yerinde değiştirmeyen ayrı target, immutable
+  `profile_source_snapshots` owner’ı, FK/unique/hash/state/replay kısıtları ve
+  read-only → validate → commit sırası tanımlandı. Migration çalıştırılmadı;
+  durum `CONTRACT_READY / IMPLEMENTATION_PENDING`, migration `NO-GO`. Kanıt:
+  `evidence/P1.12.f.h.w/SONUC.md`; son tam proje `548/548 PASS`. Sıradaki tek
+  iş bounded target initializer + publish edilmeyen failure/restart testidir.
+
+- 2026-09-17 P1.12.f.h.v provenance SQLite failure/replay oracle kapısı
+  tamamlandı: ACCEPTED replay, exact duplicate/conflict, UNKNOWN authority
+  dışı bırakma ve commit öncesi failure rollback `3/3` ile doğrulandı. Bu
+  test-only oracle production schema/migration binding açmıyor. Kanıt:
+  `evidence/P1.12.f.h.v/SONUC.md`; tam proje `548/548 PASS`. Sıradaki tek iş
+  provenance owner’ını production schema’ya bağlayan minimum migration
+  taslağıdır.
+
+- 2026-09-17 P1.12.f.h.u immutable provenance schema taslağı hazırlandı:
+  profile revision’dan ayrı source snapshot owner’ı, source kind/row ID,
+  payload hash, source schema revision, observed time ve ACCEPTED/UNKNOWN/
+  QUARANTINED state kuralları tanımlandı. V1’e uygulanmadı, schema version ve
+  migration binding açılmadı. Kanıt: `evidence/P1.12.f.h.u/SONUC.md`; son tam
+  proje kapısı `545/545 PASS`. Sıradaki tek iş provenance schema için bağımsız
+  SQLite failure/replay ve duplicate/conflict oracle’ıdır.
+
+- 2026-09-17 P1.12.f.h.t profile source provenance/snapshot identity karar
+  kapısı tamamlandı: source kind, row/snapshot identity, payload hash,
+  schema/policy revision, observed time ve profile bağı zorunlu contract olarak
+  tanımlandı. Aynı identity farklı hash ile `CONFLICT`, eksik/UNKNOWN source
+  `QUARANTINED/NO_GO` kalacak. V1 profile tablosu provenance taşımadığı için
+  persistence/migration `NO-GO`; üretim kodu değişmedi. Kanıt:
+  `evidence/P1.12.f.h.t/SONUC.md`; mevcut adapter `2/2`, son tam proje
+  `545/545 PASS`. Sıradaki tek iş immutable provenance schema taslağıdır.
+
+- 2026-09-17 P1.12.f.h.s profile revision + contract-size source adapter
+  tamamlandı: caller-supplied revision identity, symbol, effective time,
+  exact positive contract-size ve fee/slippage/rounding policy revision’ları
+  immutable journal profile revision’ına dönüştürülüyor. Contract-size default
+  edilmiyor; invalid source fail-closed. Venue fetch, provenance, migration ve
+  ekonomik binding açılmadı. Kanıt: `evidence/P1.12.f.h.s/SONUC.md`; odak
+  `2/2 PASS`, tam proje `545/545 PASS`. Sıradaki tek iş explicit source
+  provenance/snapshot identity kararı `P1.12.f.h.t` altında tamamlandı; sıradaki
+  iş immutable provenance schema oracle’ıdır.
+
+- 2026-09-17 P1.12.f.h.r migration source contract karar kapısı tamamlandı:
+  her hedef alan için source authority/row identity, exact normalization,
+  revision-event bağı ve missing/UNKNOWN/conflict/late davranışı zorunlu
+  kabul şartı yapıldı. Profile, event/execution, reservation ve posting
+  sahiplikleri ayrıldı; mevcut split store’lar bunları tam taşımadığı için
+  migration `NO-GO`, implementation `PENDING`. Kanıt:
+  `evidence/P1.12.f.h.r/SONUC.md`; hedefli preflight `1/1 PASS`, son tam
+  proje kapısı `543/543 PASS`. Sıradaki tek iş profile revision + contract-size
+  source adapter karar kapısıdır.
+
+- 2026-09-17 P1.12.f.h.q split-store migration kapsam envanteri tamamlandı:
+  preflight v1 journal’ın profile, event/execution, reservation ve posting
+  alanlarının tamamını karşılaştırıyor. Gerçek split kaynaklarda yalnız
+  event identity/sequence/hash ve reservation identity/owner/amount gözlendi;
+  eksik alanlar default’lanmadı, migration `NO-GO` kaldı. Kanıt:
+  `evidence/P1.12.f.h.q/SONUC.md`; odak `11/11 PASS`, tam proje
+  `543/543 PASS`. Sıradaki tek iş eksik ekonomik alanların üretileceği kaynak
+  sözleşmesi için karar kapısıdır.
+
+- 2026-09-17 P1.12.f.h.p event+reservation atomic coordinator kapısı
+  tamamlandı: profile-bound event ve source-event bağlı reservation aynı bounded
+  SQLite transaction’ında yazılıyor; exact duplicate idempotent, conflict ve
+  source mismatch fail-closed. Reservation insert’ine SQLite failure injection
+  event insert’inin de restart sonrası görünmemesini doğruladı. Durum
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`, release/posting ve legacy split
+  store migration `NO-GO`. Kanıt: `evidence/P1.12.f.h.p/SONUC.md`; odak
+  `10/10 PASS`, tam proje `543/543 PASS`. Sıradaki tek iş mevcut split
+  FuturesDcaEventStore + ReservationLedger verisinin bu journal’a güvenli,
+  eksik ekonomik alanları uydurmayan migration kararıdır.
+
+- 2026-09-17 P1.12.f.h.o minimum reservation projection kapısı tamamlandı:
+  reservation identity, owner/asset, exact reserved-consumed-releasable alanları,
+  optional release identity, terminal state, version ve source-event reference
+  yazımı/replay’i eklendi. Exact duplicate `DUPLICATE`, farklı payload
+  `CONFLICT`, negatif/bozuk alan ve eksik source event fail-closed. Event ve
+  reservation aynı transaction’da bağlanmadı; release/posting ekonomik otoritesi
+  açılmadı. Durum `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`, release/atomic
+  binding `NO-GO`. Kanıt: `evidence/P1.12.f.h.o/SONUC.md`; odak `8/8 PASS`,
+  tam proje `541/541 PASS`. Bu kapıdan sonra event+reservation atomic
+  coordinator `P1.12.f.h.p` altında tamamlandı; sıradaki iş split-store migration
+  kapsamını kanıtlamaktır.
+
+- 2026-09-17 P1.12.f.h.n profile-bound immutable event envelope kapısı
+  tamamlandı: event/execution/order identity, sequence, exact execution
+  alanları, canonical payload, checksum, duplicate/conflict ve profile scope
+  doğrulandı. Reservation/posting binding’i açılmadı. Durum
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`, reservation/posting `NO-GO`.
+  Kanıt: `evidence/P1.12.f.h.n/SONUC.md`; tam proje `539/539 PASS`. Sıradaki
+  tek iş minimum reservation projection kapısıdır.
+
+- 2026-09-17 P1.12.f.h.m immutable profile revision insert/replay kapısı
+  tamamlandı: v1 journal profile scope’u explicit contract-size ve policy
+  revision kimlikleriyle canonical hash’li, duplicate idempotent ve conflict
+  fail-closed biçimde yazıp replay ediyor. Event/reservation/posting binding’i
+  açılmadı. Durum `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`, event binding
+  `NO-GO`. Kanıt: `evidence/P1.12.f.h.m/SONUC.md`; tam proje `537/537 PASS`.
+  Sıradaki tek iş immutable event envelope validator’ıdır.
+
+- 2026-09-17 P1.12.f.h.l minimum Futures DCA v1 schema kapısı tamamlandı:
+  boş/inert bounded SQLite schema initializer profile revision, event,
+  reservation ve economic posting sahipliklerini tanımlıyor; mevcut dosya
+  üzerine yazmıyor. Binding ve ekonomik satır yazımı açılmadı. Durum
+  `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`, binding `NO-GO`. Kanıt:
+  `evidence/P1.12.f.h.l/SONUC.md`; tam proje `535/535 PASS`. Sıradaki tek iş
+  immutable profile revision insert/replay validator’ıdır.
+
+- 2026-09-17 P1.12.f.h.k gerçek kaynaklara bağlı migration preflight kapısı
+  tamamlandı: `FuturesDcaEventStore` ve `ReservationLedger` read-only
+  incelendi; eksik profile/multiplier, fee/slippage/rounding,
+  release-identity ve posting alanlarında açık `NO_GO` verildi. Migration
+  hedefi oluşturulmadı. Durum `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, binding
+  `NO-GO`. Kanıt: `evidence/P1.12.f.h.k/SONUC.md`; tam proje `533/533 PASS`.
+  Sıradaki tek iş minimum production schema’yı oluşturmaktır.
+
+- 2026-09-17 P1.12.f.h.j migration validator/conflict-replay oracle kapısı
+  tamamlandı: profile revision, sequence, identity, reservation/posting link,
+  checksum ve UNKNOWN/quarantine fail-closed kuralları `3/3 PASS` doğrulandı.
+  Bu production migration değildir; durum `COMPLETE_WITH_LIMITATION /
+  LOCAL_PASS`, production validator/binding `IMPLEMENTATION_PENDING`. Kanıt:
+  `evidence/P1.12.f.h.j/SONUC.md`; sıradaki tek iş gerçek kaynak tiplerine
+  bağlayıp tam suite ile doğrulamaktır. Tam proje `532/532 PASS`.
+
+- 2026-09-17 P1.12.f.h.i minimum Futures DCA journal schema/migration
+  sözleşmesi hazırlandı: Spot’tan bağımsız bounded SQLite hedefi, immutable
+  profile/event/execution/reservation/posting sahiplikleri ve in-place olmayan
+  migration sınırı yazıldı. Ekonomik authority alanları varsayılmadı; durum
+  `CONTRACT_READY / IMPLEMENTATION_PENDING`, production binding `NO-GO`.
+  Kanıt: `evidence/P1.12.f.h.i/SONUC.md`; sıradaki tek iş migration validator
+  ile conflict/replay testidir.
+
+- 2026-09-17 P1.12.f.h.h tek journal transaction oracle kapısı tamamlandı:
+  bağımsız stdlib SQLite failure-injection testi, event/reservation/posting
+  birlikte commit edilmeden hata oluştuğunda restart sonrası partial projection
+  görünmediğini ve başarılı commit’in aynı kayıt kümesini replay ettiğini
+  doğruladı. Durum `COMPLETE_WITH_LIMITATION / LOCAL_PASS`, production
+  binding `IMPLEMENTATION_PENDING`. Kanıt:
+  `evidence/P1.12.f.h.h/SONUC.md`; sıradaki tek iş bu sözleşmeyi gerçek
+  Futures DCA immutable alanlarına bağlayan minimum schema/migration taslağıdır.
+  Tam proje `529/529 PASS`.
+
+- 2026-09-17 P1.12.f.h.g tek journal sahiplik kapısı tamamlandı:
+  `SpotBindingStore` atomic transaction için referans kalıbı olsa da Spot
+  lifecycle/CORE01 sahibidir; Futures DCA event, multiplier, fee/slippage,
+  reservation release ve position commitment schema’sını taşımaz. İki mevcut
+  Futures store ayrı transaction sınırlarında kaldı; production coordinator
+  eklenmedi. Durum `DEFERRED / NO-GO / LOCAL_PASS`. Kanıt:
+  `evidence/P1.12.f.h.g/SONUC.md`; sıradaki tek iş ortak immutable sözleşmeyi
+  bağımsız oracle ve failure-injection ile doğrulayan migration/transaction
+  contract kararıdır.
+
+- 2026-09-17 P1.12.f.h.f partial/cancel/late/UNKNOWN release kapısı
+  tamamlandı: mevcut Futures DCA event/reservation sözleşmeleri release
+  identity, consumed/releasable miktar, terminal/quarantine state ve cursor
+  taşımıyor. Event sequence’i release authority’si değildir; production
+  binding açılmadı. Durum `DEFERRED / NO-GO / LOCAL_PASS`. Kanıt:
+  `evidence/P1.12.f.h.f/SONUC.md`; sıradaki tek iş bunu profile revision,
+  multiplier ve fee/slippage/rounding ile tek bounded journal transaction’ında
+  birleştirmektir.
+
+- 2026-09-17 P1.12.f.h.e fee/slippage/rounding karar kapısı tamamlandı:
+  `FuturesDcaFill` fee, fee asset, effective execution price, slippage
+  reference, execution time ve rounding policy taşımıyor; pending reserve fee
+  ve slippage hariç hesaplanıyor. Production binding açılmadı.
+  Durum `DEFERRED / NO-GO / LOCAL_PASS`. Kanıt:
+  `evidence/P1.12.f.h.e/SONUC.md`; sıradaki tek iş bu alanları profile
+  revision ve release identity ile tek bounded journal transaction’ında exact
+  contract olarak tanımlamaktır.
+
+- 2026-09-17 P1.12.f.h.d profile-revision kapsam kapısı tamamlandı:
+  `FuturesDcaProfile` symbol, effective-time ve immutable revision authority
+  taşımıyor; odak `1/1 PASS`. Production profile/ledger binding açılmadı.
+  Durum `DEFERRED / NO-GO / LOCAL_PASS`, tam proje `527/527 PASS`. Kanıt:
+  `evidence/P1.12.f.h.d/SONUC.md`; sıradaki tek iş revision scope ile
+  fee/slippage/rounding ve partial/cancel/late/UNKNOWN release kurallarını tek
+  bounded journal transaction sözleşmesinde birleştirmektir.
+
+- 2026-09-17 P1.12.f.h.c tamamlandı: bağımsız Decimal oracle, DCA fill
+  quantity’sinin explicit `pnl_multiplier` ile effective quantity/notional’a
+  dönüşümünü doğruladı; `0.001` örneğinde mevcut `quantity × price` sonucu ile
+  fark görüldü. Üretim profile/ledger binding açılmadı.
+  Durum `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; ekonomik binding
+  `DEFERRED / NO-GO`, odak `1/1 PASS`, tam proje `526/526 PASS`. Kanıt:
+  `evidence/P1.12.f.h.c/SONUC.md`; sıradaki tek iş profile-revision kapsamı
+  ve fee/slippage/rounding dahil tek-journal transaction sözleşmesidir.
+
+- 2026-09-17 P1.12.f.h.b contract-size commitment kapısı tamamlandı:
+  `FuturesDcaProfile` multiplier taşımıyor; DCA fill projection notional’ı
+  doğrudan `quantity × price` hesaplıyor, ayrı linear math ise explicit
+  contract-size istiyor. Sessiz `1` varsayımı reddedildi.
+  Durum `DEFERRED / NO-GO / LOCAL_PASS`; production kodu değişmedi, son tam
+  suite `525/525 PASS`. Kanıt: `evidence/P1.12.f.h.b/SONUC.md`; sıradaki tek
+  iş profile-revision bağlı contract-size/multiplier exact oracle kapısıdır.
+
+- 2026-09-17 P1.12.f.h.a failure-injection kapısı tamamlandı:
+  event journal commit’inden reservation commit’inden önceki injected failure
+  restart sonrası event’i görünür, reservation’ı unchanged bıraktı. Bu,
+  mevcut iki-store yaklaşımının atomic ekonomik binding olmadığını bağımsız
+  `1/1 PASS` ile doğrular; production coordinator eklenmedi.
+  Durum `LOCAL_PASS / NO-GO_CONFIRMED`; son tam suite `525/525 PASS`.
+  Kanıt: `evidence/P1.12.f.h.a/SONUC.md`; sıradaki tek iş dört ekonomik
+  sözleşme için exact oracle ve tek bounded SQLite journal failure/restart
+  kabulüdür.
+
+- 2026-09-17 gelen ayrıntılı Binance ürün raporu ve ikinci küçük 3Commas/
+  Pionex metni yeniden doğrulandı. Güvenli Futures/Spot v1 profili değişmedi.
+  Pionex DIY per-safety-order deviation/allocation `P1.12.f.i`; Futures Grid
+  dynamic order placement ile dynamic range ayrımı, dynamic margin reserve ve
+  P1.15 bağımlı Hedge Grid `P1.13.f–g` kapsamına eklendi. Pasted metindeki
+  stale Binance karşılaştırması, kişisel değerler, iç citation’lar, untyped
+  mimari ve ilk hatalı step formülü reddedildi. Kod/dependency değişmedi; son
+  tam suite `524/524 PASS`. Kanıt/karar raporu:
+  `docs/P1.12_P1.13_3COMMAS_PIONEX_KARSILASTIRMA_KARAR_RAPORU.md`.
+
+- 2026-09-17 P1.12.f.h atomic binding yeniden açılma sözleşmesi hazırlandı:
+  hedef, event + reservation + fill-release + posting cursor’ını tek bounded
+  SQLite transaction’ında tutan tek journal’dır. Base→quote commitment,
+  fee/slippage/rounding, partial/cancel/late/UNKNOWN release ve position
+  identity exact olarak çözülmeden implementation açılmayacak.
+  `CONTRACT_READY / IMPLEMENTATION_PENDING`; mevcut f.g `DEFERRED / NO-GO`
+  kararı korunuyor. Son tam suite `524/524 PASS`. Kanıt:
+  `evidence/P1.12.f.h/SONUC.md`; sıradaki tek iş bu dört ekonomik sözleşme
+  için bağımsız oracle ve failure-injection kabul kapısıdır.
+
+- 2026-09-17 P1.12.f.g reservation + fill-release atomicity karar kapısı
+  tamamlandı: mevcut Futures DCA event store ve AccountReservationLedger ayrı
+  SQLite transaction sınırlarında olduğu için atomic ekonomik binding güvenli
+  biçimde kurulamadı. Kod/adapter değişmedi; `DEFERRED / NO-GO / LOCAL_PASS`.
+  Reservation odak `5/5`, event store odak `4/4`, son tam suite `524/524 PASS`.
+  Kanıt: `evidence/P1.12.f.g/SONUC.md`; tek veritabanı transaction veya
+  crash-safe outbox/recovery sözleşmesi oluşmadan lifecycle/live authority
+  açılmayacak.
+
+- 2026-09-17 P1.12.f.f tamamlandı: P1.12.f.d Futures DCA event contract’ı
+  ayrı bounded SQLite journal/replay store’a bağlandı. Canonical JSON,
+  SHA-256 checksum, sabit deal/config scope, local sequence ve duplicate/
+  conflict kuralları restart sonrasında doğrulanıyor. Odak `4/4 PASS`, tam
+  proje `tools/run_checks.py` `524/524 PASS`, compile/workspace PASS. Bu local
+  sequence Binance transport sequence’i değildir; reservation commit/fill-
+  release/economic posting atomicity yoktur. Kanıt:
+  `evidence/P1.12.f.f/SONUC.md`; sıradaki tek iş reservation + fill-release
+  atomicity karar kapısıdır.
+
+- 2026-09-17 P1.12.f.e tamamlandı: pending Futures DCA quote tutarı mevcut
+  immutable AccountReservation projection’ına bağlandı. Yalnız seçilen USDT
+  settlement asset ve ONE_WAY mode kabul ediliyor; yanlış asset/mode, kapasite
+  aşımı ve stale version fail-closed. Odak `3/3 PASS`, tam proje
+  `tools/run_checks.py` `520/520 PASS`, compile/workspace PASS. Bu candidate
+  projection’dır; persistence/commit ve fill-release atomicity yoktur. Kanıt:
+  `evidence/P1.12.f.e/SONUC.md`; sıradaki tek iş reservation persistence ve
+  event journal/replay binding karar kapısıdır.
+
+- 2026-09-16 P1.12.f.d tamamlandı: Futures DCA fill’leri için yerel event
+  identity, deal/config revision scope ve ardışık sequence contract’ı eklendi.
+  Exact event duplicate idempotent; event/execution identity conflict, scope
+  ve sequence gap fail-closed. Odak `4/4 PASS`, tam proje
+  `tools/run_checks.py` `517/517 PASS`, compile/workspace PASS. Bu sequence
+  Binance transport sequence’i değildir; persistence ve shared-account
+  reservation binding yoktur. Kanıt: `evidence/P1.12.f.d/SONUC.md`; sıradaki
+  tek iş shared-account reservation binding karar kapısıdır.
+
+- 2026-09-16 P1.12.f.c tamamlandı: ayrı Futures DCA fill projection’ı
+  gözlemlenmiş base/safety fill’lerinden exact average-entry, pozisyon
+  quantity/notional, tamamlanan safety sayısı ve sınırlı pending seviyeleri
+  üretiyor. Base tamamlanmadan safety, seviye atlama, overfill ve farklı
+  duplicate payload fail-closed; sonlu dış decimal’e sığmayan average
+  yaklaşıklaştırılmıyor. Odak projection `4/4`, bağımsız Decimal oracle `2/2`,
+  tam proje `tools/run_checks.py` `513/513 PASS`, compile/workspace PASS.
+  Kanıt: `evidence/P1.12.f.c/SONUC.md`; sıradaki tek iş gerçek event
+  identity/sequence ve shared-account reservation binding karar kapısıdır.
+
+- 2026-09-16 P1.12.f.b tamamlandı: bağımsız Decimal oracle, Futures DCA plan
+  projection’ının long/short cumulative deviation, volume multiplier,
+  BASE/QUOTE sizing, quantity-step quantization ve gerçekleşebilir quote
+  allocation sonuçlarını tekrar uygulamadan doğruladı. Odak `2/2 PASS`, tam
+  proje `tools/run_checks.py` `507/507 PASS`, compile/workspace PASS. Kanıt:
+  `evidence/P1.12.f.b/SONUC.md`; sıradaki tek iş average-entry/fill ve aktif
+  safety-order/pending reservation sözleşmesidir.
+
+- 2026-09-16 P1.12.f.a tamamlandı: `futures_dca_plan.py` seçilen
+  USD_M/USDT/one-way/isolated offline profile içinde finite long/short safety
+  ladder, cumulative deviation, volume scale, BASE_QTY/QUOTE_NOTIONAL sizing,
+  quantity-step quantization ve required-capital/coverage projection’ı üretiyor.
+  Odak `3/3 PASS`, tam proje `tools/run_checks.py` `505/505 PASS`,
+  compile/workspace PASS. Order/fill/position/exit/live authority yok.
+  Kanıt: `evidence/P1.12.f.a/SONUC.md`; bağımsız oracle P1.12.f.b’de
+  tamamlandı.
+
+- 2026-09-16 P1.12.e ilk dikey dilimi tamamlandı: fixed-tier isolated
+  liquidation estimate long/short için exact analitik kök üretiyor; risk tier,
+  isolated margin ve mark snapshot zorunlu. Tier mismatch, eski snapshot ve
+  exact decimal’e sığmayan kök fail-closed. Odak `3/3 PASS`, tam proje
+  `tools/run_checks.py` `502/502 PASS`, compile/workspace PASS. Venue
+  liquidation, cross/hedge, partial liquidation, bankruptcy, ADL ve core
+  binding kapalıdır. Kanıt: `evidence/P1.12.e/SONUC.md`.
+
+- 2026-09-16 P1.12.d ilk dikey dilimi tamamlandı: ayrı
+  `linear_ledger_store.py` fee/funding projection’ını checksum’li SQLite
+  replay’e bağladı. Restart exactness, duplicate/conflict, geriye dönük zaman
+  ve tamper fail-closed odak testleri `4/4 PASS`; tam proje kontrolü
+  `tools/run_checks.py` `499/499 PASS`, compile/workspace PASS. Bu store
+  position/order/core/venue authority taşımaz; P1.12.e ve P1.12.f sıradaki
+  bağımlı işlerdir. Kanıt: `evidence/P1.12.d/SONUC.md`.
+
+- 2026-09-16 3Commas/Pionex ikinci araştırması ve kullanıcı tarafından sağlanan
+  Binance raporu birlikte denetlendi. Binance raporunun dar v1 çekirdeği
+  korunurken, hedef ürünün gelişmiş DCA ve Futures Grid kapsamı yol haritasına
+  somut alt fazlar olarak işlendi: P1.12.f–h Futures DCA plan/lifecycle/recovery;
+  P1.13.f–h Futures Grid v1, advanced replacement/replay ve doğrulanmış
+  Reverse/Infinity profilleri. 3Commas safety-order multiplier, averaging,
+  signal, multiple-TP/trailing/breakeven; Pionex long/short/neutral Futures
+  Grid, funding/liquidation ve grid-profit/equity ayrımı `ROADMAP` olarak
+  kabul edildi. Pionex Futures DCA exact alanları, dynamic grid algoritması,
+  bazı arithmetic/lifecycle ayrıntıları `NOT_VERIFIED/DEFERRED` kaldı.
+  Pasted metindeki stale Binance karşılaştırması, kişisel/proje değerleri,
+  sahte atıflar, untyped EventBus/GridNode/JSON-Zustand mimarisi ve hatalı ilk
+  deviation formülü reddedildi. Kanıt ve karar:
+  `docs/P1.12_P1.13_3COMMAS_PIONEX_ARASTIRMA_RAPORU.md` ve
+  `docs/P1.12_P1.13_3COMMAS_PIONEX_KARSILASTIRMA_KARAR_RAPORU.md`.
+
+- 2026-09-16 P1.12/P1.13 ürün kuralı araştırması tamamlandı: resmi Binance
+  USDⓈ-M ve Spot Grid sözleşmeleri ile ilk ürün profili sabitlendi. Futures
+  `USDⓈ-M perpetual + USDT single-asset + one-way + isolated`; UPL/liquidation
+  mark price, realized close execution price, funding yalnız timestamped venue
+  event ve offline demo default leverage `1x` olacaktır. Spot Grid
+  `arithmetic + quote-asset-fee-only`; matched cycle profit ile total equity
+  ayrı tutulacaktır. Cross/hedge/multi-asset/ADL/auto-margin, third-asset fee
+  conversion, geometric rounding, trailing ekonomik replacement ve
+  reverse/infinity açılmadı. Kanıt: `docs/P1.12_P1.13_URUN_KURALLARI_ARASTIRMA_RAPORU.md`.
+  Bu karar P1.12.d/e ve P1.13.c için offline sözleşme sınırını netleştirir;
+  canlı signed/mutation veya mevcut CORE01 ekonomik Store binding izni vermez.
+
+- 2026-09-16 P2.04 live order-status read-only preflight yapıldı: sentetik
+  `BTCUSDT/orderId=0` sorgusu `ORDER_STATUS_QUERY_REJECTED` olarak sanitize
+  edildi. Sonuç başarılı lookup veya `NOT_FOUND` olarak yorumlanmadı; gerçek
+  order ID/event, reconnect/catch-up orchestration, ekonomik binding ve
+  mutation hâlâ kapalıdır.
+
+- 2026-09-16 P2.04 signed read-only order catch-up tamamlandı: ayrı WebSocket
+  bağlantısında `order.status` HMAC isteği, `symbol/orderId` identity kontrolü,
+  redaction ve hata sonrası socket kapanışı eklendi. Odak `7/7 PASS`,
+  standart/optimize suite `495/495 PASS`, release manifest/workspace PASS.
+  Gerçek order ID/event, reconnect/catch-up orchestration, ekonomik binding ve
+  mutation açılmadı; live reconciliation `DEFERRED / NO-GO`.
+  Kanıt: `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`.
+
+- 2026-09-16 P2.04 User Data Stream fail-closed hardening tamamlandı: geçersiz,
+  desteklenmeyen veya timeout/transport hatası sonrasında socket kapatılıyor,
+  abonelik temizleniyor ve sonraki okuma `USER_STREAM_NOT_CONNECTED` ile
+  duruyor. Odak `6/6 PASS`, standart/optimize suite `493/493 PASS`,
+  compileall/workspace PASS. Canlı event, reconnect/catch-up, REST order query,
+  ekonomik binding ve mutation açılmadı; live reconciliation `DEFERRED / NO-GO`.
+  Kanıt: `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`.
+
+- 2026-09-16 P2.04 canlı User Data Stream read-only aboneliği tamamlandı: `websockets==17.1` eklendi; gerçek Testnet WS API’de imzalı `userDataStream.subscribe.signature` `status=200`, `subscription_id=0` verdi ve bağlantı kapatıldı. Adapter yalnız bounded `executionReport` identity çözümlemesi ve redacted `UserDataEvent` üretir; mutation, event üretimi, reconnect/catch-up, REST order query ve ekonomik binding yok. Odak `4/4 PASS`, standart/optimize `492/492 PASS`; canlı reconciliation `DEFERRED / NO-GO`. Kanıt: `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`.
+
+- 2026-09-16 P2.04 canlı read-only kapısı tamamlandı: mevcut `testnet-readonly` credential ile yalnız signed `GET /api/v3/account` geçti; güvenli hesap/izin özeti `SPOT`, `SPOT`, `SIGNED_ACCOUNT_CONTEXT`, `balances_count=502`. Bu hesap erişimi reconciliation veya emir kanıtı değildir. Aktif kaynakta gerçek User Data Stream, reconnect worker ve live reconciliation adapterı bulunmadığı için `P2.04_USER_DATA_STREAM = DEFERRED / NO-GO`; yeni bağımlılık, adapter veya mutation eklenmedi. Standart/optimize `488/488 PASS`, workspace/manifest PASS. Kanıt: `evidence/P2.04/LIVE_READ_ONLY_GATE_SONUC.md`.
+
+- 2026-09-16 P2.03 conditional durable replay mikro-fazı tamamlandı: immutable conditional projection ayrı bounded SQLite store’da checksum’li persist/replay ediliyor; state sırası, duplicate/conflict, tamper ve restart exactness doğrulandı. Fill/core/order/live venue authority yok. Odak `3/3`, tam ve optimize suite `488/488 PASS`; venue-specific identity ve live integration `DEFERRED / NO-GO`.
+
+- 2026-09-16 P2.03 conditional trigger → execution mikro-fazı tamamlandı: trigger gözlemi ile explicit execution order kimliği ayrıldı; duplicate/conflict, execution-before-trigger, out-of-order, GAP/STALE/CONFLICT quarantine ve cancel confirmation race sınırları fail-closed doğrulandı. Fill/core/persistence/live venue/mutation açılmadı. Odak `6/6`, tam ve optimize suite `485/485 PASS`; sonraki conditional durable replay ve gerçek venue identity `DEFERRED / NO-GO`.
+
+- 2026-09-16 P2.03 MARKET durable economic replay mikro-fazı tamamlandı: exact execution state’i ve redacted identity binding ayrı bounded SQLite projection’da checksum’li ve atomik persist/replay ediliyor; duplicate/conflict, immutable successor, terminal state, tamper ve rollback sınırları doğrulandı. Replay core event/order/balance üretmez. Odak `5/5`, tam ve optimize suite `478/478 PASS`; compile/workspace PASS. MARKET core binding, conditional/order-list ve mutation kapalıdır.
+
+- 2026-09-16 P2.03 MARKET execution identity/reconciliation mikro-fazı tamamlandı: exact `MarketFill`, `MATCHED` lookup, `ACCEPTED`/`DUPLICATE` stream kararı ve birebir venue/Spot/order/execution kimlikleri in-memory binding’e bağlandı. Quarantine, conflict, not-found ve farklı payload fail-closed. Odak `3/3 PASS`; MARKET core binding `DEFERRED / NO-GO`, durable replay `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`.
+
+- 2026-09-16 P2.03 MARKET/BASE_QUANTITY mikro-fazı tamamlandı: explicit base miktarlı MARKET için immutable exact ekonomik sözleşme eklendi. Her fill base/quote/effective price/fee/asset taşır; BUY/SELL slippage, partial fill, residual, terminal coverage ve duplicate/conflict fail-closed doğrulandı. `quoteOrderQty`, core binding, gerçek MARKET emri, mutation ve mainnet açılmadı. Odak `6/6`, tam ve optimize suite `470/470 PASS`; compile/workspace/manifest/diff PASS. Kanıt: `evidence/P2.03/MARKET_CONDITIONAL_ORDER_LIST_CONTRACT_SONUC.md`.
+
+- 2026-09-15 security scan: one LOW CWE-400 historical validation body-buffering finding was remediated with the shared streaming limiter and chunked early-cut regression. Local gates: Python 459/459, optimized 459/459, compileall/workspace/frontend build/release manifest PASS. Local Browser E2E PASS; live venue mutation remains closed. Lisanssız erişilebilirlik yolunda NVDA `PASS / USER_CONFIRMED`, Narrator `PASS / USER_CONFIRMED`, Windows HCM `PASS / LOCAL_UI`; JAWS yalnız opsiyonel ek doğrulamadır.
+
+Audit baseline: `7965392`; target branch is public `origin/main`. P2.05 read-only acceptance passed `29/29`; the current audit-remediation regression target is `459/459`, with compileall, workspace, release-manifest and frontend production build gates PASS.
+
+NVDA ücretsiz doğrulaması kapandı: NVDA açıkken 28/28 keyboard focus durağı ve DOM/landmark/form/status/table/disclosure sözleşmesi PASS; kullanıcı sesli çıktıyı onayladı. Narrator aynı akışta 27/28 görünür focus ölçümüyle kullanıcı sesli çıktısı onaylandı ve `PASS / USER_CONFIRMED` kaydedildi; teknik body-döngüsü sınırı kanıtta korundu. JAWS `NOT_RUN` ve opsiyonel.
+
+Windows High Contrast testi kullanıcı onayıyla gerçek Windows Ayarları ekranında tamamlandı: `Gece gökyüzü` altında DCABOT `forced-colors: active`, 9 heading, 4 landmark, 21 control, yatay taşmasız (`1390=1390`) ve temiz konsol ile doğrulandı; tema test sonunda `Yok` olarak geri yüklendi. HCM `PASS / LOCAL_UI`; Narrator kullanıcı onayıyla `PASS / USER_CONFIRMED`; JAWS `NOT_RUN` ve opsiyonel.
+
+The P2.03 lifecycle-to-core binding exists in `a60ef1f`; the current working slice adds its offline durable replay journal, redacted reconciliation association, fail-closed coordinator restart hydration, explicit authoritative snapshot gate, AttemptStore recovery orchestration, bounded post-recovery lookup handoff, and verified external-review fixes. P1.19.g adds a minimal frontend component-test runtime and `12/12` critical-flow tests plus a passing local Browser E2E flow. Neither activates live Binance REST/WS, signed account, mutation, live recovery, or mainnet.
+
+Current gate: External-review remediation plus the Buffy HATA report review, offline reconciliation-result evidence binding, exact venue-event identity contract, non-economic venue-to-Spot mapping candidate persistence/replay and independently reviewed explicit verified-mapping admission are locally closed; full P2.03/P2.04 remain `IN_PROGRESS`; trading activation `NO-GO`.
+
+The Buffy HATA report was checked against current source and tests. `_quality_response()` was normalized to one JSON response type with `Cache-Control: no-store`; hydration `FAILED` precedence received a focused regression test. The report’s stale quality-parser and frontend state-count claims were not implemented; config caching remains deferred; CORS, SQLite path ownership and multi-worker state remain P3.01 deployment gates. The offline reconciliation slice added redacted lookup-result evidence with idempotent conflict handling and legacy-payload readability, then added exact `UserDataEvent ↔ OrderLookup` classification and a non-economic mapping candidate; neither promotes lookup outcomes to fills or core postings.
+
+Next safe action: MARKET core binding’i açmamak; limitten bağımsız ekonomik event şeması, core authority ve bağımsız oracle kabul edilmeden `DEFERRED / NO-GO` korumak. Yeni order-list/OCO implementation’ı da açılmayacak; list/leg identity, working/pending coordination, cancellation confirmation, replacement identity ve atomic restart/replay owner sözleşmesi ürün/venue kanıtıyla ayrıca kabul edilmeden `DEFERRED / NO-GO` kalacak. Live signed integration ve Testnet mutation kapalı; mutation ayrı açık kullanıcı yetkisi ister. Frontend component tests, local Browser E2E, NVDA, Narrator ve Windows HCM ücretsiz kabul yolu PASS; JAWS opsiyonel ve NOT_RUN.
+
+2026-09-16 güncel karar: P2.03/P2.04 offline lifecycle, durable replay, reconciliation evidence binding ve explicit LIMIT admission yerel olarak kapalıdır (`LOCAL_PASS`). MARKET → core ekonomik binding ve gerçek venue conditional/order-list/OCO lifecycle `DEFERRED / NO-GO` kalır; conditional stop/exit trigger → fill ayrımı için yalnız sınırlı offline regresyon kanıtı eklendi, yeni ekonomik kod eklenmedi. Binance resmi sözleşme araştırması, MARKET için effective-price/quote-to-base/cumulative-quote/slippage; conditional için trigger-to-execution/gap/cancel; order-list için list/leg identity/coordination/restart atomicity gereksinimlerini doğruladı. Yeniden açılma sırası: `MARKET/BASE_QUANTITY` → conditional trigger/execution → order-list/OCO; `quoteOrderQty` ilk dilimde yoktur. Kanıt: `docs/YOL_HARITASI.md`, `evidence/P2.03/MARKET_CONDITIONAL_ORDER_LIST_CONTRACT_SONUC.md`, `evidence/P2.03/DURABLE_BINDING_SONUC.md`.
+
+2026-09-16 dış araştırma raporlarının güncel checkout karşılaştırması tamamlandı. Arena legacy revision nedeniyle `REJECTED / STALE`; Claude/Sol’un preview fiyatı, funding işareti, manifest/cache sınırı, frontend testleri ve journal erişimi maddeleri mevcut kod/testlerle kapalıdır. Negatif fee red önerisi, güncel rebate kullanımını gösteren core regression nedeniyle `REJECTED / EXISTING CONTRACT`; gerçek venue maksimum fee policy’si `DEFERRED`. API ayrıştırması, coverage/static kalite, wheelhouse/SBOM, semantic event tipleri ve deployment ownership `DEFERRED/P3.01`; live trading, MARKET/conditional/order-list binding ve otomatik retry/multi-exchange `NO-GO`. Bu yeniden değerlendirmede yeni ekonomik kod veya dış kaynak eklenmedi; tam ve optimize suite `459/459 PASS`. Kanıt: `docs/YOL_HARITASI.md`.
+
+2026-09-16 P2.02.c tamamlandı: Windows Credential Manager üzerinde yalnız HMAC generic credential saklama/okuma sınırı ve secret echo etmeyen `tools/configure_testnet_credential.py` yardımcı programı eklendi. Gerçek Binance anahtarı okunmadı; dummy round-trip/redaction ve desteklenmeyen key family fail-closed odak testleri PASS. Kullanıcı kendi makinesinde `uv run --frozen python tools/configure_testnet_credential.py testnet-readonly` komutuyla API key ve secret’ı girmelidir; değerler sohbete, Git’e veya loga aktarılmayacaktır. Signed account HTTP, gerçek REST/WS ve mutation hâlâ `NO-GO`.
+
+2026-09-16 P2.02.d tamamlandı: Kullanıcının yerel Credential Manager kaydı yalnız imzalı, sabit `GET /api/v3/account` read-only adapter’ında kullanıldı. Gerçek Testnet çağrısı `SPOT` account, `SPOT` permission ve `SIGNED_ACCOUNT_CONTEXT` capability ile geçti; bakiye değerleri hiçbir çıktı/repr/persistence’e alınmadı. Sahte taşıma odak testi `3/3 PASS`; gerçek çağrı `LIVE_READ_ONLY_PASS`. Emir, mutation, WebSocket, reconciliation ve mainnet kapalı; tam P2.02 kabulü verilmedi.
 
 ---
 
@@ -282,7 +2027,7 @@ Durum: COMPLETE / LOCAL_PASS; bağımsız review: NOT_RUN. Kanıt: `evidence/P1.
 
 Yeni `src/dcabot/application/historical_fixed_limit.py` modülü yalnız explicit `FIXED_LIMIT_STRICT_V1` policy’sini uygular: placement barı eligible değildir; sonraki canonical barlar değerlendirilir; BUY için `low < limit`, SELL için `high > limit` strict penetration sentetik fill gözlemi verir; equality yalnız `EQUALITY_TOUCH` observation olarak kalır; fill exact `limit_price` ile bir fixed slice’tır; bar başına tek fill, exact remainder ve EOF’de `OPEN_AT_END` korunur. Same-bar ekonomik sıra belirsizliği application seam üzerinden `INDETERMINATE / AMBIGUOUS_OHLC_PATH` olarak fail-closed’dur. Fee, slippage, tick uydurma, open price improvement ve gerçek exchange execution iddiası eklenmedi.
 
-RED → GREEN odak testleri ve production kodundan bağımsız Decimal tablo oracle kontrolü `7/7 PASS`; tam regresyon `131/131 PASS`; `compileall PASS`. Public profile/API, legacy historical model, persistence, UI ve marker authority değiştirilmedi. P1.07.d.2 public contract değerlendirmesi `DEFER` edildi; sonraki tek iş, public entegrasyondan önce DCA strategy binding araştırma kapısı olan P1.07.d.3’tür.
+RED → GREEN odak testleri ve production kodundan bağımsız Decimal tablo oracle kontrolü `9/9 PASS`; tam regresyon `131/131 PASS`; `compileall PASS`. Public profile/API, legacy historical model, persistence, UI ve marker authority değiştirilmedi. P1.07.d.2 public contract değerlendirmesi `DEFER` edildi; sonraki tek iş, public entegrasyondan önce DCA strategy binding araştırma kapısı olan P1.07.d.3’tür.
 
 ### P1.07.d.2 — Public contract araştırma kapısı
 
@@ -642,19 +2387,38 @@ Sonraki tek iş: `P1.13.c` spot grid fee asset/rounding ve matched cycle profit 
 
 ### P1.13.c — Spot grid fee ve cycle/equity karar kapısı
 
-Durum: `DEFERRED / NO-GO / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.13.c/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/10_P1.13_GRID_FAMILIES.md`.
+Durum: `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.13.c/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/10_P1.13_GRID_FAMILIES.md`.
 
-Local core `FILL` yalnız `quote_asset` fee kabul ediyor ve `State.fees` tek scalar toplam taşıyor; spot base-fee/third-asset inventory ve multi-asset mark authority yok. Fee asset/sign/rounding owner ile matched cycle profit-total equity köprüsü seçilmeden numeric grid net sonucu eklenmedi. Fee posting, geometric quantization, accepted fill Store binding, replacement, reserve, API/UI ve public grid sonucu açılmadı. Önceki kod baseline `259/259 PASS`, compile/workspace `PASS` (`110` aktif Python dosyası); production readiness `NO`.
+İlk offline arithmetic profilinde yalnız quote-asset fee, explicit
+`EXACT_NO_ROUNDING` ve exact mark-price equity kabul ediliyor. Accepted BUY/SELL
+çifti mevcut inventory projection üzerinden doğrulanıyor; matched cycle profit
+ile total equity ayrı alanlarda hesaplanıyor. Base/third-asset fee conversion,
+venue quantization, fee Store binding, replacement, reserve, API/UI ve public
+grid sonucu açılmadı. Odak `5/5 PASS`; P1.13.a–c ilişkili küme `13/13 PASS`;
+tam proje `707` testte `705 PASS`, faz dışı Windows Credential Manager
+`Windows error 1312` nedeniyle `2` environment error. Bağımsız Decimal oracle,
+compile, read-only source-surface, workspace ve `git diff --check` PASS.
 
-Sonraki tek iş: `P1.13.d` geometric seviye precision/quantization karar kapısı; kanıt yetersizse güvenli DEFER.
+Sıradaki tek iş: `P1.13.d` geometric seviye precision/quantization karar kapısı;
+kanıt yetersizse güvenli DEFER.
 
 ### P1.13.d — Geometric grid precision ve quantization karar kapısı
 
-Durum: `DEFERRED / NO-GO / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.13.d/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/10_P1.13_GRID_FAMILIES.md`.
+Durum: `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.13.d/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/10_P1.13_GRID_FAMILIES.md`.
 
-Geometric `r=(upper/lower)^(1/N)` sonucu genel olarak exact Fraction değildir. Precision, N semantiği, endpoint/level sayısı, tick origin, rounding direction/mode ve quantization owner profile’e bağlanmadan ekonomik level üretilmedi. Mevcut `exact_text` exact dış decimal ister; `align` yalnız off-grid’i reddeder. Otomatik rounding, order/fill, inventory, fee, replacement, trailing/reverse/infinity/leveraged grid ve UI açılmadı. Önceki kod baseline `259/259 PASS`, compile/workspace `PASS` (`110` aktif Python dosyası); production readiness `NO`.
+Geometric `r=(upper/lower)^(1/N)` exact rational kök ve explicit tick grid’i
+ile sınırlandı. Perfect-root olmayan oran ve off-tick seviye fail-closed
+reddediliyor; otomatik rounding yapılmıyor. Odak `9/9 PASS`, P1.13.a–d
+ilişkili küme `18/18 PASS`, tam proje `712` testte `710 PASS`, faz dışı Windows
+Credential Manager `Windows error 1312` nedeniyle `2` environment error.
+Compile, independent literal oracle, read-only source-surface, workspace ve
+`git diff --check` PASS. Order/fill, inventory/fee, replacement,
+trailing/reverse/infinity/leveraged grid, API/UI, persistence ve Binance/
+Testnet mutation açılmadı.
 
-Sonraki tek iş: `P1.13.e` trailing-up/down ve reverse/infinity grid ailelerinin ayrı profile karar kapısı.
+P1.13.e kararı `DEFERRED / NO-GO` olarak kapatıldı; sonraki tek iş
+`P1.13.f` Futures Grid v1 için ayrı profile ve exact projection karar
+kapısıdır.
 
 ### P1.13.e — Grid trailing-up/down ve reverse/infinity karar kapısı
 
@@ -662,11 +2426,15 @@ Durum: `DEFERRED / NO-GO / LOCAL_PASS`; bağımsız review: `NOT_RUN`; productio
 
 Trailing-up/down için araştırma yalnız ürün davranışını destekliyor; exact range/version transition, pending order/reserve lifecycle, cancel-replace identity, late fill, precision/rounding ve persistence/replay sözleşmesi yok. Reverse/infinity exact semantics `NOT_VERIFIED`. Mevcut `trailing_ratchet.py` exit-trigger projection’ıdır ve grid range authority değildir; aritmetik seviye üreticisine de range kaydırma eklenmedi. Leveraged grid P1.12/P1.11 bağımlılıkları nedeniyle kapsam dışı kaldı. Kod/API/UI/order/reserve değişikliği yapılmadı.
 
-Kanonik `uv run --frozen python tools/run_checks.py`: `259/259 PASS`; workspace: `PASS` (`110` aktif Python dosyası). Sonraki tek iş: `P1.14.a` rebalancing/signal/template çekirdek sınırı ve karar kapısı.
+Son doğrulanmış checkout baseline'ı: `712` testte `710 PASS`, Windows
+Credential Manager `Windows error 1312` nedeniyle `2` environment error;
+workspace, compile ve diff kontrolleri `PASS`. P1.13.f.a ile ayrı profile ve
+exact level projection tamamlandı. Sonraki tek iş: `P1.13.f.b`
+position/initial-position ve accepted-fill state karar kapısı.
 
 ### P1.14.a — Rebalancing exact target/delta projection
 
-Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.14.a/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/11_P1.14_REBALANCING_SIGNAL_TEMPLATES.md`.
+Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `PASS` (Erdos salt-okunur Codex incelemesi); production readiness: `NO`. Kanıt: `evidence/P1.14.a/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/11_P1.14_REBALANCING_SIGNAL_TEMPLATES.md`.
 
 `target_value_i = total_equity * target_weight_i` ve `trade_delta_i = target_value_i - current_value_i` aynı açık valuation asset içinde exact projection olarak eklendi. Weight toplamı exact 1, duplicate asset, negatif current, geçersiz giriş ve exact decimal dışı sonuç fail-closed; çıktı asset adına göre canonical. Order/reserve/fill, fee/rounding, price conversion, balance, trigger, persistence, signal/template ve UI authority’si yoktur. RED import → GREEN kanonik regresyon `265/265 PASS`; bağımsız Decimal oracle `PASS`; workspace `PASS` (`110` aktif Python dosyası).
 
@@ -674,33 +2442,33 @@ Sonraki tek iş: `P1.14.b` signal identity/dedupe ve event-time karar kapısı.
 
 ### P1.14.b — Signal identity, event-time ve dedupe
 
-Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.14.b/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/11_P1.14_REBALANCING_SIGNAL_TEMPLATES.md`.
+Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `PASS` (Ptolemy salt-okunur Codex incelemesi, düzeltme sonrası); production readiness: `NO`. Kanıt: `evidence/P1.14.b/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/11_P1.14_REBALANCING_SIGNAL_TEMPLATES.md`.
 
-Immutable `signal_id`, source, integer `event_time_us`, `schema_version=signal-v1` ve lowercase SHA-256 payload hash sözleşmesi eklendi. Exact duplicate no-op, aynı ID ile farklı metadata/payload conflict, eski yeni signal stale ve geçmiş zaman sırası ihlali fail-closed. Signal candidate/order/fill, payload hash üretimi, auth/replay window, warmup/closed-bar, persistence, API ve UI açılmadı. RED import → GREEN kanonik regresyon `270/270 PASS`; bağımsız signal control `PASS`; compile/workspace `PASS` (`114` aktif Python dosyası).
+Immutable `signal_id`, source, integer `event_time_us`, `schema_version=signal-v1` ve lowercase SHA-256 payload hash sözleşmesi eklendi. Exact duplicate no-op, aynı ID ile farklı metadata/payload conflict, history içinde duplicate identity, eski yeni signal stale ve geçmiş zaman sırası ihlali fail-closed. Signal candidate/order/fill, payload hash üretimi, auth/replay window, warmup/closed-bar, persistence, API ve UI açılmadı. RED import → GREEN kanonik regresyon `270/270 PASS`; bağımsız signal control `PASS`; compile/workspace `PASS` (`114` aktif Python dosyası).
 
 Sonraki tek iş: `P1.14.c` signal warmup/closed-bar ve stale-policy karar kapısı.
 
 ### P1.14.c — Signal warmup, closed-bar ve stale readiness gate
 
-Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.14.c/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/11_P1.14_REBALANCING_SIGNAL_TEMPLATES.md`.
+Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `PASS` (Locke salt-okunur Codex incelemesi); production readiness: `NO`. Kanıt: `evidence/P1.14.c/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/11_P1.14_REBALANCING_SIGNAL_TEMPLATES.md`.
 
-Explicit `WAITING_FOR_CLOSED_BAR`, `STALE`, `WARMING_UP` ve `READY` readiness projection’ı eklendi. Signal event time ile son kapalı bar zamanı integer microseconds; warmup/stale pencereleri açık caller input’u; wall-clock/processing time kullanılmıyor. Signal candidate/order/fill, indikatör, adapter, trigger, persistence, API ve UI açılmadı. RED import → GREEN kanonik regresyon `275/275 PASS`; bağımsız readiness control `PASS`; compile/workspace `PASS` (`116` aktif Python dosyası).
+Explicit `WAITING_FOR_CLOSED_BAR`, `STALE`, `WARMING_UP` ve `READY` readiness projection’ı eklendi. Signal event time ile son kapalı bar zamanı integer microseconds; warmup/stale pencereleri açık caller input’u; stale boundary equality ve tüm bool gate tipleri fail-closed regresyonlarla kapsandı; wall-clock/processing time kullanılmıyor. Signal candidate/order/fill, indikatör, adapter, trigger, persistence, API ve UI açılmadı. Odak regresyon `6/6 PASS`, ilgili readiness kümesi `12/12 PASS`, bağımsız readiness oracle `PASS`; compile/diff `PASS`. `tools/run_checks.py` proje Python `3.13` isterken bundled runtime `3.12.14` olduğu için bu oturumda çalıştırılamadı.
 
 Sonraki tek iş: `P1.14.d` threshold/time rebalancing trigger karar kapısı.
 
 ### P1.14.d — Rebalancing threshold/time trigger projection
 
-Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.14.d/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/11_P1.14_REBALANCING_SIGNAL_TEMPLATES.md`.
+Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `PASS` (Mendel salt-okunur Codex incelemesi); production readiness: `NO`. Kanıt: `evidence/P1.14.d/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/11_P1.14_REBALANCING_SIGNAL_TEMPLATES.md`.
 
-Threshold `abs(current-target)>=threshold` ve time interval `observation-last>=interval` ayrı exact projection’lar olarak eklendi. Inclusive boundary, decimal weight/threshold, integer microsecond time ve geriye giden observation zamanı fail-closed. Trigger yalnız readiness/candidate kapısıdır; order/reserve/fill, conversion, fee/rounding, balance, sizing, persistence, API ve UI authority’si yoktur. RED import → GREEN kanonik regresyon `281/281 PASS`; bağımsız Decimal/time oracle `PASS`; compile/workspace `PASS` (`118` aktif Python dosyası).
+Threshold `abs(current-target)>=threshold` ve time interval `observation-last>=interval` ayrı exact projection’lar olarak eklendi. Inclusive boundary, decimal weight/threshold, integer microsecond time ve geriye giden observation zamanı fail-closed. NaN/Infinity/exponent/malformed decimal, threshold=0, signed zero, aynı timestamp ve tüm bool zaman girdileri doğrudan regresyonlarla kapsandı. Trigger yalnız readiness/candidate kapısıdır; order/reserve/fill, conversion, fee/rounding, balance, sizing, persistence, API ve UI authority’si yoktur. Odak regresyon `8/8 PASS`, ilgili projection kümesi `14/14 PASS`, bağımsız Decimal/time oracle `PASS`; compile/diff `PASS`. `tools/run_checks.py` proje Python `3.13` isterken bundled runtime `3.12.14` olduğu için bu oturumda çalıştırılamadı.
 
 Sonraki tek iş: `P1.14.e` template integrity ve non-authority karar kapısı.
 
 ### P1.14.e — Strategy template integrity ve non-authority
 
-Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.14.e/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/11_P1.14_REBALANCING_SIGNAL_TEMPLATES.md`.
+Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `PASS` (Turing salt-okunur Codex incelemesi, düzeltme sonrası); production readiness: `NO`. Kanıt: `evidence/P1.14.e/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/11_P1.14_REBALANCING_SIGNAL_TEMPLATES.md`.
 
-`strategy-template-v1` canonical JSON snapshot, SHA-256 identity, 64 KiB/bounded payload, forbidden executable/secret/credential field, declared capability integrity ve inert/non-authority sınırı ile eklendi. Activation approval, profile capability binding, webhook auth, order/reserve/fill, persistence, API ve UI açılmadı. RED → GREEN kanonik regresyon `286/286 PASS`; bağımsız canonical/hash control `PASS`; compile/workspace `PASS` (`120` aktif Python dosyası).
+`strategy-template-v1` canonical JSON snapshot, SHA-256 identity, 64 KiB/bounded payload, forbidden executable/secret/credential field, declared capability integrity ve inert/non-authority sınırı ile eklendi. Public `StrategyTemplate(...)` kurucusundaki duplicate capability bypass’ı kırmızı regresyonla doğrulanıp `__post_init__` fail-closed guard’ıyla düzeltildi. Activation approval, profile capability binding, webhook auth, order/reserve/fill, persistence, API ve UI açılmadı. Odak regresyon `6/6 PASS`, ilgili projection kümesi `14/14 PASS`, bağımsız canonical/hash/non-authority oracle `PASS`; compile/diff `PASS`. `tools/run_checks.py` proje Python `3.13` isterken bundled runtime `3.12.14` olduğu için bu oturumda çalıştırılamadı.
 
 P1.14.f tamamlandı; ayrıntılı kapanış ve sonraki görev aşağıdaki bölümde kayıtlıdır.
 
@@ -714,19 +2482,19 @@ Sonraki tek iş: `P1.15.a` hedge/cross/two-leg kapsam karar kapısı.
 
 ### P1.15.a — Hedge identity ve two-leg state sınırı
 
-Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.15.a/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/12_P1.15_HEDGE_CROSS_TWO_LEG.md`.
+Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `PASS` (Herschel salt-okunur Codex incelemesi, düzeltme sonrası); production readiness: `NO`. Kanıt: `evidence/P1.15.a/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/12_P1.15_HEDGE_CROSS_TWO_LEG.md`.
 
-`ONE_WAY` ve `HEDGE` position identity’leri explicit venue profile, product, symbol ve gerekiyorsa LONG/SHORT hedge side ile ayrıldı. Two-leg state machine yalnız güvenli ilk sınırı uygular: `NONE → LEG_A_PENDING → ONE_LEG_FILLED/PARTIAL_HEDGE → BOTH_ESTABLISHED`; recovery ve timeout geçişleri explicit’tir. First-leg ara state’i geri alınmaz; fake atomicity yoktur. Accepted-fill quantity posting, duplicate/replay persistence, recovery ledger, cross ownership, reduce-only, liquidation, API ve UI bu dilimin dışındadır. RED → GREEN `294/294 PASS`; bağımsız identity/state control, compile ve workspace `PASS` (`124` aktif Python dosyası).
+`ONE_WAY` ve `HEDGE` position identity’leri explicit venue profile, product, symbol ve gerekiyorsa LONG/SHORT hedge side ile ayrıldı. Two-leg state machine yalnız güvenli ilk sınırı uygular: `NONE → LEG_A_PENDING → ONE_LEG_FILLED/PARTIAL_HEDGE → BOTH_ESTABLISHED`; recovery ve timeout geçişleri explicit’tir. First-leg ara state’i geri alınmaz; fake atomicity yoktur. Unhashable/wrong-type state girdileri explicit string guard ile fail-closed `TWO_LEG_STATE_INVALID` döndürür. Accepted-fill quantity posting, duplicate/replay persistence, recovery ledger, cross ownership, reduce-only, liquidation, API ve UI bu dilimin dışındadır. Odak `4/4 PASS`, ilgili two-leg projection kümesi `8/8 PASS`, bağımsız hedge/two-leg oracle `PASS`; compile/diff `PASS`. `tools/run_checks.py` proje Python `3.13` isterken bundled runtime `3.12.14` olduğu için bu oturumda çalıştırılamadı.
 
 P1.15.a tamamlandı; ayrıntılı kapanış `evidence/P1.15.a/SONUC.md` altında kayıtlıdır.
 
 ### P1.15.b — Accepted two-leg fill projection
 
-Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.15.b/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/12_P1.15_HEDGE_CROSS_TWO_LEG.md`.
+Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `PASS` (Bohr salt-okunur Codex incelemesi, düzeltme sonrası); production readiness: `NO`. Kanıt: `evidence/P1.15.b/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/12_P1.15_HEDGE_CROSS_TWO_LEG.md`.
 
 `LegFill` ve immutable `TwoLegFillProjection` ile aynı account/venue-profile/product/symbol kapsamındaki HEDGE LONG/SHORT iki ayağın accepted fill’leri exact decimal miktarlarla ayrı izleniyor. İlk leg partial/full sonrası `PARTIAL_HEDGE`/`ONE_LEG_FILLED` ara state’i korunuyor; iki leg FULL olduğunda `BOTH_ESTABLISHED` oluşuyor. Duplicate aynı payload’da idempotent, conflicting ID, aynı side, scope değişimi, geriye giden event time ve tamamlanmış leg’e yeni fill fail-closed reddediliyor. İstenen toplam quantity bu mikro-fazda bulunmadığından quantity conservation iddia edilmiyor.
 
-Projection yalnız in-memory read modelidir; persistence/reopen/replay/recovery, late-fill policy, cross ownership, reduce-only, margin/liquidation, order/reserve binding, API/UI ve ekonomik posting açılmadı. `test_matrices/P1.15_TESTS.md` checkout’ta bulunmadığı için kanıt kapsamı araştırma belgesi ve yerel testlerle sınırlıdır. RED import → GREEN `298/298 PASS`; bağımsız accepted-fill control, compile ve workspace `PASS` (`126` aktif Python dosyası).
+Public projection constructor’ı state, identity pair, fill history, aggregate quantity ve status tutarlılığını yeniden doğruluyor; state/leg/status whitelist’leri exact string tipini zorunlu kılıyor. Bu sayede malformed projection ve custom equality allowlist bypass’ı fail-closed kalıyor. Projection yalnız in-memory read modelidir; persistence/reopen/replay/recovery, late-fill policy, cross ownership, reduce-only, margin/liquidation, order/reserve binding, API/UI ve ekonomik posting açılmadı. `docs/P1_KRITIK_ARASTIRMA_FINAL/test_matrices/P1.15_TESTS.md` mevcut ancak `SPECIFIED_NOT_EXECUTED_AGAINST_LOCAL_CODE` olduğu için implementation kabul kanıtı sayılmadı. Kırmızı regresyonla bulunan iki bulgu düzeltildi; odak `7/7 PASS`, ilgili hedge projection kümesi `11/11 PASS`, bağımsız accepted-fill/malformed-constructor oracle ve compile `PASS`, `git diff --check` `PASS`. `tools/run_checks.py` ve `tools/check_workspace.py` Python `3.13` gereksinimi nedeniyle bu oturumda tam-suite/workspace sonucu veremedi; güncel tam-suite sonucu iddia edilmiyor.
 
 P1.15.b tamamlandı; ayrıntılı kapanış `evidence/P1.15.b/SONUC.md` altında kayıtlıdır.
 
@@ -736,31 +2504,61 @@ Durum: `DEFERRED / NO-GO / LOCAL_PASS`; bağımsız review: `NOT_RUN`; productio
 
 Mevcut `LifecycleStore` açıkça `NON_ECONOMIC_LIFECYCLE_ONLY` kapsamındadır ve two-leg economic identity/leg/effective-time alanlarını taşımaz. Generic economic `Store` execution dedup ve posting içerir, ancak hedge side/leg scope, effective ordering, recovery state ve P1.15 model lineage sözleşmesini taşımaz. P1.15.b in-memory projection’ını iki ayrı store arasında bağlayan adapter atomic accepted-fill + state transition kanıtı üretmez. Bu nedenle migration, yeni economic schema, recovery numeric modeli veya adapter yazılmadı.
 
-P1.15.c’nin yeniden açılması için canonical event schema, tek persistence sahibi/transaction planı, event/effective/persistence time ayrımı, two-leg duplicate/conflict/late-fill recovery politikası, deterministic reopen/replay ve independent field-level oracle/test matrisi gerekir. `test_matrices/P1.15_TESTS.md` checkout’ta mevcut değil. Kanonik regresyon `298/298 PASS`, bağımsız storage schema control, compile ve workspace `PASS` (`126` aktif Python dosyası).
+P1.15.c’nin yeniden açılması için canonical event schema, tek persistence sahibi/transaction planı, event/effective/persistence time ayrımı, two-leg duplicate/conflict/late-fill recovery politikası, deterministic reopen/replay ve independent field-level oracle/test matrisi gerekir. `docs/P1_KRITIK_ARASTIRMA_FINAL/test_matrices/P1.15_TESTS.md` mevcut ancak local code’a karşı çalıştırılmış kabul matrisi değildir. Kanonik regresyon `30/30 PASS` (lifecycle + generic store), bağımsız storage schema control, compile ve diff `PASS`; tam suite/workspace checker Python `3.13` gereksinimi nedeniyle çalışmadı.
 
 Sonraki güvenli tek iş: `P1.16.a` chronological split ve leakage-free evaluation karar kapısı.
 
 ### P1.16.a — Chronological train/gap/test split sınırı
 
-Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.16.a/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md`.
+Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review:
+`PASS` (Noether salt-okunur Codex incelemesi, P1/P2 bulgu yok);
+production readiness: `NO`. Kanıt: `evidence/P1.16.a/SONUC.md`; araştırma
+kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md`.
 
-`ChronologicalPoint`, `ChronologicalSplit` ve `split_chronological` ile strict artan integer `event_time_us` kullanan immutable train/gap/test sınırı eklendi. `max(train_time) < min(test_time)` korunuyor; sıralama otomatik yapılmıyor. Explicit `gap_count` yalnız yapısal dışlama alanıdır, purge/embargo horizon’u değildir. Duplicate identity, duplicate/geriye giden zaman, geçersiz sınır ve boş bölüm fail-closed reddediliyor. OOS freeze/touched lineage, feature/label horizon, exact purge/embargo, multiple-testing/stress registry, persistence, API/UI ve economic result bu mikro-fazda yok. RED import → GREEN `303/303 PASS`; bağımsız chronology oracle, compile ve workspace `PASS` (`128` aktif Python dosyası).
+`ChronologicalPoint`, `ChronologicalSplit` ve `split_chronological` ile strict
+artan integer `event_time_us` kullanan immutable train/gap/test sınırı eklendi.
+Public constructor artık üç bölümün tamamında sıra, gap/test sınırı ve duplicate
+identity’yi yeniden doğruluyor; yanlış point tipi ve custom equality’li sample ID
+fail-closed reddediliyor. `max(train_time) < min(test_time)` korunuyor;
+sıralama otomatik yapılmıyor. Explicit `gap_count` yalnız yapısal dışlama
+alanıdır, purge/embargo horizon’u değildir. OOS freeze/touched lineage,
+feature/label horizon, exact purge/embargo, multiple-testing/stress registry,
+persistence, API/UI ve economic result bu mikro-fazda yok. Odak `7/7 PASS`;
+bağımsız chronology oracle ve compile `PASS`.
+
+`tools/run_checks.py` ve `tools/check_workspace.py` Python `3.13` gereksinimi
+nedeniyle bundled `3.12.14` ile çalışmadı (`active_python_files: 286`); güncel
+tam-suite/workspace sonucu iddia edilmiyor. `git diff --check` `PASS` (mevcut
+LF/CRLF uyarıları).
 
 Sonraki tek iş: `P1.16.b` OOS freeze ve evaluation lineage karar kapısı.
 
 ### P1.16.b — OOS freeze ve evaluation lineage
 
-Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.16.b/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md`.
+Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review:
+`PASS` (Hilbert salt-okunur Codex re-review, P1/P2 bulgu yok); production
+readiness: `NO`. Kanıt: `evidence/P1.16.b/SONUC.md`; araştırma kanıtı:
+`docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md`.
 
-`EvaluationLineage` OOS sonucu görülmeden `OOS_UNTOUCHED`, inspection sonrası `OOS_INSPECTED` durumunu taşır. Inspection sonrası tuning talebi eski lineage’ı `TOUCHED` yaparak `NEW_EXPERIMENT_REQUIRED` döndürür; eski OOS tekrar untouched gösterilemez. OOS görülmeden tuning değişmeden izinlidir. New experiment/trial üretimi, dataset/config/model/kernel/seed binding, persistence, OOS KPI, purge/embargo, stress, API/UI ve economic result bu mikro-fazda yok. RED import → GREEN `307/307 PASS`; bağımsız OOS freeze control, compile ve workspace `PASS` (`130` aktif Python dosyası).
+`EvaluationLineage` OOS sonucu görülmeden `OOS_UNTOUCHED`, inspection sonrası
+`OOS_INSPECTED` durumunu taşır. Inspection sonrası tuning talebi eski lineage’ı
+`TOUCHED` yaparak `NEW_EXPERIMENT_REQUIRED` döndürür; eski OOS tekrar untouched
+gösterilemez. Public lineage ve tuning decision modelleri exact string ve exact
+lineage tipiyle custom equality/string-subclass bypass’ını fail-closed reddeder.
+OOS görülmeden tuning değişmeden izinlidir. New experiment/trial üretimi,
+dataset/config/model/kernel/seed binding, persistence, OOS KPI, purge/embargo,
+stress, API/UI ve economic result bu mikro-fazda yok. Odak `5/5 PASS`, bağımsız
+OOS freeze oracle, Hilbert re-review, compile ve diff `PASS`; Python `3.13`
+gereksinimi nedeniyle checker’lar bu oturumda çalışmadı
+(`active_python_files: 286`).
 
 Sonraki tek iş: `P1.16.c` feature/label horizon ve purge/embargo karar kapısı.
 
 ### P1.16.c — Feature/label horizon overlap ve purge kararı
 
-Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.16.c/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md`.
+Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; bağımsız review: `Pauli PASS` (salt-okunur Codex re-review, P1/P2 bulgu yok); production readiness: `NO`. Kanıt: `evidence/P1.16.c/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md`.
 
-`TimeInterval` ve `assess_purge_requirement` ile half-open `[start_time_us,end_time_us)` train-label/test-feature aralıkları karşılaştırılıyor. Adjacent sınır `NO_OVERLAP`, kesişen aralık `PURGE_REQUIRED`; duplicate identity ve unsorted interval listesi fail-closed. Bu yalnız overlap/gate sonucudur; exact purge/embargo süresi feature lookback, label future horizon ve settlement bilgisi olmadan seçilmedi. Dataset binding, OOS/trial/stress lineage, persistence, API/UI ve economic result yok. RED import → fixture sıralama düzeltmeli GREEN `311/311 PASS`; bağımsız horizon oracle, compile ve workspace `PASS` (`132` aktif Python dosyası).
+`TimeInterval` ve `assess_purge_requirement` ile half-open `[start_time_us,end_time_us)` train-label/test-feature aralıkları karşılaştırılıyor. Adjacent sınır `NO_OVERLAP`, kesişen aralık `PURGE_REQUIRED`; public assessment status/ID tutarlılığı, duplicate ID, exact tuple/interval tipi ve custom equality/subclass bypass’ları fail-closed. Bu yalnız overlap/gate sonucudur; exact purge/embargo süresi feature lookback, label future horizon ve settlement bilgisi olmadan seçilmedi. Dataset binding, OOS/trial/stress lineage, persistence, API/UI ve economic result yok. Odak `5/5 PASS`; bağımsız horizon oracle, compile ve diff `PASS`. Checker’lar Python `3.13` gereksinimi nedeniyle bundled `3.12.14` ile çalışmadı (`active_python_files: 286`); güncel tam-suite/workspace sonucu iddia edilmiyor.
 
 Sonraki tek iş: `P1.16.d` multiple-testing trial registry karar kapısı.
 
@@ -782,19 +2580,32 @@ Sonraki tek iş: `P1.16.f` warmup leakage ve readiness binding karar kapısı.
 
 ### P1.16.f — Warmup leakage ve readiness binding
 
-Durum: `DEFERRED / NO-GO / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.16.f/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md`.
+Durum: `DEFERRED / NO-GO / RESEARCH_AUDITED / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.16.f/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md` ve evidence içindeki QuantConnect/Freqtrade primer kaynakları.
 
-Mevcut `signal_readiness.py` saf readiness sınıflandırması yapıyor; ancak gerçek feature/indicator lookback, warmup başlangıcı ve historical economic runner’a binding yok. Bu nedenle yeni numeric warmup, indicator/signal authority veya warmup event’lerinden fill oluşmadığına dair end-to-end ekonomik kod açılmadı. Mevcut `318/318 PASS`, compile ve workspace `PASS` (`136` aktif Python dosyası).
+Resmî kaynak denetimi warmup’ın indicator state hazırlığı olduğunu ve warmup sırasında trade açılmaması gerektiğini doğruladı; Freqtrade ayrıca stabil history’nin strategy’nin gerçek lookback’inden türetilmesini ve unstable başlangıç bölümünün çıkarılmasını ister. Local source audit’te `signal_readiness.py` yalnız caller tarafından verilen sayıyı sınıflandırıyor; mevcut historical simulation/plan/contract zincirinde feature/indicator/label adapterı yok. Bağımsız stdlib warmup/lookahead oracle `PASS`. Bu nedenle yeni numeric warmup, indicator/signal authority veya warmup event’lerinden fill oluşmadığına dair end-to-end ekonomik kod açılmadı.
 
 Sonraki tek iş: `P1.16.g` local feature/label horizon ve gerçek run binding karar kapısı.
 
 ### P1.16.g — Local feature/label horizon ve gerçek run binding
 
-Durum: `DEFERRED / NO-GO / LOCAL_PASS`; bağımsız review: `NOT_RUN`; production readiness: `NO`. Kanıt: `evidence/P1.16.g/SONUC.md`; araştırma kanıtı: `docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md`.
+Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; odak red/green kontrat kontrolü:
+`PASS_WITH_LIMITATION`; ayrı bağımsız review: `NOT_RUN`; production readiness: `NO`.
+Kanıt:
+`evidence/P1.16.g/SONUC.md`; araştırma dayanağı:
+`docs/P1_KRITIK_ARASTIRMA_FINAL/13_P1.16_WALK_FORWARD_STRESS.md`.
 
-Local code/test ağacında feature/indicator/label pipeline, lookback/future horizon veya historical runner binding bulunmadı. Bu nedenle numeric purge/embargo, warmup policy, OOS KPI veya gerçek run identity binding uydurulmadı; mevcut `TimeInterval` overlap gate’i yalnız structural karar olarak kaldı. Mevcut `318/318 PASS`, compile ve workspace `PASS` (`136` aktif Python dosyası).
+`historical_features.py` bounded exact `CLOSE_SMA`, `CLOSE_RETURN` ve
+`FUTURE_CLOSE_RETURN` pipeline’ını closed-bar, chronology, lookback/horizon ve
+1.000 bar sınırlarıyla uygular. Feature binding run planına, historical
+reducer’a ve capture identity’sine bağlanır; warmup barlarında action üretilmez,
+tam binding yeniden doğrulanır ve değişiklik reducer başlamadan reddedilir.
+Feature değerleri exact `Fraction` tabanlı canonical ratio olarak taşınır.
+Numeric purge/embargo, ekonomik KPI/OOS, optimizer, stress model, persistence
+schema, API/UI opt-in profili ve canlı venue davranışı bu faza dahil değildir.
+`4/4`, `6/6`, `26/26` odak regresyonları geçti; tam checker `786/788 PASS`, iki
+Windows Credential Manager ortam hatası kaldı; compile/workspace/diff geçti.
 
-Sonraki tek iş: `P1.16.h` bounded real-run lineage binding karar kapısı.
+Sonraki tek iş: `P1.16.i` stress ekonomik modeli ve gerçek senaryo runner karar kapısı.
 
 ### P1.16.h — Bounded real-run lineage binding
 
@@ -944,9 +2755,20 @@ Mevcut gerçek token kapsamı ve seçilmiş kontrast oracle ölçüldü; 11 krit
 
 F30’un light theme kısmı için exact palette/default/persistence kararı gerekir; bu karar gelmeden yeni UI kodu açılmayacak. Kanıt: `evidence/P1.19.f/SONUC.md`.
 
+### P1.19.g — Frontend kritik akış component-test kapısı
+
+Durum: **COMPLETE_WITH_LIMITATION / LOCAL_PASS**; production readiness: `NO`. Kanıt: `evidence/P1.19.g/SONUC.md`.
+
+Onaylanan ek test runtime’ı olarak Vitest, React Testing Library ve jsdom eklendi. `datasetCatalog` yardımcıları, `HistoricalChart` idle/loading/error/ready durumları, exact decimal OHLC doğrulaması, dataset/artifact uyuşmayan tamamlanmış aksiyon marker’larının fail-closed reddi, `PREFIX_BOUNDARY_ONLY` indeterminate boundary ve backend `ExplanationSection` görünümü test edildi. Üç test dosyasında `12/12 PASS`; TypeScript ve production frontend build PASS.
+
+Bu kanıt gerçek browser/E2E, canlı API, NVDA/JAWS veya gerçek Windows High Contrast Mode değildir. Yeni ekonomik hesap, API contract, persistence veya canlı entegrasyon açılmadı. Test runtime kurulumu npm çıktısında `2` güvenlik uyarısı bildirdi; `audit fix` çalıştırılmadı, bağımlılık yükseltmesi ayrı bakım kapısıdır.
+
 ### P1.16.g — Local feature/label horizon ve gerçek run binding
 
-Gerçek feature/indicator/label pipeline ve historical runner bağı mevcut kod/fixture ile görülmeden purge/embargo veya warmup için numeric policy seçilmeyecek. Yalnız kanıtlı, bounded ve fail-closed bir sınır uygulanabilir.
+Bounded exact feature/label pipeline ve historical runner binding uygulandı;
+closed-bar, lookback/future horizon, warmup action suppression ve capture
+identity checksum’ı kanıtlandı. Numeric purge/embargo, ekonomik KPI/OOS ve
+stress runner ayrı P1.16.i karar kapısıdır.
 
 ### P1.16.f — Warmup leakage ve readiness binding
 
@@ -984,7 +2806,7 @@ Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`; trading activation `NO-GO`. Kan�
 
 Kimliksiz gerçek Binance Spot Testnet `GET /api/v3/exchangeInfo?symbol=BTCUSDT` çağrısı bounded adaptöre bağlandı ve yeni read-only local endpoint’ten sunuldu: `GET /api/venue-snapshots/binance-spot-testnet?symbol=BTCUSDT`. Sözleşme sabit testnet tabanı, boşluksuz/kontrol-karaktersiz 1–32 karakter UTF-8 symbol girdisi, UTF-8 percent-encoding, 5 saniye default/30 saniye max timeout, 256 KiB response sınırı, identity encoding, response hash, symbol/filter/rate-limit metadata’sı ve fail-closed upstream hatalarını içeriyor. Gerçek public yanıt `TRADING`, 11 filter, 4 rate-limit kaydı, boş `permissions` ve `permissionSets=[['SPOT']]` verdi; `SPOT` account/key capability’si uydurulmadı.
 
-Odak `7/7 PASS`, tam Python regresyon `366/366 PASS`, Python 3.13 compile/workspace, ASGI smoke, frontend build ve gerçek public GET PASS. API key/secret, signed account capability, `/sapi`, WebSocket, order/order-test/cancel, persistence, UI wizard ve ekonomik hesaplama açılmadı. Sıradaki tek iş: P2.01.b public snapshot’ın UI’da salt-okunur gösterimi için karar/uygulama kapısı.
+Odak `9/9 PASS`, tam Python regresyon `366/366 PASS`, Python 3.13 compile/workspace, ASGI smoke, frontend build ve gerçek public GET PASS. API key/secret, signed account capability, `/sapi`, WebSocket, order/order-test/cancel, persistence, UI wizard ve ekonomik hesaplama açılmadı. Sıradaki tek iş: P2.01.b public snapshot’ın UI’da salt-okunur gösterimi için karar/uygulama kapısı.
 
 ## 2026-09-11 — P2.01.b public snapshot salt-okunur UI
 
@@ -1101,3 +2923,26 @@ PASS.
 Sıradaki tek iş: venue lifecycle facts’larının mevcut `domain.engine`
 `INTENT/FILL/ORDER_FINAL` ekonomik event’lerine bağlanma sözleşmesini ve
 offline dedup/reconciliation kanıtını incelemek.
+## 2026-09-18 — P2.03 offline OCO order-list identity/state projection
+
+Durum: `IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`; full P2.03: `IN_PROGRESS`;
+trading activation: `NO-GO`. Kanıt:
+`evidence/P2.03/MARKET_CONDITIONAL_ORDER_LIST_CONTRACT_SONUC.md`.
+
+P2.03’ün sıradaki güvenli dilimi olarak resmi Spot OCO sözleşmesi ile mevcut
+checkout karşılaştırıldı ve yeni `order_list_contract.py` eklendi. Immutable
+`orderListId`/`listClientOrderId`/`OCO` identity, tam iki leg, WORKING/PENDING
+rolü, venue order-type sınırı, bounded list/leg status gözlemi, duplicate,
+conflict, out-of-order ve terminal OCO koordinasyonu fail-closed doğrulandı.
+`tests/test_order_list_contract.py` `4/4 PASS`; P2.03’e ilişkin geniş koruma
+kümesi `77/77 PASS`. `tools/run_checks.py` `792` testte `790 PASS` verdi; kalan
+iki hata Windows Credential Manager ortamı (`1312` ve cleanup
+`CREDENTIAL_NOT_FOUND`) ile sınırlı kaldı. Compileall, workspace (`290` aktif
+Python dosyası) ve diff check PASS.
+
+Bu dilimde fiyat, miktar, fill, fee, reserve, core event, cancel-replace,
+SQLite persistence, signed transport, User Data Stream orchestration, gerçek
+Testnet mutation veya mainnet açılmadı. In-memory observation geçmişi 128 kayıt
+ile bounded’dır. Sıradaki tek iş bu state projection’ı SQLite transaction içinde
+atomic durable replay owner’a bağlamaktır; MARKET core binding ve canlı order
+listesi hâlâ `DEFERRED / NO-GO`.

@@ -18,14 +18,20 @@ from dcabot.application.spot_order_lifecycle import (
     SpotOrderLifecycle,
 )
 from dcabot.domain.config import Config
-from dcabot.domain.engine import Order, State
+from dcabot.domain.engine import Order, State, identifier
 from dcabot.domain.math import Position
 from dcabot.domain.numbers import bounded, exact_text, number, ratio
+from dcabot.application.reconciliation import EventDecision
+from dcabot.application.venue_spot_event_mapping import VenueSpotEventMappingCandidate
 from dcabot.persistence.reconciliation_journal import (
     DurableReconciliationObservation,
+    MappingRecordOutcome,
     RECONCILIATION_TABLE_SQL,
     ReconciliationRecordOutcome,
+    load_mappings_unlocked,
     load_unlocked as load_reconciliation_unlocked,
+    record_mapping_unlocked,
+    record_mapping_with_evidence_unlocked,
     record_unlocked as record_reconciliation_unlocked,
     validate_reconciliation_schema,
 )
@@ -284,6 +290,107 @@ class SpotBindingStore:
         except BaseException:
             self.db.execute("ROLLBACK")
             raise
+
+    def record_mapping(
+        self, candidate: VenueSpotEventMappingCandidate
+    ) -> MappingRecordOutcome:
+        """Persist one non-economic mapping candidate without changing projections."""
+
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            result = record_mapping_unlocked(self.db, candidate)
+            self.db.execute("COMMIT")
+            return result
+        except BaseException:
+            self.db.execute("ROLLBACK")
+            raise
+
+    def record_mapping_with_evidence(
+        self,
+        candidate: VenueSpotEventMappingCandidate,
+        observation: DurableReconciliationObservation,
+    ) -> MappingRecordOutcome:
+        """Atomically persist matched evidence and a non-economic mapping candidate."""
+
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            result = record_mapping_with_evidence_unlocked(self.db, candidate, observation)
+            self.db.execute("COMMIT")
+            return result
+        except BaseException:
+            self.db.execute("ROLLBACK")
+            raise
+
+    def load_mappings(self) -> tuple[VenueSpotEventMappingCandidate, ...]:
+        """Replay identity candidates without promoting lifecycle or core state."""
+
+        self.db.execute("BEGIN")
+        try:
+            result = load_mappings_unlocked(self.db)
+            self.db.execute("COMMIT")
+            return result
+        except BaseException:
+            self.db.execute("ROLLBACK")
+            raise
+
+    def append_verified_mapping(
+        self,
+        candidate: VenueSpotEventMappingCandidate,
+        observation: DurableReconciliationObservation,
+        event: SpotOrderEvent,
+        *,
+        fee: str | None = None,
+        fee_asset: str | None = None,
+        core_role: str | None = None,
+    ) -> CoreBindingResult:
+        """Admit one durably matched Spot event through the existing guarded binder."""
+
+        if not isinstance(candidate, VenueSpotEventMappingCandidate):
+            raise SpotBindingStoreError(
+                "SPOT_RECONCILIATION_MAPPING_INVALID", "Mapping candidate güvenli tipte değil."
+            )
+        if not isinstance(observation, DurableReconciliationObservation):
+            raise SpotBindingStoreError(
+                "SPOT_RECONCILIATION_MAPPING_LINK_INVALID", "Reconciliation evidence güvenli tipte değil."
+            )
+        if not isinstance(event, SpotOrderEvent):
+            raise SpotBindingStoreError(
+                "SPOT_BINDING_EVENT_INVALID", "Spot event güvenli tipte değil."
+            )
+        if observation.decision not in {EventDecision.ACCEPTED, EventDecision.DUPLICATE}:
+            raise SpotBindingStoreError(
+                "SPOT_RECONCILIATION_MAPPING_ADMISSION_INVALID",
+                "Ekonomik admission yalnız kabul edilmiş stream kararıyla yapılabilir.",
+            )
+        if (
+            candidate.spot_event_id != event.event_id
+            or candidate.spot_order_id != event.order_id
+            or candidate.execution_id != event.execution_id
+        ):
+            raise SpotBindingStoreError(
+                "SPOT_RECONCILIATION_MAPPING_LINK_INVALID",
+                "Mapping candidate Spot event kimliğiyle eşleşmiyor.",
+            )
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            observations = load_reconciliation_unlocked(self.db)
+            mappings = load_mappings_unlocked(self.db)
+            if observation not in observations or candidate not in mappings:
+                raise SpotBindingStoreError(
+                    "SPOT_RECONCILIATION_MAPPING_NOT_DURABLE",
+                    "Mapping ve matched evidence önce durable olarak yazılmalıdır.",
+                )
+            record_mapping_with_evidence_unlocked(self.db, candidate, observation)
+            self.db.execute("COMMIT")
+        except BaseException:
+            self.db.execute("ROLLBACK")
+            raise
+        return self.append(
+            event,
+            fee=fee,
+            fee_asset=fee_asset,
+            core_role=core_role,
+        )
 
     def _initialize(
         self, lifecycle: SpotOrderLifecycle, core_state: State
@@ -578,7 +685,7 @@ def _state_payload(state: State) -> dict[str, object]:
 
 
 def _order_payload(order: Order) -> dict[str, object]:
-    return {
+    payload = {
         "order_id": order.order_id,
         "role": order.role,
         "side": order.side,
@@ -589,6 +696,9 @@ def _order_payload(order: Order) -> dict[str, object]:
         "status": order.status,
         "complete": order.complete,
     }
+    if order.intent_id is not None:
+        payload["intent_id"] = order.intent_id
+    return payload
 
 
 def _decode_state(payload: object) -> State:
@@ -656,7 +766,7 @@ def _decode_state(payload: object) -> State:
 
 
 def _decode_order(payload: object) -> Order:
-    if not isinstance(payload, dict) or set(payload) != {
+    fields = {
         "order_id",
         "role",
         "side",
@@ -666,10 +776,15 @@ def _decode_order(payload: object) -> Order:
         "notional",
         "status",
         "complete",
-    }:
+    }
+    payload_fields = set(payload) if isinstance(payload, dict) else None
+    if payload_fields not in (fields, fields | {"intent_id"}):
         raise ValueError("Invalid order fields")
     if type(payload["complete"]) is not bool:
         raise ValueError("Invalid order flag")
+    intent_id = payload.get("intent_id")
+    if intent_id is not None:
+        intent_id = identifier(intent_id)
     return Order(
         order_id=payload["order_id"],
         role=payload["role"],
@@ -680,6 +795,7 @@ def _decode_order(payload: object) -> Order:
         notional=_fraction(payload["notional"]),
         status=payload["status"],
         complete=payload["complete"],
+        intent_id=intent_id,
     )
 
 

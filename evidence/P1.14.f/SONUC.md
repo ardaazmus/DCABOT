@@ -5,7 +5,7 @@
 - Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`
 - Kod: `src/dcabot/application/template_activation_gate.py`
 - Test: `tests/test_template_activation_gate.py`
-- Bağımsız review: `NOT_RUN`
+- Bağımsız review: `PASS` (Singer salt-okunur Codex incelemesi)
 - Production readiness: `NO`
 - Sonraki tek iş: `P1.15.a` hedge/cross/two-leg kapsam karar kapısı
 
@@ -27,10 +27,16 @@ Actual activation transition, user/system authorization, selected-profile parame
 ## Kontroller
 
 - Önce test RED: yeni test dosyası eksik `template_activation_gate` modülü nedeniyle beklenen import error verdi.
-- En küçük uygulama sonrası `uv run --frozen python tools/run_checks.py`: `290/290 PASS`.
-- Bağımsız activation/capability control: pending, ready ve unsupported kararları `PASS`.
-- `uv run --frozen python -m compileall -q src tests`: `PASS`.
-- `uv run --frozen python tools/check_workspace.py`: `PASS`; `122` aktif Python dosyası.
+- Güncel odak `python -m unittest tests.test_template_activation_gate`: `4/4 PASS`.
+- İlgili template/projection kümesi `python -m unittest tests.test_template_activation_gate tests.test_strategy_template`: `10/10 PASS`.
+- Bağımsız template activation oracle: pending/approved/unsupported precedence,
+  duplicate ve bool allowlist/approval reddi, immutable decision ve non-authority `PASS`.
+- Singer salt-okunur Codex review: `PASS`; kritik P1/P2 bulgu yok.
+- `python -m compileall -q src`: `PASS`; `git diff --check`: `PASS`.
+- `tools/run_checks.py` güncel tam-suite için `FAIL`: proje `Python 3.13`
+  isterken kullanılabilir bundled runtime `3.12.14`; bu nedenle güncel
+  tam-suite sonucu iddia edilmiyor.
+- Önceki tarihsel tam-suite sonucu (`290/290`) bu oturumun doğrulaması olarak kullanılmadı.
 - Live/testnet, credential ve gerçek emir yolu açılmadı.
 
 ## Kanıt sınırı

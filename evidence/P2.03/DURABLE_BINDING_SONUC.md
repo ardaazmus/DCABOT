@@ -49,6 +49,33 @@ TRADING_ACTIVATION = NO-GO
   reddeder. Doğrulanan her kayıt mevcut explicit lookup portuna devredilir;
   sonuçlar durable `ACKNOWLEDGED`/`UNRESOLVED` state’lerine yazılır ve
   authoritative snapshot kapısı ayrıca korunur.
+- REST lookup sonucu, `DurableReconciliationObservation.lookup` alanında yalnız
+  redacted evidence olarak saklanabilir. `FOUND` yalnız venue order kimliğinin
+  lookup tarafından bulunduğunu ifade eder; Spot fill, core event veya ekonomik
+  posting üretmez.
+- Lookup evidence canonical payload/hash ile immutable ve idempotent’tir: aynı
+  event + aynı lookup `DUPLICATE`, aynı event + farklı lookup `CONFLICT` olur.
+  Lookup alanı olmayan önceki journal payload’ları `lookup=None` olarak geriye
+  dönük okunabilir.
+- `evaluate_venue_event_lookup`, redacted `UserDataEvent` ile `OrderLookup`
+  arasındaki kimliği açıkça sınıflandırır: yalnız birebir `FOUND` eşleşmesi
+  `MATCHED`, `FOUND` kimlik uyuşmazlığı `CONFLICT`, diğer sonuçlar
+  `UNRESOLVED` olur. Bu sınıflandırma lifecycle veya core state değiştirmez.
+- `build_spot_event_mapping_candidate`, yalnız `MATCHED` evidence ile iki
+  namespace kimliğini (`venue_event_id`, `spot_event_id`) ve mevcut execution
+  ID’yi ekonomik alan taşımadan bir candidate olarak birleştirir. Candidate,
+  aynı offline SQLite journal’ında bounded sequence/checksum ile persist/replay
+  edilir; duplicate/conflict fail-closed’dur ve replay core/lifecycle
+  projection’larını değiştirmez.
+- `record_mapping_with_evidence`, matched redacted evidence ile candidate
+  kimliklerini transaction içinde cross-check eder; uyuşmazlıkta evidence ve
+  candidate birlikte rollback olur. Başarılı replay core/lifecycle projection
+  üretmez.
+- `append_verified_mapping`, yalnız durable candidate + matched evidence,
+  birebir Spot event/execution kimlikleri ve kabul edilmiş (`ACCEPTED`/
+  `DUPLICATE`) stream kararı ile mevcut guarded LIMIT binder’a explicit
+  admission verir. Candidate replay veya evidence kaydı tek başına ekonomik
+  posting yapmaz; binder reddederse projection’lar ilerlemez.
 
 ## Sınır
 
@@ -60,12 +87,34 @@ sunar, `SYNCED` üretmez. `startup_with_durable_recovery` aynı doğrulamayı
 AttemptStore recovery’sinden önce orkestre eder. Snapshot sonrası gerçek
 reconciliation ve canlı venue association ayrıca kanıtlanmalıdır.
 
+MARKET’in core’a ekonomik binding’i `DEFERRED / NO-GO` kalır: aktif core
+`Order.limit` alanını ve limit uyumlu fill kontrolünü zorunlu tutar; MARKET etkin
+fiyatı, `quoteOrderQty` dönüşümü, partial-fill ve slippage sözleşmesi yoktur.
+Conditional ve order-list/OCO lifecycle için trigger, parent/list, leg
+koordinasyonu, cancel-replace ve restart persistence sözleşmesi bulunmadığından
+bu alanlar da `DEFERRED / NO-GO` olarak korunur. Bu scope gate varsayımsal
+ekonomik model veya venue davranışı üretmez.
+
 ## RED → GREEN kanıtı
 
 `tests/test_spot_binding_store.py` lifecycle/core replay, duplicate/conflict ve
 rejected no-write davranışını; `tests/test_spot_binding_reconciliation.py`
 reconciliation restart replay, redacted schema, duplicate/conflict, GAP’ın
 promotion olmadan korunması ve transaction rollback davranışını kapsar.
+
+`tests/test_reconciliation_journal.py` lookup evidence redaction, duplicate/
+conflict ve lookup alanı olmayan legacy payload replay davranışını doğrudan
+journal katmanında doğrular.
+
+`tests/test_venue_event_binding.py` exact match, identity conflict ve
+unresolved lookup sınıflandırmasını redacted contract seviyesinde doğrular.
+
+`tests/test_venue_spot_event_mapping.py` yalnız `MATCHED` evidence ile
+ candidate oluşturulmasını ve unresolved/conflict evidence’in reddini doğrular.
+
+`tests/test_reconciliation_mapping.py` candidate persistence/replay, restart,
+duplicate/conflict, atomic matched-evidence linkage, rollback, non-accepted
+stream decision admission rejection ve core promotion sınırını doğrular.
 
 `tests/test_reconciliation.py` cursor hydration, SYNCED promotion engeli, GAP
 quarantine, authoritative snapshot cursor/freshness doğrulaması, tutarsız
@@ -76,10 +125,10 @@ sırasını; recovered attempt listesinin explicit lookup handoff’unu ve mutat
 Yerel doğrulama:
 
 ```text
-uv run --frozen python tools/run_checks.py: 432/432 PASS
-uv run --frozen python -O tools/run_checks.py: 432/432 PASS
+uv run --frozen python tools/run_checks.py: 454/454 PASS
+uv run --frozen python -O tools/run_checks.py: 454/454 PASS
 uv run --frozen python -m compileall -q src tests: PASS
-uv run --frozen python tools/check_workspace.py: PASS, 168 aktif Python dosyası
+uv run --frozen python tools/check_workspace.py: PASS, 176 aktif Python dosyası
 frontend npm run build: PASS
 git diff --check: PASS
 ```

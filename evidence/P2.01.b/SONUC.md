@@ -54,7 +54,7 @@ hesap/API-key yetkisi, bakiye, emir kabulü, fill veya ekonomik sonuç üretmez.
 | Python 3.13 compileall | `PASS` |
 | Workspace kontrolü | `PASS`, 150 aktif Python dosyası |
 | Gerçek public Testnet GET | `PASS`, `BTCUSDT=TRADING`, 11 filter, 4 rate limit |
-| Yerleşik tarayıcı DOM/screenshot/interaction QA | `NOT_RUN`: browser çalışma varlık yolu bulunamadı |
+| Yerleşik tarayıcı DOM/screenshot/interaction QA | `PASS`: local Browser ile public snapshot kartı, DOM, desktop/390px screenshot ve etkileşim doğrulandı |
 | Doğrudan Chrome CDP responsive/visual QA | `PASS`: 320/768/1280px’te yatay taşma yok; snapshot ve public/account sınırı DOM’da mevcut; screenshot kanıtı `.cluster/p2-audit-20260911/p2-01b-{320,768,1280}.png` |
 | Doğrudan Chrome CDP keyboard/focus QA | `PASS`: 23 klavye durağında görünür focus ring; Space ile native disclosure aç/kapa doğrulandı |
 | Güncel kaynakla yeniden başlatılmış local API route smoke | `PASS`: HTTP 200; `BINANCE_SPOT_TESTNET`, `BTCUSDT`, `TRADING`, `read_only=true`, `credential_required=false`; order types döndü |
@@ -64,9 +64,10 @@ hesap/API-key yetkisi, bakiye, emir kabulü, fill veya ekonomik sonuç üretmez.
 ## Sınırlar ve sonraki adım
 
 Bu dilim P2.01.b public read-only UI’sını derlenebilir, sözleşme kontrollü,
-güncel local API ile erişilebilir ve doğrudan Chrome CDP ile 320/768/1280px
-responsive/visual/keyboard smoke doğrulanmış hale getirir. Yerleşik browser
-eklenti yolu çalışmadı; bu nedenle plugin tabanlı otomasyon ve gerçek NVDA/JAWS/
-Windows HCM hâlâ `NOT_RUN` durumundadır. Bu kayıt production accessibility veya
-tam WCAG uygunluk iddiası değildir. P2.02 signed secret/outbox, P2.03 order
-lifecycle ve P2.04 reconciliation bu kartın kapsamı değildir.
+güncel local API ile erişilebilir ve Browser DOM/screenshot/interaction smoke
+doğrulanmış hale getirir. Browser public snapshot kartında `CONNECTED_READ_ONLY`,
+`TRADING`, order types, 4 rate limit ve 11 symbol filter görünümünü doğruladı;
+credential veya mutation açılmadı. Gerçek NVDA/JAWS/Windows HCM hâlâ `NOT_RUN`
+durumundadır. Bu kayıt production accessibility veya tam WCAG uygunluk iddiası
+değildir. P2.02 signed secret/outbox, P2.03 order lifecycle ve P2.04
+reconciliation bu kartın kapsamı değildir.

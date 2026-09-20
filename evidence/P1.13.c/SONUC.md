@@ -1,31 +1,48 @@
-# P1.13.c — Spot grid fee ve cycle/equity karar kapısı
+# P1.13.c — Spot grid fee ve cycle/equity projection
 
 ## Durum
 
-`DEFERRED / NO-GO / LOCAL_PASS`; bu mikro-fazda production kodu değişmedi.
+`IMPLEMENTED_WITH_LIMITATION / LOCAL_PASS`; production readiness `NO`.
 
-## İddia kontrolü
+## Uygulanan en küçük davranış
 
-Araştırma, accepted grid sell’in sahip olunan base kapasitesini tüketmesini, accepted buy’ın inventory artırmasını ve matched grid profit’in total equity ile aynı sayı olmadığını belirtiyor. Aynı araştırma fee asset/unit etiketini, fee rounding owner’ını ve per-fill rounding politikasını zorunlu tutuyor; rounding owner yoksa fail-closed kararı veriyor.
+`SpotGridFeeProfile` yalnız açık `quote_asset` fee, exact decimal `fee_rate`,
+explicit `fee_quantum` ve `EXACT_NO_ROUNDING` mode kabul ediyor. Üçüncü/base
+fee asset’i ve venue quantization profili fail-closed kalıyor.
 
-Local core kontrolünde `FILL` event’i `fee_asset == config.quote_asset` şartı taşıyor ve `State.fees` tek bir scalar quote gideri olarak tutuluyor. Bu, spot fee’nin base asset olarak envanterden düşülmesini veya üçüncü bir fee asset’inin zamanlı kurla değerlenmesini temsil etmiyor. `State.equity` de tek bir position mark’ına bağlı CORE01 hesabıdır; grid’in açık base inventory mark-to-market değeri, matched cycle realized profit’i ve toplam equity köprüsü değildir.
+`project_spot_grid_cycle` accepted BUY ve SELL çiftini önce mevcut immutable
+spot inventory projection üzerinden doğruluyor. Matched cycle profit’i iki
+notionalın farkından iki quote-fee düşülerek ayrı hesaplanıyor. Total equity,
+cycle sonrası quote cashflow ile açık base inventory’nin explicit mark price
+üzerindeki değerini topluyor; mark fiyatı cycle profit’i değiştirmiyor.
 
-## Uygulama kararı
-
-Fee asset/rounding/posting ve cycle-profit/equity projection eklenmedi. Mevcut generic fee toplamını grid fee authority olarak yeniden kullanmak güvenli değildir. Geometric precision/quantization, accepted FILL’in core Store’a bağlanması, replacement, reserve, multi-asset valuation, API/UI ve public grid sonucu da açılmadı.
+Projection salt-okunur, `order_authority=NONE`; persistence, Store binding,
+pending order/reserve, replacement, API/UI ve venue mutation açmıyor. State
+önceden aynı fill’i içeriyorsa fee posting state’te bulunmadığı için tekrar
+ücretlendirme güvenli kabul edilmiyor ve işlem fail-closed oluyor.
 
 ## Kanıt
 
-- Local inspection: `src/dcabot/domain/engine.py` içinde strict `FILL` fee asset kontrolü, scalar `fees` ve CORE01 single-position equity formülü doğrulandı.
-- Araştırma: `docs/P1_KRITIK_ARASTIRMA_FINAL/10_P1.13_GRID_FAMILIES.md`; fee/rounding owner ve grid profit/equity ayrımı için kanıt mevcut, local implementation claim’i yok.
-- Önceki doğrulanmış kod baseline: `259/259 PASS`.
-- Compile ve workspace baseline: `PASS`; `110` aktif Python dosyası.
-- Karar: fee varlığı/yuvarlama sahibi ve çok varlıklı equity valuation contract’ı seçilmeden numeric grid net sonucu güvenli değildir.
+- Odak `tests/test_spot_grid_cycle_accounting.py`: `5/5 PASS`.
+- İlişkili Spot Grid kümesi (`P1.13.a–c`): `13/13 PASS`.
+- Bağımsız `Decimal` oracle: `PASS`; mark değişirken cycle profit sabit,
+  total equity değişiyor.
+- Negatif sınırlar: base/third fee asset, non-zero venue quantum, yanlış
+  cycle yönü/miktarı ve tekrar ücretleme `BLOCKED`.
+- Read-only AST/write-surface: `PASS`.
+- Compile: `PASS`; workspace kontrolü: `PASS`; `git diff --check`: `PASS`.
+- Tam proje: `707` testte `705 PASS`; faz dışı Windows Credential Manager
+  `Windows error 1312` nedeniyle `2` environment error.
+- Gerçek source export, migration/publish, Binance/Testnet mutation, Store
+  persistence veya canlı order açılmadı.
 
-## Yeniden açma koşulları
+## Açık sınırlar
 
-Seçilen spot model için fee asset (quote/base/third), fee sign, per-fill rounding quantum/mode, fee’nin inventory/cashflow etkisi, accepted fill ve persistence identity, mark authority ve bağımsız Decimal oracle dondurulmalıdır. Matched cycle realized profit ile open inventory mark-to-market total equity ayrı alanlar olarak modellenmeli; duplicate/replay ve partial-fill property testleri geçmelidir.
+Per-fill venue rounding, base/third-asset fee conversion, reserved-fee
+valuation, partial-fill/replacement/replay persistence ve public grid sonucu
+ayrı kapılardır. Bu kod yalnız ilk offline `arithmetic + quote-asset-fee-only`
+profilinin accepted matched cycle projection’ıdır.
 
 ## Sonraki tek iş
 
-`P1.13.d` — geometric seviye precision/quantization veya mevcut kanıt yetersizse güvenli karar kapısı. Reverse/infinity/trailing/leveraged grid hâlâ ayrı profile ve bağımlılık kapılarıdır.
+`P1.13.d` — geometric seviye precision/quantization karar kapısı.

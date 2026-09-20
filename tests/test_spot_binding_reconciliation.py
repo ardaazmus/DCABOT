@@ -6,6 +6,7 @@ import unittest
 from dcabot.application.reconciliation import (
     ConnectionState,
     EventDecision,
+    OrderLookup,
     ReconciliationCoordinator,
     UserDataEvent,
 )
@@ -148,6 +149,61 @@ class SpotBindingReconciliationTests(unittest.TestCase):
                 self.assertEqual(store.load_reconciliation(), (observation,))
             with SpotBindingStore.open(path, config=self.config) as reopened:
                 self.assertEqual(reopened.load_reconciliation()[0].state, ConnectionState.GAP)
+
+    def test_lookup_evidence_is_durable_without_promoting_core(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "spot-bindings.sqlite"
+            with SpotBindingStore.create(
+                path,
+                config=self.config,
+                lifecycle=self.lifecycle,
+                core_state=self.core_state,
+            ) as store:
+                observation = self._observation()
+                evidence = type(observation)(
+                    observation.event,
+                    observation.decision,
+                    observation.state,
+                    observation.binding_event_id,
+                    OrderLookup.found(777),
+                )
+                self.assertEqual(store.record_reconciliation(evidence).value, "ACCEPTED")
+                self.assertEqual(store.record_reconciliation(evidence).value, "DUPLICATE")
+                self.assertEqual(store.load_reconciliation(), (evidence,))
+                self.assertEqual(store.load().core_state, self.core_state)
+                self.assertEqual(store.load().accepted_event_count, 0)
+
+            with SpotBindingStore.open(path, config=self.config) as reopened:
+                self.assertEqual(reopened.load_reconciliation(), (evidence,))
+
+    def test_lookup_evidence_conflict_is_fail_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "spot-bindings.sqlite"
+            with SpotBindingStore.create(
+                path,
+                config=self.config,
+                lifecycle=self.lifecycle,
+                core_state=self.core_state,
+            ) as store:
+                observation = self._observation()
+                found = type(observation)(
+                    observation.event,
+                    observation.decision,
+                    observation.state,
+                    observation.binding_event_id,
+                    OrderLookup.found(777),
+                )
+                conflict = type(observation)(
+                    observation.event,
+                    observation.decision,
+                    observation.state,
+                    observation.binding_event_id,
+                    OrderLookup.found(778),
+                )
+                store.record_reconciliation(found)
+                with self.assertRaisesRegex(ValueError, "SPOT_RECONCILIATION_EVENT_CONFLICT"):
+                    store.record_reconciliation(conflict)
+                self.assertEqual(store.load_reconciliation(), (found,))
 
     def test_reconciliation_conflict_rolls_back_the_core_binding(self):
         with tempfile.TemporaryDirectory() as directory:

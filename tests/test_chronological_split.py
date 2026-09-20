@@ -2,6 +2,7 @@ import unittest
 
 from dcabot.application.chronological_split import (
     ChronologicalPoint,
+    ChronologicalSplit,
     split_chronological,
 )
 
@@ -48,6 +49,42 @@ class ChronologicalSplitTests(unittest.TestCase):
             split_chronological(points(100, 200, 300), train_count=3)
         with self.assertRaisesRegex(ValueError, "CHRONOLOGICAL_SPLIT_INVALID"):
             split_chronological(points(100, 200, 300), train_count=1, gap_count=2)
+
+    def test_public_constructor_rechecks_order_gap_and_duplicate_invariants(self):
+        p0, p1, p2 = points(100, 200, 300)
+        with self.assertRaisesRegex(ValueError, "CHRONOLOGY_INVALID"):
+            ChronologicalSplit(train=(p1, p0), gap=(), test=(p2,))
+        with self.assertRaisesRegex(ValueError, "CHRONOLOGY_INVALID"):
+            ChronologicalSplit(
+                train=(p0,),
+                gap=(p1,),
+                test=(ChronologicalPoint("row-1", 300),),
+            )
+        with self.assertRaisesRegex(ValueError, "CHRONOLOGY_INVALID"):
+            ChronologicalSplit(
+                train=(p0,),
+                gap=(ChronologicalPoint("row-3", 400),),
+                test=(p2,),
+            )
+        with self.assertRaisesRegex(ValueError, "CHRONOLOGY_INVALID"):
+            ChronologicalSplit(train=(p0, p0), gap=(), test=(p2,))
+        with self.assertRaisesRegex(ValueError, "CHRONOLOGICAL_SPLIT_INVALID"):
+            ChronologicalSplit(train=(p0,), gap=(), test=(object(),))
+
+    def test_sample_identity_boundary_rejects_non_string_without_raw_type_error(self):
+        class EqualsTo:
+            def __eq__(self, other):
+                return other == "row-0"
+
+        with self.assertRaisesRegex(ValueError, "CHRONOLOGICAL_SAMPLE_ID_INVALID"):
+            ChronologicalPoint(EqualsTo(), 100)
+
+        class StringEqualsTo(str):
+            def __eq__(self, other):
+                return other == "row-0"
+
+        with self.assertRaisesRegex(ValueError, "CHRONOLOGICAL_SAMPLE_ID_INVALID"):
+            ChronologicalPoint(StringEqualsTo("row-0"), 100)
 
 
 if __name__ == "__main__":

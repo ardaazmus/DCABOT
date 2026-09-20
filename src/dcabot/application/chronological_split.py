@@ -23,7 +23,7 @@ class ChronologicalPoint:
     event_time_us: int
 
     def __post_init__(self) -> None:
-        if not isinstance(self.sample_id, str) or _IDENTIFIER.fullmatch(self.sample_id) is None:
+        if type(self.sample_id) is not str or _IDENTIFIER.fullmatch(self.sample_id) is None:
             raise ChronologicalSplitError(
                 "CHRONOLOGICAL_SAMPLE_ID_INVALID", "Sample identity geçersiz."
             )
@@ -53,6 +53,7 @@ class ChronologicalSplit:
             raise ChronologicalSplitError(
                 "CHRONOLOGICAL_SPLIT_INVALID", "Train ve test bölümleri boş olamaz."
             )
+        _validate_order(self.train + self.gap + self.test)
         if self.train[-1].event_time_us >= self.test[0].event_time_us:
             raise ChronologicalSplitError(
                 "CHRONOLOGICAL_BOUNDARY_INVALID",
