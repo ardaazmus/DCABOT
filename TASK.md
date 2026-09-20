@@ -1,17 +1,26 @@
-# Aktif iş — Faz 1: kod borcu ve bulgu kapatma
+# Aktif iş — Faz 2.1: demo akışı denetimi
 
-Hedef: `DCABOT_HATA_RAPORU.md` yalnız gerçekten açık maddeleri içersin ve bu maddeler kapansın.
-Süre kutusu: 1–2 oturum. Bu alt sistemde ardışık dilim: 0/3.
+Hedef: Local demo akışını girişten kayıtlı sonuca kadar gözlemlemek; canlı borsa, credential ve mutation açmamak.
+Süre kutusu: 1 oturum. Bu alt sistemde ardışık dilim: 0/3.
 
-## Adımlar (sırayla; her adım ayrı küçük commit)
-1. Raporu güncelle: #2 (`_quality_response`) koddaki `Cache-Control: no-store` ile düzelmiş, #6 (`FAILED` önceliği) hydration'da "en kötü durum kazanır" = fail-closed tasarım → ikisini kapalı işaretle. Test sayısını 865 yap. Sadece belge değişikliği.
-2. `api.py`: config'i her istekte diskten okumayı bırak (modül düzeyi cache, mtime ile yenile) — rapor #4. Önce test.
-3. `api.py`: CORS izinli origin listesini ortam değişkeniyle yapılandırılabilir yap; varsayılan mevcut 5173 kalsın, wildcard yok — rapor #8.
-4. `frontend/src/App.tsx`: 51 `useState`'i `useReducer` veya durum gruplarına böl (`datasetState`, `simulationState`, `savedRunsState`). Davranış değişmez; `tsc -b` ve vitest 12/12 yeşil kalmalı — rapor #10.
-5. Rapor #9 (global state) için tek satırlık sınır notu ekle: "uvicorn tek worker". Kod değişikliği yok.
-6. `engine.py:292`: STATE.md "bekleyen karar 1"e bağlı. Karar gelmediyse bu adımı atla; Faz 1 kapanışını engellemez.
+## Adımlar
+1. AGENTS.md, STATE.md ve TASK.md'yi oku; temiz çalışma ağacını ve aktif dalı doğrula.
+2. Local API ve frontend'i güvenli demo modunda başlat; health/capabilities ve ilk ekran sözleşmesini kontrol et.
+3. Dataset kataloğu, VERIFIED seçim, preflight ve historical profile eşleşmesini denetle.
+4. Yalnız bounded offline simulation akışını çalıştır; INDETERMINATE veya COMPLETED sonuçlarını yanlış biçimde canlı sonuç gibi sunmadığını kontrol et.
+5. Explicit save ile SQLite kayıt, liste ve detail akışını denetle; duplicate/idempotency ve corrupt/missing state sınırlarını doğrula.
+6. Arayüz akışındaki bulguları mevcut kaynak/testlerle eşleştir; gerekirse tek küçük dikey dilim seç. Yeni belge/evidence klasörü açma.
+7. Değişen alanın testlerini, tam checker'ı ve frontend tsc/vitest'i çalıştır; STATE.md'yi yalnız güncel gerçekle üzerine yaz.
+
+## Değişmez sınırlar
+- Credential, secret, signed request, emir, mutation ve mainnet yok.
+- Gerçek ekonomik sonuç veya testnet mutation için açık karar/gate gerekir.
+- Manual işlem kaydı, eski source DB/export veya migration girdisi istenmez.
+- UNKNOWN, INDETERMINATE, eksik veri ve gap başarı kanıtı sayılmaz.
+- Faz başına tek evidence/Sonuc dosyası kuralı korunur; yeni klasör ancak AGENTS/TASK kapsamındaki faz kabulüyle açılabilir.
 
 ## Kabul
-- Tam checker PASS, frontend tsc + vitest PASS.
-- Hata raporu boş veya yalnız "kabul edilen sınır" satırları içeriyor.
-- Kapanışta: STATE.md güncellenir, TASK.md Faz 2.1 (demo akışı denetimi) için yeniden yazılır.
+- Demo akışı yalnız güvenli local/offline veya read-only public sınırda kalır.
+- UI, API ve persistence sözleşmeleri birbirine bağlı kanıtla raporlanır.
+- Test sonucu açıkça PASS/FAIL ve kapsamıyla STATE.md'ye yazılır.
+- Bağımsız inceleme yapılmadıysa review=NOT_RUN olarak kalır.
