@@ -23,6 +23,8 @@ from dataclasses import dataclass
 from dcabot.application.credential_boundary import CredentialProvider
 from dcabot.application.instrument_filters import InstrumentFilterError, InstrumentFilterProfile, validate_order_candidate
 from dcabot.application.order_attempt import AttemptOperation, AttemptState, OrderAttempt, request_fingerprint
+from dcabot.application.reconciliation import OrderLookup, ReconciliationCoordinator
+from dcabot.application.rest_catch_up import lookup_attempt_via_testnet
 from dcabot.application.signed_request import Clock
 from dcabot.data_adapters.binance_testnet_order_execution import (
     BinanceTestnetOrderExecutionError,
@@ -36,6 +38,16 @@ from dcabot.data_adapters.binance_testnet_order_execution import (
 )
 from dcabot.domain.numbers import Q, number
 from dcabot.persistence.attempt_store import AttemptStore
+
+
+@dataclass(frozen=True, slots=True)
+class _PrefetchedOrderQuery:
+    """Adapt one already-awaited OrderLookup to the synchronous OrderQuery protocol."""
+
+    lookup: OrderLookup
+
+    def find_order(self, attempt: OrderAttempt) -> OrderLookup:
+        return self.lookup
 
 
 class TestnetOrderExecutionError(RuntimeError):
@@ -200,3 +212,49 @@ async def cancel_gated_testnet_order(
         raise TestnetOrderExecutionError(
             "GATE_CANCEL_FAILED", "Cancel isteği tamamlanamadı."
         ) from exc
+
+
+async def recover_stuck_attempts(
+    *,
+    store: AttemptStore,
+    credential_id: str,
+    provider: CredentialProvider,
+    clock: Clock,
+    now_us: int,
+    websocket_factory: WebSocketFactory | None = None,
+    request_id_factory=None,
+) -> tuple[OrderAttempt, ...]:
+    """Faz 3.6: resolve whatever a prior process death left non-terminal.
+
+    Must be called once at the start of a session, before
+    `place_gated_testnet_limit_order` is attempted — otherwise a stuck
+    attempt from a crash (PREPARED, PERSISTED, or SENDING; see
+    `AttemptStore.recover_after_restart` and the `can_transition` extension,
+    docs/KARARLAR.md 2026-09-21) keeps `count_in_flight_attempts() > 0`
+    forever and every future order is refused by rule 5.
+
+    Each recovered attempt is resolved via the same real, read-only signed
+    lookup Faz 3.2's REST catch-up uses: ACKNOWLEDGED if the venue actually
+    has it (so a crash right after a real fill is never duplicated), or it
+    stays UNRESOLVED (permanent, requires an operator to look, never
+    silently retried) if the venue genuinely never saw it.
+    """
+
+    coordinator = ReconciliationCoordinator(store)
+    recovered = coordinator.startup(now_us=now_us)
+    resolved: list[OrderAttempt] = []
+    for attempt in recovered:
+        lookup = await lookup_attempt_via_testnet(
+            attempt,
+            credential_id=credential_id,
+            provider=provider,
+            clock=clock,
+            **({} if websocket_factory is None else {"websocket_factory": websocket_factory}),
+            **({} if request_id_factory is None else {"request_id_factory": request_id_factory}),
+        )
+        resolved.append(
+            coordinator.reconcile_attempt(
+                attempt.attempt_id, _PrefetchedOrderQuery(lookup), now_us=now_us
+            )
+        )
+    return tuple(resolved)

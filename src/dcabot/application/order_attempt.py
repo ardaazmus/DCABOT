@@ -178,8 +178,14 @@ def can_transition(current: AttemptState, target: AttemptState) -> bool:
     """Return whether a durable attempt may move between explicit states."""
 
     allowed = {
-        AttemptState.PREPARED: {AttemptState.PERSISTED},
-        AttemptState.PERSISTED: {AttemptState.SENDING},
+        # UNKNOWN is also reachable directly from PREPARED/PERSISTED: a
+        # process restart (Faz 3.6, docs/KARARLAR.md 2026-09-21) cannot tell
+        # whether a crash between prepare() and mark_sending() truly never
+        # reached the network, so it quarantines conservatively the same way
+        # a crash during SENDING does, instead of leaving the attempt with
+        # no way out of a non-terminal state.
+        AttemptState.PREPARED: {AttemptState.PERSISTED, AttemptState.UNKNOWN},
+        AttemptState.PERSISTED: {AttemptState.SENDING, AttemptState.UNKNOWN},
         AttemptState.SENDING: {
             AttemptState.ACKNOWLEDGED,
             AttemptState.REJECTED,

@@ -173,13 +173,31 @@ class AttemptStore:
         )
 
     def recover_after_restart(self, *, now_us: int) -> tuple[OrderAttempt, ...]:
-        """Quarantine every in-flight send as UNKNOWN after process restart."""
+        """Quarantine every non-terminal attempt as UNKNOWN after process restart.
 
+        Covers PREPARED and PERSISTED too, not only SENDING: a crash between
+        prepare() and mark_sending() cannot be told apart from a crash that
+        did reach the network, so it is quarantined the same conservative
+        way (Faz 3.6, docs/KARARLAR.md 2026-09-21) rather than left stuck in
+        a state with no further transition.
+        """
+
+        states = (
+            AttemptState.PREPARED.value,
+            AttemptState.PERSISTED.value,
+            AttemptState.SENDING.value,
+        )
+        reasons = {
+            AttemptState.PREPARED.value: "RESTART_BEFORE_SEND",
+            AttemptState.PERSISTED.value: "RESTART_BEFORE_SEND",
+            AttemptState.SENDING.value: "RESTART_DURING_SEND",
+        }
         self.db.execute("BEGIN IMMEDIATE")
         try:
+            placeholders = ",".join("?" for _ in states)
             rows = self.db.execute(
-                "SELECT * FROM attempts WHERE state=? ORDER BY attempt_id",
-                (AttemptState.SENDING.value,),
+                f"SELECT * FROM attempts WHERE state IN ({placeholders}) ORDER BY attempt_id",
+                states,
             ).fetchall()
             recovered = []
             for row in rows:
@@ -188,7 +206,7 @@ class AttemptStore:
                     current,
                     state=AttemptState.UNKNOWN,
                     last_transition_at_us=now_us,
-                    terminal_reason="RESTART_DURING_SEND",
+                    terminal_reason=reasons[current.state.value],
                 )
                 self.db.execute(
                     "UPDATE attempts SET state=?, last_transition_at_us=?, terminal_reason=? "

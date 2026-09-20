@@ -37,6 +37,7 @@ from dcabot.application.testnet_order_execution import (
     TestnetOrderExecutionError,
     cancel_gated_testnet_order,
     place_gated_testnet_limit_order,
+    recover_stuck_attempts,
 )
 from dcabot.data_adapters.binance_testnet_account import fetch_binance_testnet_account
 from dcabot.data_adapters.binance_testnet_order_execution import trading_kill_switch_enabled
@@ -105,12 +106,25 @@ async def main() -> None:
         print("DCABOT_TRADING_ENABLED 'true' degil -- yalnizca goruntuleme yapildi, hicbir emir gonderilmeyecek.")
         return
 
-    if not _confirm("Bu LIMIT emri GERCEKTEN testnet'e gondermek istiyor musun?"):
-        print("Iptal edildi (onaylanmadi). Hicbir istek gonderilmedi.")
-        return
-
     store_path = Path(gettempdir()) / "dcabot_single_testnet_order_attempts.sqlite"
     with AttemptStore(store_path) as store:
+        # Faz 3.6: resolve anything a prior run left stuck (crashed/killed
+        # process) before even asking about a new order -- otherwise rule 5
+        # (single in-flight mutation) refuses every future order forever.
+        recovered = await recover_stuck_attempts(
+            store=store,
+            credential_id=args.credential_id,
+            provider=provider,
+            clock=clock,
+            now_us=int(time.time() * 1_000_000),
+        )
+        for attempt in recovered:
+            print(f"Onceki oturumdan kalan attempt kurtarildi: {attempt.attempt_id} -> {attempt.state.value}")
+
+        if not _confirm("Bu LIMIT emri GERCEKTEN testnet'e gondermek istiyor musun?"):
+            print("Iptal edildi (onaylanmadi). Hicbir istek gonderilmedi.")
+            return
+
         attempt_id = f"single-order-{int(time.time())}"
         now_us = int(time.time() * 1_000_000)
         try:
