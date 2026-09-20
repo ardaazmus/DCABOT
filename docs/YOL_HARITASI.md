@@ -3,10 +3,10 @@
 Sıra bağlayıcıdır: P1 yerel demo → P2 Binance testnet → P3 gerçek Binance (sınırlı canary) → P4 diğer borsalar. Bir sonraki faza geçmek için önceki fazın kapanış ölçütü sağlanır. Eski dilim günlükleri: `docs/archive/history/`.
 
 ## Şimdi
-- **Faz 2 kapandı (2.1-2.5).** Sıradaki iş TASK.md'dedir.
+- **Faz 2 (P1 kapanışı) tamamen kapandı — `p1-demo-complete` etiketlendi.** Sıradaki iş TASK.md'dedir (Faz 3 kapsam kararı Arda'yı bekliyor).
 
 ## Sonra
-Faz 2 (P1 kapanışı) → Faz 3 (gerçek testnet) → Faz 4 (canary).
+Faz 3 (gerçek testnet) → Faz 4 (canary).
 
 ## Dondurulmuş (P1'i bekletmez; kod var, arayüze bağlanmadan yeni sözleşme yazılmaz)
 Futures Grid, Reverse/Infinity Grid, two-leg/hedge, rebalancing, signal bot, çoklu bot/pair, LLM açıklayıcı asistan.
@@ -26,7 +26,7 @@ Açık hata raporu maddelerini doğrula ve kapat (TASK.md). Çıkış: rapor bo�
 5. **2.4 Etkileşimli marker (tamam):** grafikte olay ↔ tablo satırı çift yönlü bağlantı, mouse + klavye (bkz. STATE.md).
 6. **2.5 Stress modeli (tamam — dar kapsam):** P1.16.i.b araştırması bağımsız kontrolde iki yerde çelişkili çıktı verdi (T-07 sayısal, T-12 identity) ve reserve örneği kendi invariant'ını ihlal etti; bu yüzden yeni spread/latency/queue/reserve stress modeli `NO-GO` kaldı. Bunun yerine yalnız mevcut exact `config.slippage` mekanizmasıyla ikinci, açık şekilde etiketlenmiş bir "stress slippage" profili eklendi (`historical_demo_btcusdt_1h_stress_slippage_v1`, slippage=0.002); yeni ekonomik kod yok, mevcut profil seçici + mevcut compare ekranı üzerinden kullanılıyor (bkz. STATE.md, docs/KARARLAR.md).
 
-Kapanış: temiz klonda README komutlarıyla 9 adımlık akış hatasız çalışır → bağımsız review APPROVED → `git tag p1-demo-complete`.
+Kapanış (tamam, 2026-09-20): temiz klonda (gerçek `git clone`, kalıcı config değişikliği yok) README komutlarıyla 9 adımlık akış hatasız çalıştı (indir/doğrula → kalite → bot kur → önizle → koş → grafikten incele → kaydet → kapat/aç → reproduce ile aynı hash) → bağımsız review `APPROVED_WITH_FINDINGS` (Codex/muse, `evidence/P1_CLOSURE_INDEPENDENT_REVIEW_2026_09_20/SONUC.md`; tek eyleme dönüşen bulgu — click-bubbling kozmetik hata — Claude tarafından aynı gün düzeltildi ve doğrulandı) → `git tag p1-demo-complete` atıldı.
 
 ## Faz 3 — P2: gerçek Binance testnet
 Her dilim `evidence_scope=REAL_TESTNET` üretmiyorsa iş sayılmaz.

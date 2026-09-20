@@ -1,39 +1,35 @@
 # Durum — 2026-09-20
 
-Aktif faz: Faz 2 tamamen kapandı (2.1-2.5). Dal: codex/latest-state-2026-09-20.
-Doğrulanan: tam checker 880/880 PASS (0 skip); frontend tsc -b temiz, vitest 22/22 PASS.
-Eksenler: implementation=IN_PROGRESS · verification=PASS · evidence_scope=LOCAL_INTEGRATION · review=NOT_RUN · deployment=NOT_DEPLOYED
+Aktif faz: **Faz 2 (P1 kapanışı) tamamen kapandı ve `p1-demo-complete` etiketlendi.** Dal: codex/latest-state-2026-09-20.
+Doğrulanan: tam checker 880/880 PASS (0 skip); frontend tsc -b temiz, vitest 23/23 PASS.
+Eksenler: implementation=DONE(P1) · verification=PASS · evidence_scope=LOCAL_INTEGRATION+CLEAN_CLONE · review=APPROVED_WITH_FINDINGS · deployment=NOT_DEPLOYED
 
-## Faz 2.5 — Stress modeli (bu oturum, Claude yaptı, delege edilmedi)
-- **Önce araştırıldı:** `docs/archive/arastirma-promptlari/P1.16.i.b_...md` ve `evidence/P1.16.i.b/SONUC.md` yeniden okundu. Rapor bağımsız kontrolde iki yerde çelişkili çıktı verdi (T-07 sayısal, T-12 seed/identity) ve `ReserveState` örneği kendi `available>=0` invariant'ını ihlal etti. Sonuç: tam stress ekonomik modeli (spread/latency/queue/reserve) **`DEFERRED/NO-GO` olarak kaldı** — bkz. docs/KARARLAR.md.
-- **Uygulanan dar dilim:** yeni bir isimli profil — `historical_demo_btcusdt_1h_stress_slippage_v1` (`src/dcabot/application/historical_profiles.py`, `config/historical_demo_btcusdt_1h_stress_slippage_v1.json`) — mevcut demo config'in birebir kopyası, yalnız `slippage="0.002"`. Yeni ekonomik kod yok; mevcut exact `config.slippage` mekanizması (Fraction) kullanıldı.
-- **Neden Codex'e gitmedi:** mevcut UI zaten profil seçiciyle yeni profili otomatik listeliyor, mevcut Faz 2.3 compare ekranı iki slippage koşusunu yan yana göstermeye zaten yeterli — frontend'e hiç dokunulmadı. Kalan iş (`application/historical_profiles.py`, config JSON) işbölümü kuralının Claude-only tarafına giriyor.
-- **Doğrulama:** yeni bağımsız oracle testi (`test_stress_slippage_profile_shifts_the_base_fill_price_deterministically`: bar open=100 → base fill=100, stress fill=100.2, elle hesaplandı); profil registry + API profil listesi testleri güncellendi; tam checker 880/880 PASS; canlı tarayıcıda `/api/historical-profiles` ve `/api/datasets/{id}/run-plan?profile_id=...` her iki profil için ayrı `config_hash` ile doğrulandı, UI dropdown'ında yeni profil göründü.
+## P1 kapanış ölçütü — bu oturumda tamamlandı (bkz. docs/KARARLAR.md)
+1. **Temiz klon + 9 adım:** gerçek `git clone` (kalıcı git config değişikliği yok, yalnız süreç-bazlı `GIT_CONFIG_*` env override), README komutlarıyla backend+frontend ayağa kaldırıldı, 9 adım (veri indir/doğrula → kalite → bot kur → önizle → koş → grafikten incele → kaydet → kapat/aç → reproduce) tarayıcıda canlı doğrulandı (`reproduced=true`, 3 hash eşleşti).
+2. **Bağımsız review:** Codex/muse (farklı ajan, salt-okunur, tek dosya çıktı izniyle) `git diff main...HEAD`'i üç katmanlı (kritik/ekonomik → API → frontend) inceledi. Sonuç `APPROVED_WITH_FINDINGS`, rapor: `evidence/P1_CLOSURE_INDEPENDENT_REVIEW_2026_09_20/SONUC.md`. Katman 1-2'de davranışsal kusur yok; 1 LOW + 4 INFO bulgu.
+3. **Tek eyleme dönüşen bulgu (F1) Claude tarafından düzeltildi:** `DatasetCatalogPanel.tsx` aksiyon satırının `onClick`'ine, `onKeyDown`'daki hedef-koruma deseninin aynısı (`onRowClick`, `event.target !== event.currentTarget`) eklendi — Kopyala butonuna tıklamak artık satırı seçmiyor. Yeni test eklendi, canlı DOM'da doğrulandı (Copy → `aria-pressed=false`, satır → `aria-pressed=true`).
+4. **`git tag p1-demo-complete` atıldı.**
 
-## Faz 2.4 tamamlama — aksiyon tablosuna klavye erişimi (önceki oturum, Codex uyguladı, Claude doğruladı+düzeltti)
-- **Uygulayan:** Codex/Muse, TASK.md brief'i ile, yalnız izinli 3 dosyaya dokunarak (`DatasetCatalogPanel.tsx`, `styles.css`, yeni `DatasetCatalogPanel.test.tsx`). Diff ~76 satır.
-- **Claude'un düzeltmesi:** event bubbling (Copy butonu → satır seçimi) `onRowKeyDown`'a `event.target !== event.currentTarget` koruması eklenerek kapatıldı.
-- **Claude'un doğrulaması:** diff satır satır incelendi; tsc temiz, vitest 22/22 PASS; tam checker PASS; canlı tarayıcıda gerçek `KeyboardEvent('Enter')` dispatch edilip satır+marker eşzamanlı `aria-pressed=true` oldu.
+## Faz 2.5 — Stress modeli (önceki tur, Claude yaptı, delege edilmedi)
+Tam stress ekonomik modeli (spread/latency/queue/reserve) `DEFERRED/NO-GO` kaldı (P1.16.i.b'nin kendi bağımsız kontrolünde iki çelişki + reserve invariant ihlali). Bunun yerine yalnız mevcut exact `config.slippage` ile ikinci bir profil eklendi (`historical_demo_btcusdt_1h_stress_slippage_v1`, slippage=0.002), yeni ekonomik kod yok. Frontend'e dokunulmadı (mevcut profil seçici + compare ekranı yeterliydi).
 
-## Ajanlar arası işbölümü — durum
-İki Codex devri (Faz 2.4) temiz ve dosya allowlist'ine sadık kaldı. Faz 2.5'te delegasyon gerekmedi çünkü kalan iş tamamen kritik/config katmanındaydı ve UI tarafı zaten mevcut bileşenlerin yeniden kullanımıydı — bu da doğru "verimlilik" kararıydı (yeni UI kodu icat etmek yerine sıfır yeni kod).
-
-## Faz 2.1-2.3 özeti (önceki dilimler — ayrıntı git geçmişinde)
-Sıralı deal restart + deal kimliği, Faz 2.2 ekonomik metrik seti, Faz 2.3 reproduce+compare. Proje temizliği: 29 araştırma dosyası arşivlendi, `.cluster/` silindi.
+## Ajanlar arası işbölümü — genişletilmiş kullanım
+Bu oturumda ilk kez Codex/muse **kod yazmak için değil, bağımsız inceleme için** kullanıldı (salt-okunur, tek rapor dosyası izniyle). Sonuç: disiplinli, kanıt-temelli bir rapor — kendi çalıştırdığı komutların gerçek çıktısını verdi, okumadığı alanları `NOT_VERIFIED` bıraktı, tek gerçek bulguyu (F1) doğru şiddet seviyesiyle (LOW) sınıflandırdı. Bu kullanım biçimi ileride büyük diff'lerde ikinci göz olarak tekrarlanabilir.
 
 ## Kodda mevcut
-- Yerel arayüz (FastAPI 127.0.0.1:8000 + React/Vite 5173): veri seti kaydı, public indirme, kalite raporu, OHLC grafik (etkileşimli marker, klavye dahil), doğrulama, sıralı deal + Faz 2.2 metrikleri destekli simülasyon, SQLite kayıt/listesi, reproduce doğrulama, iki-run karşılaştırma, 4 historical profil (paper, demo v1, demo stress-slippage v1, demo fixed-slice v1).
+- Yerel arayüz (FastAPI 127.0.0.1:8000 + React/Vite 5173): veri seti kaydı, public indirme, kalite raporu, OHLC grafik (etkileşimli marker, klavye+mouse tutarlı), doğrulama, sıralı deal + ekonomik metrikler, SQLite kayıt/listesi, reproduce doğrulama, iki-run karşılaştırma, 4 historical profil (paper, demo v1, demo stress-slippage v1, demo fixed-slice v1).
 - CLI tools/bot.py: demo, init/replay/status/audit, preview.
 - Çekirdek: exact Decimal/Fraction ladder, net TP, drawdown; idempotent SQLite kayıtları.
 - P2 salt-okunur Binance testnet sınırı: public, account, user-stream adaptörleri.
 
 ## Bilinen sınırlar
 - Signed REST/WS emir, mutation ve mainnet: NO-GO. Gerçek reconnect worker ve REST catch-up yok.
-- Simülasyon: OHLC intrabar sırası INDETERMINATE; gerçek likidite modeli yok. Tam stress ekonomik modeli (spread/latency/queue/reserve) NO-GO — bkz. docs/KARARLAR.md 2026-09-20.
+- Simülasyon: OHLC intrabar sırası INDETERMINATE; gerçek likidite modeli yok. Tam stress ekonomik modeli NO-GO.
 - API tek worker'a bağlı. Python 3.13 zorunlu; uv sync --frozen.
+- Bağımsız review kapsam notları (evidence/P1_CLOSURE_INDEPENDENT_REVIEW_2026_09_20/SONUC.md, NOT_VERIFIED listesi): gerçek tarayıcı/testnet davranışı, yeni ~4.5k satırlık futures/grid/order_list persistence modülleri, evidence/docs içerikleri satır satır incelenmedi — Faz 3 öncesi gerekirse ayrıca ele alınabilir.
 
 ## Kararlar (2026-09-20, Claude tarafından alındı — bkz. `docs/KARARLAR.md`)
-Arda çalışma kuralını netleştirdi: ürün/teknik kararları Claude alır, gerekçesiyle işaretler (credential/gerçek emir/mainnet hariç). Sıralı deal persistence, Faz 2 dondurma listesi onaylandı; testnet mutation gate ertelendi; Claude/Codex işbölümü kuralı doğrulandı; Faz 2.5 stress modeli NO-GO + dar slippage-profili ACCEPT.
+Sıralı deal persistence, Faz 2 dondurma listesi, Faz 2.5 stress NO-GO + dar slippage-profili, Claude/Codex işbölümü (kod + bağımsız review), P1 kapanış ölçütü tamamlandı ve etiketlendi.
 
 ## Sıradaki adım
-Faz 2 (P1 kapanışı) tamamen kapandı: 2.1, 2.1b, 2.2, 2.3, 2.4, 2.5 hepsi tamam. Kapanış ölçütü docs/YOL_HARITASI.md'de: "temiz klonda README komutlarıyla 9 adımlık akış hatasız çalışır → bağımsız review APPROVED → `git tag p1-demo-complete`." Sırada: bu kapanış ölçütünü (uçtan uca temiz-klon doğrulama + review) çalıştırmak, ya da Arda onaylarsa doğrudan Faz 3'e (P2 gerçek Binance testnet) geçmek — bu ikisi arasında seçim Arda'nın product-scope kararı, TASK.md'de açık soru olarak bırakıldı.
+P1 kapandı. Sırada Arda'nın kapsam kararı: Faz 3'e (P2 — gerçek Binance testnet) geçmek. Bu ilk kez projenin gerçek bir dış sisteme (testnet de olsa) bağlanacağı faz olduğu için TASK.md'de açık soru olarak bırakıldı; Claude roadmap sıralamasına karar verir ama bu geçişin zamanlamasını Arda onaylar.

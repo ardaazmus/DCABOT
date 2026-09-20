@@ -1,4 +1,4 @@
-import { type HTMLAttributes, type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type HTMLAttributes, type KeyboardEvent, type MouseEvent, useEffect, useRef, useState } from "react";
 import { HistoricalChart } from "./HistoricalChart";
 import { ExplanationSection } from "./ExplanationSection";
 import { HistoricalProfileSelector, HistoricalProfileStatus } from "./HistoricalProfileSelector";
@@ -139,6 +139,11 @@ export function ActionTable({ actions, fixedSlice, title = "AKSİYON GEÇMİŞİ
     onSelectBarIndex?.(barIndex);
   }
 
+  function onRowClick(event: MouseEvent<HTMLTableRowElement>, barIndex: number) {
+    if (event.target !== event.currentTarget) return; // satır içindeki Kopyala/detay gibi öğelerin tıklamasını satır seçimine sızdırma
+    onSelectBarIndex?.(barIndex);
+  }
+
   function rowProps(barIndex: number): HTMLAttributes<HTMLTableRowElement> {
     const selected = selectedBarIndex === barIndex;
     return {
@@ -148,7 +153,7 @@ export function ActionTable({ actions, fixedSlice, title = "AKSİYON GEÇMİŞİ
       tabIndex: interactive ? 0 : undefined,
       "aria-label": interactive ? `Bar ${barIndex} aksiyonunu seç` : undefined,
       "aria-pressed": interactive ? selected : undefined,
-      onClick: interactive ? () => onSelectBarIndex?.(barIndex) : undefined,
+      onClick: interactive ? (event) => onRowClick(event, barIndex) : undefined,
       onKeyDown: interactive ? (event) => onRowKeyDown(event, barIndex) : undefined,
     };
   }

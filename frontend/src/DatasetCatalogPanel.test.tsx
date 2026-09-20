@@ -54,4 +54,19 @@ describe("ActionTable keyboard selection", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(document.querySelectorAll(".historical-action-row-interactive")).toHaveLength(0);
   });
+
+  it("satır içindeki Kopyala butonuna tıklamak veya orada Enter'a basmak satırı seçmez", () => {
+    const onSelectBarIndex = vi.fn();
+    render(<ActionTable actions={actions} fixedSlice={true} onSelectBarIndex={onSelectBarIndex} />);
+
+    const copyButton = screen.getAllByRole("button", { name: "Kopyala" })[0];
+    fireEvent.click(copyButton);
+    fireEvent.keyDown(copyButton, { key: "Enter" });
+
+    expect(onSelectBarIndex).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Bar 1 aksiyonunu seç" }));
+    expect(onSelectBarIndex).toHaveBeenCalledTimes(1);
+    expect(onSelectBarIndex).toHaveBeenCalledWith(1);
+  });
 });
