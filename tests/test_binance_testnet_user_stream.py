@@ -258,6 +258,49 @@ class BinanceTestnetUserDataStreamTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(BinanceTestnetUserStreamError, "USER_STREAM_NOT_CONNECTED"):
             await stream.recv_execution_report()
 
+    async def test_library_specific_close_exception_still_fails_closed(self):
+        # A real disconnect can surface as websockets.exceptions.ConnectionClosedError,
+        # which is Exception-derived but NOT an OSError/TimeoutError/ValueError/TypeError
+        # (observed live against the real testnet: it escaped uncaught before this fix).
+        from websockets.exceptions import ConnectionClosedError
+
+        socket = FakeSocket(
+            json.dumps({"id": "request-1", "status": 200, "result": {"subscriptionId": 7}}),
+            ConnectionClosedError(None, None),
+        )
+        stream = BinanceTestnetUserDataStream(
+            "testnet-readonly",
+            provider=provider(),
+            clock=FixedClock(),
+            websocket_factory=lambda _url, **_kwargs: socket,
+            request_id_factory=lambda: "request-1",
+        )
+        await stream.connect()
+
+        with self.assertRaisesRegex(BinanceTestnetUserStreamError, "USER_STREAM_EVENT_INVALID"):
+            await stream.recv_execution_report()
+        self.assertTrue(socket.closed)
+
+    async def test_order_list_library_specific_close_exception_still_fails_closed(self):
+        from websockets.exceptions import ConnectionClosedError
+
+        socket = FakeSocket(
+            json.dumps({"id": "request-1", "status": 200, "result": {"subscriptionId": 7}}),
+            ConnectionClosedError(None, None),
+        )
+        stream = BinanceTestnetUserDataStream(
+            "testnet-readonly",
+            provider=provider(),
+            clock=FixedClock(),
+            websocket_factory=lambda _url, **_kwargs: socket,
+            request_id_factory=lambda: "request-1",
+        )
+        await stream.connect()
+
+        with self.assertRaisesRegex(BinanceTestnetUserStreamError, "USER_STREAM_EVENT_INVALID"):
+            await stream.recv_order_list_event()
+        self.assertTrue(socket.closed)
+
     async def test_signed_order_status_lookup_is_read_only_and_redacted(self):
         socket = FakeSocket(
             json.dumps({

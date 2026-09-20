@@ -1,22 +1,22 @@
-# Aktif iş — Faz 3.1 kod tamam, REAL_TESTNET kanıtı Arda'yı bekliyor
+# Aktif iş — Faz 3.2: REST catch-up (KAPSAM, Claude sahibi)
 
-`src/dcabot/application/user_stream_reconnect_worker.py` (reconnect worker) ve `tools/run_user_stream_reconnect_worker.py` (canlı çalıştırma aracı) yazıldı, offline test edildi (`tests/test_user_stream_reconnect_worker.py`, 6/6 PASS), tam checker 886/886 PASS. Ayrıntı: STATE.md, docs/KARARLAR.md ("Faz 3.1 kapsam netleştirmesi").
+Faz 3.1 kapandı (`evidence_scope=REAL_TESTNET`, bkz. STATE.md/docs/KARARLAR.md). Sırada **3.2 — REST catch-up**: gap sonrası açık emir/işlem sorgusuyla snapshot, `ReconciliationCoordinator.apply_authoritative_snapshot`'a bağlanan authoritative REST lookup.
 
-## Arda'nın yapması gereken (Claude yapamaz — credential + gerçek ağ gerekir)
-1. `uv run --frozen python tools/configure_testnet_credential.py <credential_id>` — testnet API key/secret'ı yerel Windows Credential Manager'a kaydet (repoya girmez).
-2. `$env:PYTHONPATH='src'; uv run --frozen python tools/run_user_stream_reconnect_worker.py <credential_id>` çalıştır.
-3. `CONNECTED` satırını gördükten sonra ağı kes/aç.
-4. Log'da `DISCONNECTED → RECONNECTING → RECONNECTED` görülmeli (gerçek `GAP` garanti değil — o an bir event kaçarsa görülür).
-5. Ctrl+C, redakte log'u (credential/secret içermez) Claude'a yapıştır.
+## Neden Claude sahibi
+`application/reconciliation.py` (kritik dosya listesinde) ve signed REST çağrısı içeren bir persistence/adapter dilimi. Codex'e devredilmez.
 
-## Bu geldiğinde Claude'un yapacağı
-- Log'u STATE.md'ye `evidence_scope=REAL_TESTNET` olarak işler.
-- **3.2 — REST catch-up**'a geçer: gap sonrası açık emir/işlem sorgusuyla snapshot, `apply_authoritative_snapshot`'a bağlanan authoritative REST lookup. Bu, `persistence/`/`application/reconciliation.py` sınırına giren kritik bir dilim — Claude yapar, Codex'e verilmez.
+## İlk adımlar (kod yazmadan önce netleştirilecek)
+1. `application/reconciliation.py`'deki `apply_authoritative_snapshot`/`AuthoritativeReconciliationSnapshot`'ı tekrar oku — snapshot'ın hangi alanları (`event_cursor`, `observed_at_ms`) taşıması gerektiğini kesinleştir.
+2. Mevcut `query_binance_testnet_order_status` (`binance_testnet_user_stream.py`) zaten tek-emir REST-benzeri sorgu yapıyor (WS API üzerinden) — REST catch-up'ın bunu mu genişleteceğini yoksa ayrı bir "açık emirler" toplu sorgusu mu gerektirdiğini araştır (Binance'in `openOrders`/`myTrades` benzeri salt-okunur uç noktaları).
+3. Dar bir kapsam öner: yalnız GAP/RECONCILIATION_REQUIRED durumunda tetiklenen, salt-okunur, mevcut credential/signing altyapısını (`signed_request.py`) yeniden kullanan bir snapshot sorgusu. Yeni mutation/emir YOK.
 
 ## Değişmez sınırlar
-- Credential, secret, signed request, gerçek emir, mutation ve mainnet: Arda onayı olmadan asla. Claude `tools/run_user_stream_reconnect_worker.py`'yi kendisi hiç çalıştırmaz.
+- Credential, secret, signed mutating request, gerçek emir ve mainnet: yok.
+- `engine.py` çekirdek State/apply/decision değişmez.
 - STATE.md/TASK.md yalnız Claude günceller.
+- Claude gerçek testnet'e karşı hiçbir şey çalıştırmaz — REAL_TESTNET kanıtı yine Arda'nın yerelde çalıştırmasıyla gelir.
 
 ## Kabul
-- REAL_TESTNET kanıtı geldiğinde STATE.md güncellenir ve 3.2 brief'i yazılır.
-- Kanıt gelmeden 3.2'ye geçilmez (roadmap: "Her dilim evidence_scope=REAL_TESTNET üretmiyorsa iş sayılmaz" — bu, 3.1'in kendisi için geçerli; 3.2 3.1'in kanıtına dayanmadan da tasarlanabilir ama commit edilmeden önce 3.1 kanıtı beklenir).
+- Kod yazılmadan önce dar kapsam Arda'ya sunulur ve onaylanır (Faz 2.5'teki gibi).
+- Onaylanırsa: test-first, offline sahte-socket/sahte-REST testleri + tam checker.
+- REAL_TESTNET kanıtı Arda'dan gelmeden 3.2 "tamam" sayılmaz.

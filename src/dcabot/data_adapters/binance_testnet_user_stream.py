@@ -196,6 +196,15 @@ class BinanceTestnetUserDataStream:
             raise BinanceTestnetUserStreamError(
                 "USER_STREAM_EVENT_INVALID", "User Stream olayı güvenli biçimde çözümlenemedi."
             ) from exc
+        except Exception as exc:
+            # A real disconnect can surface as a library-specific exception
+            # (e.g. websockets.exceptions.ConnectionClosedError, which is not
+            # an OSError) rather than one of the types above. Fail closed the
+            # same way instead of letting it escape uncaught.
+            await self.close()
+            raise BinanceTestnetUserStreamError(
+                "USER_STREAM_EVENT_INVALID", "User Stream olayı güvenli biçimde çözümlenemedi."
+            ) from exc
 
     async def recv_order_list_event(self) -> UserDataOrderListEvent:
         """Decode one bounded listStatus event without inferring leg status."""
@@ -223,6 +232,14 @@ class BinanceTestnetUserDataStream:
             await self.close()
             raise
         except (TimeoutError, OSError, ValueError, TypeError) as exc:
+            await self.close()
+            raise BinanceTestnetUserStreamError(
+                "USER_STREAM_EVENT_INVALID", "User Stream listStatus olayı güvenli biçimde çözülemedi."
+            ) from exc
+        except Exception as exc:
+            # See the matching comment in recv_execution_report: a real
+            # disconnect can surface as a library-specific exception that is
+            # not an OSError, and must still fail closed instead of escaping.
             await self.close()
             raise BinanceTestnetUserStreamError(
                 "USER_STREAM_EVENT_INVALID", "User Stream listStatus olayı güvenli biçimde çözülemedi."
