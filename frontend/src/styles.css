@@ -86,3 +86,11 @@ nav { display: grid; gap: 6px; }.nav-item { color: #8597aa; text-decoration: non
 .binance-snapshot-boundary p { margin: 5px 0 0; color: #c7b996; font-size: 10px; line-height: 1.5; }
 @media (max-width: 1080px) { .binance-snapshot-facts, .binance-snapshot-disclosures { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px) { .binance-snapshot-facts, .binance-snapshot-disclosures { grid-template-columns: 1fr; }.binance-snapshot-intro { max-width: none; }.binance-snapshot-message .catalog-secondary-button { width: 100%; } }
+/* Faz 2.4 etkileşimli marker: grafik ↔ aksiyon tablosu iki yönlü seçim vurgusu. */
+.historical-chart-markers .historical-chart-marker-interactive { pointer-events: auto; cursor: pointer; }
+.historical-chart-marker-interactive:hover { fill: #8ccaff; }
+.historical-chart-marker-interactive:focus-visible { outline: none; stroke: #42a5ff; stroke-width: 2.5; }
+.historical-chart-marker-selected { fill: #f5b841; stroke: #392d13; }
+.historical-action-table tbody tr.historical-action-row-interactive { cursor: pointer; }
+.historical-action-table tbody tr.historical-action-row-selected { background: rgba(245, 197, 91, .16); box-shadow: inset 3px 0 #f5c55b; }
+.historical-action-table tbody tr.historical-action-row-selected:hover { background: rgba(245, 197, 91, .22); }

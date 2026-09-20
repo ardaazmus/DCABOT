@@ -1,3 +1,4 @@
+import { type KeyboardEvent } from "react";
 import { type HistoricalChartBar, type HistoricalChartData, type HistoricalSimulationResult } from "./datasetCatalog";
 
 type HistoricalChartStatus = "idle" | "loading" | "ready" | "error";
@@ -7,6 +8,8 @@ type HistoricalChartProps = {
   status: HistoricalChartStatus;
   error: string;
   simulation: HistoricalSimulationResult | null;
+  selectedBarIndex?: number | null;
+  onSelectBarIndex?: (barIndex: number) => void;
 };
 
 type FixedDecimal = {
@@ -186,13 +189,20 @@ function buildBoundary(data: HistoricalChartData, simulation: HistoricalSimulati
   return { boundary: { barIndex: ambiguity.bar_index, x, labelX: nearRightEdge ? x - 7 : x + 7, textAnchor: nearRightEdge ? "end" : "start" }, error: "" };
 }
 
-export function HistoricalChart({ data, status, error, simulation }: HistoricalChartProps) {
+export function HistoricalChart({ data, status, error, simulation, selectedBarIndex = null, onSelectBarIndex }: HistoricalChartProps) {
   if (status === "idle") return null;
   const titleId = "historical-chart-title";
   const descriptionId = "historical-chart-description";
   const captionId = "historical-chart-caption";
   const geometry = status === "ready" && data ? chartGeometry(data, simulation) : null;
   const renderError = status === "ready" && !geometry;
+  const interactive = typeof onSelectBarIndex === "function";
+
+  function onMarkerKeyDown(event: KeyboardEvent<SVGCircleElement>, barIndex: number) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onSelectBarIndex?.(barIndex);
+  }
   return <section className={`historical-chart ${renderError ? "error" : status}`} aria-labelledby={titleId}>
     <div className="historical-chart-heading"><div><p className="preflight-section-label">TARİHSEL OHLC GÖRÜNÜMÜ</p><h6 id={titleId}>Kapalı bar grafiği</h6></div><span className="historical-chart-badge">READ-ONLY</span></div>
     {status === "loading" && <div className="historical-chart-state" role="status" aria-live="polite">Grafik verisi hazırlanıyor…</div>}
@@ -203,8 +213,23 @@ export function HistoricalChart({ data, status, error, simulation }: HistoricalC
         <title id={titleId}>Kapalı bar tarihsel OHLC grafiği</title>
         <desc id={descriptionId}>{geometry.accessibleSummary}</desc>
         <path className="historical-chart-path" d={geometry.path} vectorEffect="non-scaling-stroke" />
-        <g className="historical-chart-markers" aria-hidden="true">
-          {geometry.markers.map((marker, index) => <circle className="historical-chart-marker" key={`${marker.barIndex}-${index}`} cx={roundCoordinate(marker.x)} cy={MARKER_LANE_Y} r={MARKER_RADIUS} />)}
+        <g className="historical-chart-markers" aria-hidden={interactive ? undefined : true}>
+          {geometry.markers.map((marker, index) => {
+            const selected = selectedBarIndex === marker.barIndex;
+            return <circle
+              className={`historical-chart-marker${interactive ? " historical-chart-marker-interactive" : ""}${selected ? " historical-chart-marker-selected" : ""}`}
+              key={`${marker.barIndex}-${index}`}
+              cx={roundCoordinate(marker.x)}
+              cy={MARKER_LANE_Y}
+              r={MARKER_RADIUS}
+              role={interactive ? "button" : undefined}
+              tabIndex={interactive ? 0 : undefined}
+              aria-label={interactive ? `Bar ${marker.barIndex} aksiyonunu seç` : undefined}
+              aria-pressed={interactive ? selected : undefined}
+              onClick={interactive ? () => onSelectBarIndex?.(marker.barIndex) : undefined}
+              onKeyDown={interactive ? (event) => onMarkerKeyDown(event, marker.barIndex) : undefined}
+            />;
+          })}
           {geometry.boundary && <><line className="historical-chart-boundary" x1={roundCoordinate(geometry.boundary.x)} y1={PLOT_TOP} x2={roundCoordinate(geometry.boundary.x)} y2={PLOT_BOTTOM} /><text className="historical-chart-boundary-label" x={roundCoordinate(geometry.boundary.labelX)} y={PLOT_TOP + 14} textAnchor={geometry.boundary.textAnchor}>INCOMPLETE · BAR {geometry.boundary.barIndex}</text></>}
         </g>
       </svg>

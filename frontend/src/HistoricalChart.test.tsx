@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { HistoricalChart } from "./HistoricalChart";
 import type {
   HistoricalChartData,
@@ -73,6 +73,13 @@ const action = {
   fill_price: "100",
   quantity: "1",
   fee: "0",
+};
+
+const secondAction = {
+  ...action,
+  bar_index: 2,
+  open_time_us: 3,
+  raw_reference: "bar-2",
 };
 
 function renderReady(simulationResult: HistoricalSimulationResult | null = null, data = chartData) {
@@ -153,5 +160,109 @@ describe("HistoricalChart", () => {
 
     expect(screen.getByText("INCOMPLETE · BAR 2")).toBeInTheDocument();
     expect(document.querySelectorAll(".historical-chart-marker")).toHaveLength(0);
+  });
+
+  it("marker tıklaması bar_index seçimini bildirir", () => {
+    const onSelectBarIndex = vi.fn();
+    render(
+      <HistoricalChart status="ready" data={chartData} error="" simulation={simulation({ actions: [action] })} onSelectBarIndex={onSelectBarIndex} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Bar 1 aksiyonunu seç" }));
+
+    expect(onSelectBarIndex).toHaveBeenCalledTimes(1);
+    expect(onSelectBarIndex).toHaveBeenCalledWith(1);
+  });
+
+  it("Enter tuşu marker seçimini bildirir", () => {
+    const onSelectBarIndex = vi.fn();
+    render(
+      <HistoricalChart status="ready" data={chartData} error="" simulation={simulation({ actions: [action] })} onSelectBarIndex={onSelectBarIndex} />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("button", { name: "Bar 1 aksiyonunu seç" }), { key: "Enter" });
+
+    expect(onSelectBarIndex).toHaveBeenCalledTimes(1);
+    expect(onSelectBarIndex).toHaveBeenCalledWith(1);
+  });
+
+  it("Space tuşu marker seçimini bildirir, diğer tuşlar bildirmez", () => {
+    const onSelectBarIndex = vi.fn();
+    render(
+      <HistoricalChart status="ready" data={chartData} error="" simulation={simulation({ actions: [action] })} onSelectBarIndex={onSelectBarIndex} />,
+    );
+
+    const marker = screen.getByRole("button", { name: "Bar 1 aksiyonunu seç" });
+    fireEvent.keyDown(marker, { key: "Tab" });
+    expect(onSelectBarIndex).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(marker, { key: " " });
+    expect(onSelectBarIndex).toHaveBeenCalledTimes(1);
+    expect(onSelectBarIndex).toHaveBeenCalledWith(1);
+  });
+
+  it("selectedBarIndex prop'u yalnız eşleşen marker'ı vurgular", () => {
+    const onSelectBarIndex = vi.fn();
+    render(
+      <HistoricalChart
+        status="ready"
+        data={chartData}
+        error=""
+        simulation={simulation({ actions: [action, secondAction] })}
+        selectedBarIndex={2}
+        onSelectBarIndex={onSelectBarIndex}
+      />,
+    );
+
+    const markers = screen.getAllByRole("button");
+    expect(markers).toHaveLength(2);
+    expect(markers[0]).toHaveAttribute("aria-pressed", "false");
+    expect(markers[0].classList.contains("historical-chart-marker-selected")).toBe(false);
+    expect(markers[1]).toHaveAttribute("aria-pressed", "true");
+    expect(markers[1].classList.contains("historical-chart-marker-selected")).toBe(true);
+  });
+
+  it("seçim handler'ı yoksa marker etkileşimli olmaz", () => {
+    renderReady(simulation({ actions: [action] }));
+
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(document.querySelectorAll(".historical-chart-marker")).toHaveLength(1);
+  });
+
+  it("INCOMPLETE boundary çizgisi etkileşimli olmaz", () => {
+    const onSelectBarIndex = vi.fn();
+    render(
+      <HistoricalChart
+        status="ready"
+        data={chartData}
+        error=""
+        simulation={simulation({
+          complete_execution: false,
+          execution_status: "INDETERMINATE",
+          application_code: "AMBIGUOUS_OHLC_PATH",
+          marker_authority: "PREFIX_BOUNDARY_ONLY",
+          marker_kind: "INCOMPLETE_BOUNDARY",
+          action_authority: {
+            mode: "COMMITTED_PREFIX",
+            economic_state_commit_scope: "PREFIX_ONLY",
+            committed_through_bar_index: 1,
+            committed_through_open_time_us: 2,
+            ambiguity_bar_index: 2,
+            contains_ambiguity_bar_actions: false,
+            contains_post_ambiguity_actions: false,
+            complete_history: false,
+            economic_state_committed: true,
+            committed_through_event_sequence: 1,
+            action_count: 1,
+          },
+          ambiguity: { bar_index: 2, open_time_us: 3, code: "AMBIGUOUS_OHLC_PATH" },
+          actions: [{ ...action, event_sequence: 1 }],
+        })}
+        onSelectBarIndex={onSelectBarIndex}
+      />,
+    );
+
+    expect(screen.getByText("INCOMPLETE · BAR 2")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

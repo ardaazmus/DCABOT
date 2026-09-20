@@ -117,7 +117,30 @@ function fixedActionStatus(action: HistoricalSimulationResult["actions"][number]
   return action.order_status_after ?? "—";
 }
 
-function ActionTable({ actions, fixedSlice, title = "AKSİYON GEÇMİŞİ", intro = "Backend’in kaydettiği simülasyon aksiyonları; finansal hesap yapılmadan, oluşma sırasıyla gösterilir." }: { actions: HistoricalSimulationResult["actions"]; fixedSlice: boolean; title?: string; intro?: string }) {
+function ActionTable({ actions, fixedSlice, title = "AKSİYON GEÇMİŞİ", intro = "Backend’in kaydettiği simülasyon aksiyonları; finansal hesap yapılmadan, oluşma sırasıyla gösterilir.", selectedBarIndex = null, onSelectBarIndex }: { actions: HistoricalSimulationResult["actions"]; fixedSlice: boolean; title?: string; intro?: string; selectedBarIndex?: number | null; onSelectBarIndex?: (barIndex: number) => void }) {
+  const interactive = typeof onSelectBarIndex === "function";
+
+  useEffect(() => {
+    if (selectedBarIndex === null || selectedBarIndex === undefined) return;
+    const row = document.getElementById(`historical-action-row-${selectedBarIndex}`);
+    if (row && typeof row.scrollIntoView === "function") {
+      try {
+        row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      } catch {
+        /* scroll desteklenmiyorsa seçim vurgusu yine de korunur */
+      }
+    }
+  }, [selectedBarIndex]);
+
+  function rowProps(barIndex: number) {
+    const selected = selectedBarIndex === barIndex;
+    return {
+      id: `historical-action-row-${barIndex}`,
+      className: selected ? "historical-action-row-selected" : interactive ? "historical-action-row-interactive" : undefined,
+      onClick: interactive ? () => onSelectBarIndex?.(barIndex) : undefined,
+    };
+  }
+
   return <section className="historical-action-history" aria-labelledby="historical-action-history-title">
     <div className="historical-action-heading"><div><p className="preflight-section-label" id="historical-action-history-title">{title}</p><p className="historical-action-intro">{intro}</p></div><span className="historical-action-count">{actions.length.toLocaleString("tr-TR")} aksiyon</span></div>
     {actions.length === 0 ? <p className="catalog-empty historical-action-empty">Bu koşuda aksiyon üretilmedi.</p> : <div className="historical-action-table-wrap">
@@ -125,7 +148,7 @@ function ActionTable({ actions, fixedSlice, title = "AKSİYON GEÇMİŞİ", intr
         <caption className="sr-only">Simülasyonda oluşan aksiyon geçmişi</caption>
         {fixedSlice ? <>
           <thead><tr><th scope="col">Bar</th><th scope="col">Aksiyon</th><th scope="col">Rol</th><th scope="col">Order</th><th scope="col">Orijinal</th><th scope="col">Dolan · kümülatif</th><th scope="col">Kalan</th><th scope="col">Durum</th></tr></thead>
-          <tbody>{actions.map((action) => <tr key={`${action.event_sequence ?? action.bar_index}-${action.action_type ?? action.role}`}>
+          <tbody>{actions.map((action) => <tr key={`${action.event_sequence ?? action.bar_index}-${action.action_type ?? action.role}`} {...rowProps(action.bar_index)}>
             <td data-label="Bar"><code>{action.bar_index.toLocaleString("tr-TR")}</code></td>
             <td data-label="Aksiyon"><span className="historical-action-role">{action.action_type ?? "—"}</span></td>
             <td data-label="Rol">{action.role}</td>
@@ -137,7 +160,7 @@ function ActionTable({ actions, fixedSlice, title = "AKSİYON GEÇMİŞİ", intr
           </tr>)}</tbody>
         </> : <>
           <thead><tr><th scope="col">Bar</th><th scope="col">Rol</th><th scope="col">Zaman · UTC µs</th><th scope="col">Gerçekleşen fiyat</th><th scope="col">Miktar</th><th scope="col">Fee</th></tr></thead>
-          <tbody>{actions.map((action) => <tr key={`${action.event_sequence ?? action.bar_index}-${action.role}`}>
+          <tbody>{actions.map((action) => <tr key={`${action.event_sequence ?? action.bar_index}-${action.role}`} {...rowProps(action.bar_index)}>
             <td data-label="Bar"><code>{action.bar_index.toLocaleString("tr-TR")}</code></td>
             <td data-label="Rol"><span className="historical-action-role">{action.role}</span></td>
             <td data-label="Zaman · UTC µs"><code>{action.open_time_us}</code></td>
@@ -215,10 +238,16 @@ function PreflightCard({
   const isFixedSliceUi = fixedSliceSelected || fixedSliceSimulation;
   const economicSummary = simulation?.final_economic_summary ?? simulation?.summary ?? null;
   const previousProfileRef = useRef<string | null>(selectedHistoricalProfileId);
+  const [selectedBarIndex, setSelectedBarIndex] = useState<number | null>(null);
+  const simulationExecutionId = simulation?.execution_id ?? null;
 
   useEffect(() => {
     if (confirmationOpen) confirmationRef.current?.focus();
   }, [confirmationOpen]);
+
+  useEffect(() => {
+    setSelectedBarIndex(null);
+  }, [simulationExecutionId]);
 
   useEffect(() => {
     setFixedSliceAcknowledged(false);
@@ -296,14 +325,14 @@ function PreflightCard({
             <div className="historical-result-values"><ResultValue label={`Brüt gerçekleşen sonuç · ${quoteAsset}`} value={economicSummary.realized_gross} note="Backend modelinden gelir; UI yeniden hesaplamaz." /><ResultValue label={`İşlem ücretleri · ${quoteAsset}`} value={economicSummary.fees} note="Backend’in quote-asset fee toplamıdır." /><ResultValue label={`Model net gerçekleşen sonuç · ${quoteAsset}`} value={economicSummary.realized_net_after_all_costs} note="Backend model sonucudur; funding bu tarihsel modelde işlenmez." /><ResultValue label="Pozisyon durumu" value={economicSummary.position_status === "OPEN_AT_END" ? "OPEN_AT_END" : "CLOSED"} note={economicSummary.position_status === "OPEN_AT_END" ? "Dönem sonunda açık kaldı; forced close uygulanmadı. Exchange mark olmadığı için gerçekleşmemiş sonuç ve equity sayısal olarak gösterilmiyor." : "Dönem sonunda pozisyon kapalı."} /></div>
              <dl className="preflight-facts historical-result-meta"><div><dt>İşlenen bar</dt><dd>{simulation.dataset.processed_bar_count.toLocaleString("tr-TR")}</dd></div><div><dt>Dönem</dt><dd>{simulation.dataset.period_start} → {simulation.dataset.period_end}</dd></div><div><dt>Model</dt><dd>{simulation.assumptions.model}</dd></div><div><dt>Config</dt><dd><code>{shortSha256(simulation.config.config_hash)}</code></dd></div><div><dt>Artifact</dt><dd><code>{shortSha256(simulation.dataset.artifact_sha256)}</code></dd></div></dl>
              <ExplanationSection explanations={simulation.explanations} />
-             <HistoricalChart data={chartData} status={chartStatus} error={chartError} simulation={simulation} />
-            <ActionTable actions={simulation.actions} fixedSlice={fixedSliceSimulation} />
+             <HistoricalChart data={chartData} status={chartStatus} error={chartError} simulation={simulation} selectedBarIndex={selectedBarIndex} onSelectBarIndex={setSelectedBarIndex} />
+            <ActionTable actions={simulation.actions} fixedSlice={fixedSliceSimulation} selectedBarIndex={selectedBarIndex} onSelectBarIndex={setSelectedBarIndex} />
           </div>}
           {simulation && simulationStatus === "indeterminate" && <>
              <div className="simulation-indeterminate-detail" role="note"><strong>Tamamlanmamış simülasyon · kesin ekonomik özet yok.</strong><p>Belirsiz bar commit edilmediği için bu koşu final execution kabul edilmez. Grafik üzerinde normal trade/action marker gösterilmez; açık ise yalnız nötr incomplete boundary gösterilir.</p>{simulation.action_authority?.mode === "COMMITTED_PREFIX" && <dl className="preflight-facts simulation-prefix-cutoff"><div><dt>Yetkili kapsam</dt><dd>Belirsizlik öncesi prefix kanıtı</dd></div><div><dt>Commit sınırı</dt><dd>Bar {simulation.action_authority.committed_through_bar_index} · event {simulation.action_authority.committed_through_event_sequence}</dd></div><div><dt>Belirsiz bar</dt><dd>Bar {simulation.action_authority.ambiguity_bar_index} · {simulation.ambiguity?.open_time_us ?? "zaman yok"}</dd></div></dl>}</div>
              <ExplanationSection explanations={simulation.explanations} />
-             {simulation.marker_authority === "PREFIX_BOUNDARY_ONLY" && <HistoricalChart data={chartData} status={chartStatus} error={chartError} simulation={simulation} />}
-            {simulation.action_authority?.mode === "COMMITTED_PREFIX" && <ActionTable actions={simulation.actions} fixedSlice={isFixedSliceUi} title="PREFIX KANITI · TAMAMLANMAMIŞ KOŞU" intro="Yalnız ambiguity öncesi backend-commit edilmiş action snapshot’larıdır; tam execution history veya final işlem sonucu değildir." />}
+             {simulation.marker_authority === "PREFIX_BOUNDARY_ONLY" && <HistoricalChart data={chartData} status={chartStatus} error={chartError} simulation={simulation} selectedBarIndex={selectedBarIndex} onSelectBarIndex={setSelectedBarIndex} />}
+            {simulation.action_authority?.mode === "COMMITTED_PREFIX" && <ActionTable actions={simulation.actions} fixedSlice={isFixedSliceUi} title="PREFIX KANITI · TAMAMLANMAMIŞ KOŞU" intro="Yalnız ambiguity öncesi backend-commit edilmiş action snapshot’larıdır; tam execution history veya final işlem sonucu değildir." selectedBarIndex={selectedBarIndex} onSelectBarIndex={setSelectedBarIndex} />}
           </>}
           {(simulationStatus === "completed" || simulationStatus === "indeterminate") && simulation && (isFixedSliceUi ? <div className="historical-save-area historical-save-readonly" role="note"><div><p className="preflight-section-label">KALICI KAYIT</p><p>Bu profilin sonucu bu aşamada kalıcı koşuya bağlı değildir ve kaydedilemez.</p></div></div> : <div className="historical-save-area" aria-live="polite">
             <div><p className="preflight-section-label">KALICI KAYIT</p><p>{simulationStatus === "indeterminate" ? "Belirsizlik kanıtlarıyla birlikte salt okunur historical run kaydı oluşturulur." : "Bu koşunun server-side immutable snapshot’ını daha sonra yeniden açmak için saklayın."}</p></div>
