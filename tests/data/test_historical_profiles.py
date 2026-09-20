@@ -20,6 +20,7 @@ class HistoricalProfileTests(unittest.TestCase):
             (
                 "paper",
                 "historical_demo_btcusdt_1h_v1",
+                "historical_demo_btcusdt_1h_stress_slippage_v1",
                 "historical_demo_btcusdt_1h_partial_fixed_v1",
             ),
         )
@@ -28,6 +29,9 @@ class HistoricalProfileTests(unittest.TestCase):
         self.assertEqual(demo.expected_dataset_id, "binance-spot-klines-v1-btcusdt-1h-2025-01-01")
         self.assertEqual(demo.venue_filter_provenance, "project_fixture")
         self.assertFalse(demo.historical_filter_claim)
+        stress_slippage = get_historical_profile("historical_demo_btcusdt_1h_stress_slippage_v1")
+        self.assertEqual(stress_slippage.expected_dataset_id, demo.expected_dataset_id)
+        self.assertEqual(stress_slippage.simulation_model, "historical_ohlcv_v1")
         fixed = get_historical_profile("historical_demo_btcusdt_1h_partial_fixed_v1")
         self.assertEqual(fixed.simulation_model, "historical_ohlcv_partial_fixed_v1")
         self.assertEqual(fixed.slice_qty, "0.001")

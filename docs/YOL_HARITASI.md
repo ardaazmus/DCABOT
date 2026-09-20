@@ -3,7 +3,7 @@
 Sıra bağlayıcıdır: P1 yerel demo → P2 Binance testnet → P3 gerçek Binance (sınırlı canary) → P4 diğer borsalar. Bir sonraki faza geçmek için önceki fazın kapanış ölçütü sağlanır. Eski dilim günlükleri: `docs/archive/history/`.
 
 ## Şimdi
-- **Faz 2.4 — etkileşimli marker:** Faz 2.1-2.3 kapandı; aktif iş TASK.md'dedir.
+- **Faz 2 kapandı (2.1-2.5).** Sıradaki iş TASK.md'dedir.
 
 ## Sonra
 Faz 2 (P1 kapanışı) → Faz 3 (gerçek testnet) → Faz 4 (canary).
@@ -23,8 +23,8 @@ Açık hata raporu maddelerini doğrula ve kapat (TASK.md). Çıkış: rapor bo�
 2. **2.1b Sıralı deal (tamam):** Orkestrasyon düzeltmesi + `deal_id`/`event_sequence` dedup kimliği + persistence çoklu-deal şeması uygulandı, çekirdek/engine.py değişmedi (bkz. STATE.md/docs/KARARLAR.md).
 3. **2.2 Ekonomik metrik seti v1 (tamam):** net PnL, max drawdown, işlem sayısı, ortalama giriş, toplam ücret, pozisyonda kalma süresi — çekirdekte (`report()`) ve `historical_simulation.py`'de hesaplanıp hem canlı hem kayıtlı API yanıtında gösteriliyor (bkz. STATE.md).
 4. **2.3 Reproduce + compare (tamam):** `POST /api/historical-runs/{run_id}/reproduce` kayıtlı run'ı stored config/dataset snapshot'ıyla yeniden çalıştırıp result/canonical-input/execution-identity hash'lerini karşılaştırır; yerel artifact değiştiyse fail-closed reddeder. Saved Runs ekranında iki koşu seçilip yan yana karşılaştırılabiliyor (bkz. STATE.md).
-5. **2.4 Etkileşimli marker:** grafikte olay → hesap kaydı bağlantısı.
-6. **2.5 Stress modeli:** yalnız 2.1–2.4 bittikten sonra, sınırlı tek dilim.
+5. **2.4 Etkileşimli marker (tamam):** grafikte olay ↔ tablo satırı çift yönlü bağlantı, mouse + klavye (bkz. STATE.md).
+6. **2.5 Stress modeli (tamam — dar kapsam):** P1.16.i.b araştırması bağımsız kontrolde iki yerde çelişkili çıktı verdi (T-07 sayısal, T-12 identity) ve reserve örneği kendi invariant'ını ihlal etti; bu yüzden yeni spread/latency/queue/reserve stress modeli `NO-GO` kaldı. Bunun yerine yalnız mevcut exact `config.slippage` mekanizmasıyla ikinci, açık şekilde etiketlenmiş bir "stress slippage" profili eklendi (`historical_demo_btcusdt_1h_stress_slippage_v1`, slippage=0.002); yeni ekonomik kod yok, mevcut profil seçici + mevcut compare ekranı üzerinden kullanılıyor (bkz. STATE.md, docs/KARARLAR.md).
 
 Kapanış: temiz klonda README komutlarıyla 9 adımlık akış hatasız çalışır → bağımsız review APPROVED → `git tag p1-demo-complete`.
 

@@ -1,24 +1,18 @@
-# Aktif iş — Faz 2.5: Stress modeli (KAPSAM ARAŞTIRMASI, Claude sahibi)
+# Aktif iş — Faz 2 kapandı, sıradaki adım Arda'nın product-scope kararını bekliyor
 
-Hedef (docs/YOL_HARITASI.md): stress testi — spread/slippage/latency/partial fill; reproducible seed; iyimser/kötümser OHLC model farkı. "Yalnız 2.1–2.4 bittikten sonra, sınırlı tek dilim."
-Sahip: Claude (kritik/finansal, bkz. AGENTS.md "Ajanlar arası işbölümü"). Codex'e devredilmez.
+Faz 2 (P1 kapanışı): 2.1, 2.1b, 2.2, 2.3, 2.4, 2.5 hepsi tamam (bkz. STATE.md, docs/YOL_HARITASI.md). Şu anda Claude'un elinde açık, kritik/matematik nitelikli bir görev yok.
 
-## Önce netleştirilmesi gerekenler (kod yazmadan)
-- `docs/OZELLIK_MATRISI.md` F24 satırı ve P1.16.i.b-e kayıtları zaten şunu tespit etmişti: stress'in araştırma/kimlik kısmı (`P1.16.i.a-e`) `COMPLETE_WITH_LIMITATION`, ama **ekonomik implementation `DEFERRED/NO-GO`** — resmî kaynaklar exact stress oracle sağlamıyor. Bu, sıfırdan yeni bir stokastik model icat etmenin AGENTS.md'nin "kanıt yetersizse riskli ekonomik davranış açılmaz" ilkesini ihlal edeceği anlamına gelir.
-- Bu yüzden Faz 2.5'in "sınırlı tek dilim" olması gerçek bir sınırlamadır, öneri değil: yeni rastgele/stokastik ekonomi YOK. Yalnız **var olan, zaten exact olan mekanizmaları** (config.slippage, INDETERMINATE/AMBIGUOUS_OHLC_PATH ambiguity tespiti) kullanan, deterministic, reproducible bir "en iyi/en kötü durum" senaryosu olabilir mi — buna karar vermek bu dilimin kendisi.
+## Açık karar (Arda'ya, roadmap-sequencing değil, gerçek ürün-kapsamı kararı)
+docs/YOL_HARITASI.md'nin Faz 2 kapanış ölçütü: "temiz klonda README komutlarıyla 9 adımlık akış hatasız çalışır → bağımsız review APPROVED → `git tag p1-demo-complete`." İki seçenek var:
 
-## Adımlar
-1. `docs/archive/arastirma-promptlari/P1.16.i.b_Stress_Ekonomik_Sozlesme_Arastirma_Promptu.md` ve ilgili `evidence/P1.16.i*/SONUC.md` kayıtlarını oku — hangi stress sözleşmesi/sınır zaten karara bağlanmış, tekrar icat etme.
-2. Dar bir kapsam öner (ör. "aynı dataset'i iki deterministic slippage senaryosuyla [config.slippage=0 vs config.slippage=mevcut×N] yan yana çalıştır, sonucu compare ekranında göster" gibi) — yeni RNG/seed YOK, ikisi de zaten var olan `simulate_historical_ohlcv` + `config.slippage` ile.
-3. Öneriyi Arda'ya kısa bir karar notu olarak sun (docs/KARARLAR.md tarzı); onay olmadan implementasyona geçme.
+1. **P1 kapanış ölçütünü şimdi çalıştır:** temiz klon + uçtan uca 9 adım doğrulama + `git tag p1-demo-complete`. Sonra Faz 3'e geç.
+2. **Doğrudan Faz 3'e geç** (P2 — gerçek Binance testnet: reconnect worker, REST catch-up, salt-okunur hesap ekranı, mutation gate kararı, tek testnet emri, restart recovery, uçtan uca testnet DCA). Bu, yerel/offline sınırın dışına çıkıp gerçek bir dış servise (testnet de olsa) bağlanmak demek — AGENTS.md'nin "credential, gerçek emir, mainnet" çizgisine yaklaşan ilk faz.
 
-## Değişmez sınırlar
-- Credential, secret, signed request, emir, mutation ve mainnet yok.
-- Yeni stokastik/RNG ekonomik model YOK — yalnız var olan exact mekanizmaların deterministic kombinasyonu.
-- `engine.py` çekirdek State/apply/decision değişmez (önceki fazlardaki gibi, orkestrasyon katmanında kal).
+Bu iki seçenek arasında Claude karar vermiyor: (1) formalite bir kapanış adımı, (2) ise projenin ilk kez gerçek bir dış sisteme (testnet Binance) bağlanacağı, risk profili değişen bir faz başlangıcı — "son ürün özellikleri" kapsamına giren bir zamanlama/kapsam kararı.
+
+## Değişmez sınırlar (her iki seçenekte de)
+- Credential, secret, signed request, gerçek emir, mutation ve mainnet: Arda onayı olmadan asla.
 - STATE.md/TASK.md yalnız Claude günceller.
 
 ## Kabul
-- Kod yazılmadan önce kapsam Arda'ya sunulur ve onaylanır.
-- Onaylanırsa: test-first, exact aritmetik, tam checker + frontend tsc/vitest.
-- Bağımsız inceleme yapılmadı; `review=NOT_RUN` olarak kalır.
+- Arda (1) veya (2)'yi seçtiğinde, Claude o dilim için kendi TASK.md brief'ini yazıp devam eder.

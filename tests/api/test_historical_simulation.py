@@ -61,6 +61,7 @@ class HistoricalSimulationApiTests(unittest.TestCase):
             [
                 "paper",
                 "historical_demo_btcusdt_1h_v1",
+                "historical_demo_btcusdt_1h_stress_slippage_v1",
                 "historical_demo_btcusdt_1h_partial_fixed_v1",
             ],
         )
@@ -68,8 +69,10 @@ class HistoricalSimulationApiTests(unittest.TestCase):
         self.assertIsNone(result[0].expected_dataset_id)
         self.assertEqual(result[1].label, "Historical demo — BTCUSDT 1h (v1)")
         self.assertEqual(result[1].expected_dataset_id, "binance-spot-klines-v1-btcusdt-1h-2025-01-01")
-        self.assertEqual(result[2].simulation_model, "historical_ohlcv_partial_fixed_v1")
-        self.assertEqual(result[2].slice_qty, "0.001")
+        self.assertEqual(result[2].label, "Historical demo — BTCUSDT 1h, stress slippage 0.2% (v1)")
+        self.assertEqual(result[2].expected_dataset_id, "binance-spot-klines-v1-btcusdt-1h-2025-01-01")
+        self.assertEqual(result[3].simulation_model, "historical_ohlcv_partial_fixed_v1")
+        self.assertEqual(result[3].slice_qty, "0.001")
         self.assertEqual(response.headers["cache-control"], "no-store")
         serialized = json.dumps([profile.model_dump(mode="json") for profile in result])
         self.assertNotIn("path", serialized)

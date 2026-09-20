@@ -288,3 +288,24 @@ class HistoricalSimulationTests(unittest.TestCase):
         second = simulate_historical_ohlcv(dataset, _config(), config_hash="b" * 64)
 
         self.assertEqual(first, second)
+
+    def test_stress_slippage_profile_shifts_the_base_fill_price_deterministically(self):
+        from dcabot.application.historical_simulation import simulate_historical_ohlcv
+
+        dataset = _dataset(("100", "100", "100", "100", "", ""))
+        base_raw = json.loads(Path("config/historical_demo_btcusdt_1h_v1.json").read_text(encoding="utf-8"))
+        stress_raw = json.loads(
+            Path("config/historical_demo_btcusdt_1h_stress_slippage_v1.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(base_raw["slippage"], "0")
+        self.assertEqual(stress_raw["slippage"], "0.002")
+        self.assertEqual(
+            {key: value for key, value in base_raw.items() if key != "slippage"},
+            {key: value for key, value in stress_raw.items() if key != "slippage"},
+        )
+
+        base_result = simulate_historical_ohlcv(dataset, Config.parse(base_raw), config_hash="b" * 64)
+        stress_result = simulate_historical_ohlcv(dataset, Config.parse(stress_raw), config_hash="c" * 64)
+
+        self.assertEqual(base_result.actions[0].fill_price, "100")
+        self.assertEqual(stress_result.actions[0].fill_price, "100.2")

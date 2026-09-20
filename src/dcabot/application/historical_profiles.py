@@ -60,6 +60,16 @@ HISTORICAL_PROFILES: Final = (
 )
 HISTORICAL_OPT_IN_PROFILES: Final = (
     HistoricalProfile(
+        profile_id="historical_demo_btcusdt_1h_stress_slippage_v1",
+        profile_version="1",
+        label="Historical demo — BTCUSDT 1h, stress slippage 0.2% (v1)",
+        config_filename="historical_demo_btcusdt_1h_stress_slippage_v1.json",
+        expected_dataset_id="binance-spot-klines-v1-btcusdt-1h-2025-01-01",
+        venue_filter_provenance="project_fixture",
+        historical_filter_claim=False,
+        anchor_source="dataset_first_bar_open",
+    ),
+    HistoricalProfile(
         profile_id="historical_demo_btcusdt_1h_partial_fixed_v1",
         profile_version="1",
         label="Historical demo — BTCUSDT 1h partial fixed slice (v1)",
