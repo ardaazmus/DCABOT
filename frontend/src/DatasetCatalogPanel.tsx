@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type HTMLAttributes, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { HistoricalChart } from "./HistoricalChart";
 import { ExplanationSection } from "./ExplanationSection";
 import { HistoricalProfileSelector, HistoricalProfileStatus } from "./HistoricalProfileSelector";
@@ -117,7 +117,7 @@ function fixedActionStatus(action: HistoricalSimulationResult["actions"][number]
   return action.order_status_after ?? "—";
 }
 
-function ActionTable({ actions, fixedSlice, title = "AKSİYON GEÇMİŞİ", intro = "Backend’in kaydettiği simülasyon aksiyonları; finansal hesap yapılmadan, oluşma sırasıyla gösterilir.", selectedBarIndex = null, onSelectBarIndex }: { actions: HistoricalSimulationResult["actions"]; fixedSlice: boolean; title?: string; intro?: string; selectedBarIndex?: number | null; onSelectBarIndex?: (barIndex: number) => void }) {
+export function ActionTable({ actions, fixedSlice, title = "AKSİYON GEÇMİŞİ", intro = "Backend’in kaydettiği simülasyon aksiyonları; finansal hesap yapılmadan, oluşma sırasıyla gösterilir.", selectedBarIndex = null, onSelectBarIndex }: { actions: HistoricalSimulationResult["actions"]; fixedSlice: boolean; title?: string; intro?: string; selectedBarIndex?: number | null; onSelectBarIndex?: (barIndex: number) => void }) {
   const interactive = typeof onSelectBarIndex === "function";
 
   useEffect(() => {
@@ -132,12 +132,24 @@ function ActionTable({ actions, fixedSlice, title = "AKSİYON GEÇMİŞİ", intr
     }
   }, [selectedBarIndex]);
 
-  function rowProps(barIndex: number) {
+  function onRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>, barIndex: number) {
+    if (event.target !== event.currentTarget) return; // satır içindeki Kopyala/detay gibi öğelerin tuşlarını satır seçimine sızdırma
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onSelectBarIndex?.(barIndex);
+  }
+
+  function rowProps(barIndex: number): HTMLAttributes<HTMLTableRowElement> {
     const selected = selectedBarIndex === barIndex;
     return {
       id: `historical-action-row-${barIndex}`,
       className: selected ? "historical-action-row-selected" : interactive ? "historical-action-row-interactive" : undefined,
+      role: interactive ? "button" : undefined,
+      tabIndex: interactive ? 0 : undefined,
+      "aria-label": interactive ? `Bar ${barIndex} aksiyonunu seç` : undefined,
+      "aria-pressed": interactive ? selected : undefined,
       onClick: interactive ? () => onSelectBarIndex?.(barIndex) : undefined,
+      onKeyDown: interactive ? (event) => onRowKeyDown(event, barIndex) : undefined,
     };
   }
 

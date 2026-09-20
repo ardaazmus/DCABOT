@@ -94,3 +94,5 @@ nav { display: grid; gap: 6px; }.nav-item { color: #8597aa; text-decoration: non
 .historical-action-table tbody tr.historical-action-row-interactive { cursor: pointer; }
 .historical-action-table tbody tr.historical-action-row-selected { background: rgba(245, 197, 91, .16); box-shadow: inset 3px 0 #f5c55b; }
 .historical-action-table tbody tr.historical-action-row-selected:hover { background: rgba(245, 197, 91, .22); }
+/* Faz 2.4 tamamlama: klavyeyle seçilebilir aksiyon satırları için görünür odak halkası. */
+.historical-action-row-interactive:focus-visible, .historical-action-row-selected:focus-visible { outline: var(--ui-focus-ring-width) solid var(--ui-focus-ring); outline-offset: var(--ui-focus-ring-offset); }

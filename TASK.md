@@ -1,45 +1,24 @@
-# Aktif iş — Faz 2.4 tamamlama: aksiyon tablosuna klavye erişimi (CODEX BRIEF — dosya sınırlı)
+# Aktif iş — Faz 2.5: Stress modeli (KAPSAM ARAŞTIRMASI, Claude sahibi)
 
-Bu görev Codex'e devredildi (bkz. `docs/KARARLAR.md` "Ajanlar arası işbölümü"). Sen kimsen (Codex/Luna/Muse dahil), önce AGENTS.md + STATE.md + bu dosyayı oku. Bu dosyadaki dosya listesi ve durma koşulları bağlayıcıdır. Bu, Faz 2.4'ün (bkz. git log) kendisi değil, onun bilinen bir sınırını kapatan küçük bir ek dilimdir.
+Hedef (docs/YOL_HARITASI.md): stress testi — spread/slippage/latency/partial fill; reproducible seed; iyimser/kötümser OHLC model farkı. "Yalnız 2.1–2.4 bittikten sonra, sınırlı tek dilim."
+Sahip: Claude (kritik/finansal, bkz. AGENTS.md "Ajanlar arası işbölümü"). Codex'e devredilmez.
 
-## Hedef
-Faz 2.4 grafikteki marker'ları klavyeyle (Tab+Enter/Space) seçilebilir yaptı ama aksiyon tablosundaki satırlar hâlâ yalnız mouse click ile seçiliyor. Şimdi satırlar da klavyeyle (Tab ile odaklanıp Enter/Space ile) seçilebilir olsun — marker'daki ile birebir aynı davranış deseni.
-
-## İzinli dosyalar (yalnız bunlar)
-- `frontend/src/DatasetCatalogPanel.tsx`
-- `frontend/src/styles.css` (yalnız ekleme; var olan kuralları silme/değiştirme)
-- `frontend/src/DatasetCatalogPanel.test.tsx` (YENİ dosya — henüz yok, sen oluşturacaksın; yalnız bu davranışı test et, `HistoricalChart.test.tsx`'teki desen ve import stiliyle: `@testing-library/react`, `render`/`fireEvent`/`screen`, `vitest`'ten `describe/expect/it/vi`)
-
-## Yasak (dokunma)
-- `src/` altındaki HER ŞEY (Python backend/çekirdek).
-- `frontend/src/App.tsx`, `HistoricalChart.tsx`, `HistoricalChart.test.tsx`, `savedRuns.ts`, `datasetCatalog.ts`, `SavedRunsPanel.tsx`.
-- `package.json`, `vite.config.*`, `tsconfig*.json` — yeni bağımlılık yok.
-- `STATE.md`, `TASK.md`, `AGENTS.md`, `docs/*`, `evidence/*`.
-- `ActionTable`'ın grafik/geometri ile ilgisi yok; yalnız `rowProps` fonksiyonuna ve satır `<tr>` elemanına dokun.
+## Önce netleştirilmesi gerekenler (kod yazmadan)
+- `docs/OZELLIK_MATRISI.md` F24 satırı ve P1.16.i.b-e kayıtları zaten şunu tespit etmişti: stress'in araştırma/kimlik kısmı (`P1.16.i.a-e`) `COMPLETE_WITH_LIMITATION`, ama **ekonomik implementation `DEFERRED/NO-GO`** — resmî kaynaklar exact stress oracle sağlamıyor. Bu, sıfırdan yeni bir stokastik model icat etmenin AGENTS.md'nin "kanıt yetersizse riskli ekonomik davranış açılmaz" ilkesini ihlal edeceği anlamına gelir.
+- Bu yüzden Faz 2.5'in "sınırlı tek dilim" olması gerçek bir sınırlamadır, öneri değil: yeni rastgele/stokastik ekonomi YOK. Yalnız **var olan, zaten exact olan mekanizmaları** (config.slippage, INDETERMINATE/AMBIGUOUS_OHLC_PATH ambiguity tespiti) kullanan, deterministic, reproducible bir "en iyi/en kötü durum" senaryosu olabilir mi — buna karar vermek bu dilimin kendisi.
 
 ## Adımlar
-1. `DatasetCatalogPanel.tsx`'teki `rowProps(barIndex)` fonksiyonuna ekle: `interactive` true iken `tabIndex={0}`, `role="button"`, `aria-pressed={selected}`, `aria-label` (örn. `Bar ${barIndex} aksiyonunu seç`), `onKeyDown` (Enter/Space → `onSelectBarIndex?.(barIndex)`, `event.preventDefault()`).
-2. `styles.css`'e yalnız ekleme: `.historical-action-row-interactive:focus-visible` için görünür outline (projede zaten var olan `--ui-focus-ring`/`outline` deseniyle tutarlı olsun, dosyanın başındaki `:focus-visible` kurallarına bak).
-3. `DatasetCatalogPanel.test.tsx` (yeni): en az 2 test — Tab+Enter satır seçimini bildirir; Tab+Space da bildirir, ilgisiz bir tuş (örn. "a") bildirmez. `ActionTable`'ı doğrudan import edip test etmek için önce onu export etmen gerekebilir (şu an dosya içinde private/unexported olabilir kontrol et) — export etmek izinli, ama başka hiçbir public API'yi değiştirme.
-
-## Durma koşulları (bunlardan biri olursa DEVAM ETME, raporla)
-- Yukarıdaki izinli dosya listesi dışında bir değişiklik gerektiğini düşünüyorsan.
-- Toplam diff ~150 satırı aşıyorsa.
-- `npx tsc -b` veya `npx vitest run` 2 denemeden sonra hâlâ kırmızıysa.
-- `ActionTable`'ı export etmek başka bir şeyi kırıyorsa.
-
-## Bitti sayılması için
-- `cd frontend && npx tsc -b` temiz.
-- `cd frontend && npx vitest run` — tüm testler (yeni dahil) PASS.
-- `git status` yalnız yukarıdaki 3 dosyayı göstermeli (2 mevcut + 1 yeni).
-- Son mesajında: değişen dosyalar, eklenen test sayısı, kalan/bilinen sınır (varsa) kısa özet.
-
-## Sonrası (Codex yapmaz, Claude yapar)
-Diff review, tam checker, canlı tarayıcıda klavye testi, STATE.md/TASK.md güncelleme, commit.
-
-## Paralel iş (bilgi amaçlı, sana ait değil)
-Claude bu sırada ayrı, kesişmeyen dosyalarda (`src/dcabot/domain/`, `historical_simulation.py`) Faz 2.5 (stress modeli) tasarımı üzerinde çalışıyor olabilir. Bu senin işini etkilemez, karışma.
+1. `docs/archive/arastirma-promptlari/P1.16.i.b_Stress_Ekonomik_Sozlesme_Arastirma_Promptu.md` ve ilgili `evidence/P1.16.i*/SONUC.md` kayıtlarını oku — hangi stress sözleşmesi/sınır zaten karara bağlanmış, tekrar icat etme.
+2. Dar bir kapsam öner (ör. "aynı dataset'i iki deterministic slippage senaryosuyla [config.slippage=0 vs config.slippage=mevcut×N] yan yana çalıştır, sonucu compare ekranında göster" gibi) — yeni RNG/seed YOK, ikisi de zaten var olan `simulate_historical_ohlcv` + `config.slippage` ile.
+3. Öneriyi Arda'ya kısa bir karar notu olarak sun (docs/KARARLAR.md tarzı); onay olmadan implementasyona geçme.
 
 ## Değişmez sınırlar
 - Credential, secret, signed request, emir, mutation ve mainnet yok.
-- Bu dilim yalnız UI erişilebilirliğidir; yeni ekonomik hesap, yeni API çağrısı, yeni bağımlılık yok.
+- Yeni stokastik/RNG ekonomik model YOK — yalnız var olan exact mekanizmaların deterministic kombinasyonu.
+- `engine.py` çekirdek State/apply/decision değişmez (önceki fazlardaki gibi, orkestrasyon katmanında kal).
+- STATE.md/TASK.md yalnız Claude günceller.
+
+## Kabul
+- Kod yazılmadan önce kapsam Arda'ya sunulur ve onaylanır.
+- Onaylanırsa: test-first, exact aritmetik, tam checker + frontend tsc/vitest.
+- Bağımsız inceleme yapılmadı; `review=NOT_RUN` olarak kalır.
