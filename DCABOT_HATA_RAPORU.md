@@ -173,6 +173,8 @@ HISTORICAL_EXECUTIONS: dict[str, HistoricalRunCapture] = {}
 
 **Açıklama:** Modül seviyesinde global mutable state. Multi-worker (`uvicorn --workers N`) durumunda her worker ayrı state'e sahip olur. Local single-worker kullanım için yeterli.
 
+**Kabul edilen sınır:** Bu local ürün akışında uvicorn tek worker çalışır; multi-worker deployment kapsam dışıdır.
+
 ---
 
 ### 10. `App.tsx` — 30+ `useState` Hook'u (Kod Kalitesi)
