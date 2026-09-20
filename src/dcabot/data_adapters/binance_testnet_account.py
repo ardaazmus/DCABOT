@@ -22,12 +22,17 @@ from dcabot.application.signed_request import (
     SignedRequestError,
     build_signed_request,
 )
+from dcabot.domain.numbers import number
 
 
 BINANCE_SPOT_TESTNET_REST_BASE_URL = "https://testnet.binance.vision/api"
 BINANCE_SPOT_TESTNET_ACCOUNT_URL = f"{BINANCE_SPOT_TESTNET_REST_BASE_URL}/v3/account"
+BINANCE_SPOT_TESTNET_OPEN_ORDERS_URL = f"{BINANCE_SPOT_TESTNET_REST_BASE_URL}/v3/openOrders"
 MAX_ACCOUNT_RESPONSE_BYTES = 256 * 1024
+MAX_OPEN_ORDERS_RESPONSE_BYTES = 256 * 1024
 MAX_BALANCES = 5_000
+MAX_NONZERO_BALANCES = 512
+MAX_OPEN_ORDERS = 512
 MAX_PERMISSIONS = 32
 DEFAULT_TIMEOUT_SECONDS = 5
 
@@ -58,9 +63,20 @@ class SystemClock:
         return time.time_ns() // 1_000_000
 
 
+@dataclass(frozen=True, slots=True)
+class BinanceTestnetBalance:
+    """One non-zero testnet asset balance; exact decimal strings, no real money."""
+
+    asset: str
+    free: str
+    locked: str
+
+
 @dataclass(frozen=True, slots=True, repr=False)
 class BinanceTestnetAccountSnapshot:
-    """Ephemeral signed account evidence without balance values or credentials."""
+    """Signed testnet account evidence. Balances are real Testnet-play-money
+    amounts (never mainnet), included for display; credentials never are.
+    """
 
     credential_id: str
     account_type: str
@@ -70,6 +86,7 @@ class BinanceTestnetAccountSnapshot:
     permissions: tuple[str, ...]
     update_time_ms: int
     balances_count: int
+    balances: tuple[BinanceTestnetBalance, ...]
     capability: AccountCapability
     response_sha256: str
     observed_at_us: int
@@ -223,6 +240,7 @@ def _normalize_account(
         raise BinanceTestnetAccountError(
             "TESTNET_ACCOUNT_RESPONSE_INVALID", "Hesap balances alanı geçersiz."
         )
+    nonzero_balances: list[BinanceTestnetBalance] = []
     for balance in balances:
         if type(balance) is not dict or set(balance) != {"asset", "free", "locked"}:
             raise BinanceTestnetAccountError(
@@ -238,6 +256,31 @@ def _normalize_account(
             raise BinanceTestnetAccountError(
                 "TESTNET_ACCOUNT_RESPONSE_INVALID", "Hesap balance metni geçersiz."
             )
+        asset = balance["asset"]
+        if not 1 <= len(asset) <= 32:
+            raise BinanceTestnetAccountError(
+                "TESTNET_ACCOUNT_RESPONSE_INVALID", "Hesap balance asset alanı geçersiz."
+            )
+        try:
+            # Binance pads to a fixed 8 decimals (e.g. "100.00000000"), which
+            # is valid but not this project's own trimmed canonical form; only
+            # parseability and sign are validated, the venue's own text is kept.
+            free_value = number(balance["free"])
+            locked_value = number(balance["locked"])
+        except ValueError as exc:
+            raise BinanceTestnetAccountError(
+                "TESTNET_ACCOUNT_RESPONSE_INVALID", "Hesap balance miktarı exact decimal olmalıdır."
+            ) from exc
+        if free_value < 0 or locked_value < 0:
+            raise BinanceTestnetAccountError(
+                "TESTNET_ACCOUNT_RESPONSE_INVALID", "Hesap balance miktarı negatif olamaz."
+            )
+        if free_value != 0 or locked_value != 0:
+            if len(nonzero_balances) >= MAX_NONZERO_BALANCES:
+                raise BinanceTestnetAccountError(
+                    "TESTNET_ACCOUNT_RESPONSE_TOO_LARGE", "Hesap sıfır olmayan balance sınırı aşıyor."
+                )
+            nonzero_balances.append(BinanceTestnetBalance(asset, balance["free"], balance["locked"]))
     can_trade = payload["canTrade"]
     trade_scope_verified = "SPOT" in permissions
     return BinanceTestnetAccountSnapshot(
@@ -249,6 +292,7 @@ def _normalize_account(
         permissions=permissions,
         update_time_ms=payload["updateTime"],
         balances_count=len(balances),
+        balances=tuple(nonzero_balances),
         capability=AccountCapability.from_evidence(
             source=CapabilitySource.SIGNED_ACCOUNT_CONTEXT,
             signed_request_verified=True,
@@ -258,6 +302,207 @@ def _normalize_account(
         response_sha256=hashlib.sha256(payload_bytes).hexdigest(),
         observed_at_us=time.time_ns() // 1000,
     )
+
+
+@dataclass(frozen=True, slots=True)
+class BinanceTestnetOpenOrder:
+    """One redacted open order snapshot; venue's own report, not a fill claim."""
+
+    symbol: str
+    order_id: int
+    client_order_id: str
+    side: str
+    type: str
+    status: str
+    price: str
+    orig_qty: str
+    executed_qty: str
+    time_ms: int
+    update_time_ms: int
+
+
+def fetch_binance_testnet_open_orders(
+    credential_id: str,
+    *,
+    provider: CredentialProvider,
+    clock: Clock | None = None,
+    opener: AccountOpener | None = None,
+    symbol: str | None = None,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    recv_window_ms: int = DEFAULT_RECV_WINDOW_MS,
+) -> tuple[BinanceTestnetOpenOrder, ...]:
+    """Fetch the account's current open orders; no order/cancel endpoint is reachable."""
+
+    if type(timeout_seconds) is not int or not 0 < timeout_seconds <= 30:
+        raise BinanceTestnetAccountError(
+            "TESTNET_OPEN_ORDERS_TIMEOUT_INVALID", "Açık emir isteği timeout değeri geçersiz."
+        )
+    if symbol is not None and (
+        not isinstance(symbol, str)
+        or not 1 <= len(symbol) <= 32
+        or symbol != symbol.strip()
+        or any(ord(char) < 0x20 or ord(char) == 0x7F for char in symbol)
+    ):
+        raise BinanceTestnetAccountError(
+            "TESTNET_OPEN_ORDERS_SYMBOL_INVALID", "Açık emir symbol değeri geçersiz."
+        )
+    try:
+        material = provider.load(credential_id)
+        if material.key_type is not ApiKeyType.HMAC:
+            raise BinanceTestnetAccountError(
+                "TESTNET_OPEN_ORDERS_KEY_TYPE_UNSUPPORTED", "Yalnız HMAC key destekleniyor."
+            )
+        signed = build_signed_request(
+            (("symbol", symbol),) if symbol is not None else (),
+            clock=clock or SystemClock(),
+            recv_window_ms=recv_window_ms,
+            signer=HmacSha256Signer(material.secret),
+        )
+    except BinanceTestnetAccountError:
+        raise
+    except SignedRequestError as exc:
+        raise BinanceTestnetAccountError(exc.code, "İmzalı açık emir isteği hazırlanamadı.") from exc
+    request = Request(
+        f"{BINANCE_SPOT_TESTNET_OPEN_ORDERS_URL}?{signed.query_string}",
+        headers={
+            "Accept": "application/json",
+            "Accept-Encoding": "identity",
+            "X-MBX-APIKEY": material.api_key,
+        },
+        method="GET",
+    )
+    response: AccountResponse | None = None
+    try:
+        response = (opener or build_opener(_NoRedirectHandler())).open(
+            request, timeout=timeout_seconds
+        )
+        status = getattr(response, "status", None)
+        if status is None:
+            status = response.getcode()  # type: ignore[attr-defined]
+        if status != 200:
+            raise BinanceTestnetAccountError(
+                "TESTNET_OPEN_ORDERS_HTTP_ERROR", "İmzalı açık emir HTTP yanıtı başarılı değil."
+            )
+        payload_bytes = _read_bounded_open_orders_response(response)
+        payload = _decode_open_orders_json(payload_bytes)
+        return _normalize_open_orders(payload)
+    except BinanceTestnetAccountError:
+        raise
+    except (HTTPError, URLError, TimeoutError, OSError) as exc:
+        raise BinanceTestnetAccountError(
+            "TESTNET_OPEN_ORDERS_UNAVAILABLE", "İmzalı açık emir yanıtı alınamadı."
+        ) from exc
+    finally:
+        if response is not None:
+            response.close()
+
+
+def _read_bounded_open_orders_response(response: AccountResponse) -> bytes:
+    headers = getattr(response, "headers", None)
+    content_length = headers.get("Content-Length") if headers is not None else None
+    if content_length is not None:
+        try:
+            declared_size = int(content_length)
+        except (TypeError, ValueError) as exc:
+            raise BinanceTestnetAccountError(
+                "TESTNET_OPEN_ORDERS_RESPONSE_INVALID", "Açık emir Content-Length geçersiz."
+            ) from exc
+        if declared_size < 0 or declared_size > MAX_OPEN_ORDERS_RESPONSE_BYTES:
+            raise BinanceTestnetAccountError(
+                "TESTNET_OPEN_ORDERS_RESPONSE_TOO_LARGE", "Açık emir yanıt byte sınırını aşıyor."
+            )
+    encoding = headers.get("Content-Encoding") if headers is not None else None
+    if encoding and encoding.lower() != "identity":
+        raise BinanceTestnetAccountError(
+            "TESTNET_OPEN_ORDERS_ENCODING_INVALID", "Açık emir yanıt sıkıştırma biçimi reddedildi."
+        )
+    payload = response.read(MAX_OPEN_ORDERS_RESPONSE_BYTES + 1)
+    if not isinstance(payload, bytes):
+        raise BinanceTestnetAccountError(
+            "TESTNET_OPEN_ORDERS_RESPONSE_INVALID", "Açık emir yanıt gövdesi bytes olmalıdır."
+        )
+    if len(payload) > MAX_OPEN_ORDERS_RESPONSE_BYTES:
+        raise BinanceTestnetAccountError(
+            "TESTNET_OPEN_ORDERS_RESPONSE_TOO_LARGE", "Açık emir yanıt byte sınırını aşıyor."
+        )
+    return payload
+
+
+def _decode_open_orders_json(payload_bytes: bytes) -> list[object]:
+    try:
+        payload = json.loads(payload_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise BinanceTestnetAccountError(
+            "TESTNET_OPEN_ORDERS_RESPONSE_INVALID", "Açık emir yanıtı JSON olarak okunamadı."
+        ) from exc
+    if type(payload) is not list or len(payload) > MAX_OPEN_ORDERS:
+        raise BinanceTestnetAccountError(
+            "TESTNET_OPEN_ORDERS_RESPONSE_INVALID", "Açık emir yanıtı bounded liste olmalıdır."
+        )
+    return payload
+
+
+def _normalize_open_orders(payload: list[object]) -> tuple[BinanceTestnetOpenOrder, ...]:
+    orders: list[BinanceTestnetOpenOrder] = []
+    for item in payload:
+        if type(item) is not dict:
+            raise BinanceTestnetAccountError(
+                "TESTNET_OPEN_ORDERS_RESPONSE_INVALID", "Açık emir öğesi nesne olmalıdır."
+            )
+        for text_field, limit in (
+            ("symbol", 32),
+            ("clientOrderId", 128),
+            ("side", 8),
+            ("type", 32),
+            ("status", 32),
+            ("price", 128),
+            ("origQty", 128),
+            ("executedQty", 128),
+        ):
+            value = item.get(text_field)
+            if (
+                type(value) is not str
+                or not value
+                or len(value) > limit
+                or any(ord(char) < 0x20 or ord(char) == 0x7F for char in value)
+            ):
+                raise BinanceTestnetAccountError(
+                    "TESTNET_OPEN_ORDERS_RESPONSE_INVALID", f"Açık emir {text_field} alanı geçersiz."
+                )
+        for int_field in ("orderId", "time", "updateTime"):
+            value = item.get(int_field)
+            if type(value) is not int or value < 0:
+                raise BinanceTestnetAccountError(
+                    "TESTNET_OPEN_ORDERS_RESPONSE_INVALID", f"Açık emir {int_field} alanı geçersiz."
+                )
+        try:
+            price = number(item["price"])
+            orig_qty = number(item["origQty"])
+            executed_qty = number(item["executedQty"])
+        except ValueError as exc:
+            raise BinanceTestnetAccountError(
+                "TESTNET_OPEN_ORDERS_RESPONSE_INVALID", "Açık emir miktarı exact decimal olmalıdır."
+            ) from exc
+        if price < 0 or orig_qty < 0 or executed_qty < 0:
+            raise BinanceTestnetAccountError(
+                "TESTNET_OPEN_ORDERS_RESPONSE_INVALID", "Açık emir miktarı negatif olamaz."
+            )
+        orders.append(
+            BinanceTestnetOpenOrder(
+                symbol=item["symbol"],
+                order_id=item["orderId"],
+                client_order_id=item["clientOrderId"],
+                side=item["side"],
+                type=item["type"],
+                status=item["status"],
+                price=item["price"],
+                orig_qty=item["origQty"],
+                executed_qty=item["executedQty"],
+                time_ms=item["time"],
+                update_time_ms=item["updateTime"],
+            )
+        )
+    return tuple(orders)
 
 
 def _string_tuple(raw: object, field_name: str, limit: int) -> tuple[str, ...]:

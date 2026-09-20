@@ -65,6 +65,13 @@ from dcabot.data_adapters.binance_testnet_public import (
     BinanceTestnetPublicError,
     fetch_binance_testnet_exchange_info,
 )
+from dcabot.data_adapters.binance_testnet_account import (
+    BinanceTestnetAccountError,
+    fetch_binance_testnet_account,
+    fetch_binance_testnet_open_orders,
+)
+from dcabot.application.signed_request import SignedRequestError
+from dcabot.application.windows_credential_provider import WindowsCredentialManagerProvider
 from dcabot.data_adapters.download_jobs import (
     DownloadJobConflict,
     DownloadJobManager,
@@ -248,6 +255,58 @@ class BinanceTestnetExchangeInfoResponse(BaseModel):
     observed_at_us: int = Field(ge=0)
     read_only: Literal[True]
     credential_required: Literal[False]
+
+
+class BinanceTestnetBalanceResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+    asset: str
+    free: str
+    locked: str
+
+
+class BinanceTestnetAccountResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+    environment: Literal["BINANCE_SPOT_TESTNET"]
+    account_type: str
+    can_trade: bool
+    can_withdraw: bool
+    can_deposit: bool
+    permissions: list[str]
+    update_time_ms: int = Field(ge=0)
+    balances_count: int = Field(ge=0)
+    balances: list[BinanceTestnetBalanceResponse]
+    response_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    observed_at_us: int = Field(ge=0)
+    read_only: Literal[True]
+    credential_required: Literal[True]
+
+
+class BinanceTestnetOpenOrderResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+    symbol: str
+    order_id: int = Field(ge=0)
+    client_order_id: str
+    side: str
+    type: str
+    status: str
+    price: str
+    orig_qty: str
+    executed_qty: str
+    time_ms: int = Field(ge=0)
+    update_time_ms: int = Field(ge=0)
+
+
+class BinanceTestnetOpenOrdersResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+    environment: Literal["BINANCE_SPOT_TESTNET"]
+    orders: list[BinanceTestnetOpenOrderResponse]
+    count: int = Field(ge=0)
+    read_only: Literal[True]
+    credential_required: Literal[True]
 
 
 class DatasetSelectionResponse(BaseModel):
@@ -1164,6 +1223,124 @@ def get_binance_testnet_exchange_info(
         observed_at_us=snapshot.observed_at_us,
         read_only=True,
         credential_required=False,
+    )
+
+
+def _testnet_credential_id() -> str | None:
+    raw = os.getenv("DCABOT_TESTNET_CREDENTIAL_ID")
+    return raw.strip() if raw and raw.strip() else None
+
+
+def _testnet_not_configured() -> JSONResponse:
+    return _problem(
+        409,
+        "TESTNET_CREDENTIAL_NOT_CONFIGURED",
+        "Testnet credential yapılandırılmadı",
+        "DCABOT_TESTNET_CREDENTIAL_ID ayarlanmadı veya tools/configure_testnet_credential.py hiç çalıştırılmadı.",
+    )
+
+
+@app.get("/api/testnet/account", response_model=BinanceTestnetAccountResponse)
+def get_binance_testnet_account(response: Response) -> BinanceTestnetAccountResponse | JSONResponse:
+    """Return one signed, read-only Testnet account snapshot. No mutation endpoint is reachable."""
+
+    response.headers["Cache-Control"] = "no-store"
+    credential_id = _testnet_credential_id()
+    if credential_id is None:
+        return _testnet_not_configured()
+    try:
+        snapshot = fetch_binance_testnet_account(
+            credential_id, provider=WindowsCredentialManagerProvider()
+        )
+    except (BinanceTestnetAccountError, SignedRequestError) as exc:
+        return _testnet_account_problem(exc.code)
+    return BinanceTestnetAccountResponse(
+        environment="BINANCE_SPOT_TESTNET",
+        account_type=snapshot.account_type,
+        can_trade=snapshot.can_trade,
+        can_withdraw=snapshot.can_withdraw,
+        can_deposit=snapshot.can_deposit,
+        permissions=[*snapshot.permissions],
+        update_time_ms=snapshot.update_time_ms,
+        balances_count=snapshot.balances_count,
+        balances=[
+            BinanceTestnetBalanceResponse(asset=item.asset, free=item.free, locked=item.locked)
+            for item in snapshot.balances
+        ],
+        response_sha256=snapshot.response_sha256,
+        observed_at_us=snapshot.observed_at_us,
+        read_only=True,
+        credential_required=True,
+    )
+
+
+@app.get("/api/testnet/open-orders", response_model=BinanceTestnetOpenOrdersResponse)
+def get_binance_testnet_open_orders(
+    response: Response, symbol: str | None = None
+) -> BinanceTestnetOpenOrdersResponse | JSONResponse:
+    """Return the account's current open orders. No order/cancel endpoint is reachable."""
+
+    response.headers["Cache-Control"] = "no-store"
+    credential_id = _testnet_credential_id()
+    if credential_id is None:
+        return _testnet_not_configured()
+    try:
+        orders = fetch_binance_testnet_open_orders(
+            credential_id, provider=WindowsCredentialManagerProvider(), symbol=symbol
+        )
+    except (BinanceTestnetAccountError, SignedRequestError) as exc:
+        return _testnet_account_problem(exc.code)
+    return BinanceTestnetOpenOrdersResponse(
+        environment="BINANCE_SPOT_TESTNET",
+        orders=[
+            BinanceTestnetOpenOrderResponse(
+                symbol=item.symbol,
+                order_id=item.order_id,
+                client_order_id=item.client_order_id,
+                side=item.side,
+                type=item.type,
+                status=item.status,
+                price=item.price,
+                orig_qty=item.orig_qty,
+                executed_qty=item.executed_qty,
+                time_ms=item.time_ms,
+                update_time_ms=item.update_time_ms,
+            )
+            for item in orders
+        ],
+        count=len(orders),
+        read_only=True,
+        credential_required=True,
+    )
+
+
+def _testnet_account_problem(code: str) -> JSONResponse:
+    if code in ("TESTNET_ACCOUNT_RESPONSE_INVALID", "TESTNET_OPEN_ORDERS_RESPONSE_INVALID"):
+        return _problem(
+            502,
+            code,
+            "Testnet hesap yanıtı geçersiz",
+            "Binance Testnet yanıtı güvenli sözleşmeye uymuyor.",
+        )
+    if code in ("TESTNET_ACCOUNT_HTTP_ERROR", "TESTNET_OPEN_ORDERS_HTTP_ERROR"):
+        return _problem(
+            502,
+            code,
+            "Testnet hesap isteği reddedildi",
+            "Binance Testnet imzalı istek başarısız oldu.",
+        )
+    if code == "WINDOWS_CREDENTIALS_UNSUPPORTED":
+        return _problem(
+            409,
+            code,
+            "Credential deposu kullanılamıyor",
+            "Windows Credential Manager yalnız Windows'ta kullanılabilir.",
+        )
+    return _problem(
+        503,
+        code,
+        "Binance Testnet hesap verisine ulaşılamadı",
+        "İmzalı Testnet hesap/açık emir isteği şu anda tamamlanamadı.",
     )
 
 
