@@ -235,6 +235,21 @@ class AttemptStore:
             f"SELECT count(*) FROM attempts WHERE state IN ({placeholders})", states
         ).fetchone()[0]
 
+    def list_resolvable_attempts(self) -> tuple[OrderAttempt, ...]:
+        """List blocking attempts that a fresh lookup can still resolve.
+
+        UNRESOLVED is intentionally excluded: `can_transition` gives it no
+        outgoing edge, so `reconcile_attempt` can never move it and it is not
+        actionable by a REST catch-up pass — it stays a permanent block until
+        an operator investigates out of band.
+        """
+
+        states = (AttemptState.UNKNOWN.value, AttemptState.RECONCILING.value)
+        rows = self.db.execute(
+            "SELECT * FROM attempts WHERE state IN (?,?) ORDER BY attempt_id", states
+        ).fetchall()
+        return tuple(_decode_row(row) for row in rows)
+
     def _transition(
         self,
         attempt_id: str,

@@ -1,32 +1,35 @@
 # Durum — 2026-09-21
 
-Aktif faz: **Faz 3.1 (reconnect worker) tamamen kapandı — `evidence_scope=REAL_TESTNET`.** P1 (Faz 2) `p1-demo-complete` etiketiyle kapalı. Dal: codex/latest-state-2026-09-20.
-Doğrulanan: tam checker 888/888 PASS (0 skip); frontend tsc -b temiz, vitest 23/23 PASS; gerçek testnet'e karşı canlı çalıştırıldı (aşağıda).
-Eksenler: implementation=DONE(3.1) · verification=PASS · evidence_scope=REAL_TESTNET(3.1) · review=NOT_RUN(3.1) · deployment=NOT_DEPLOYED
+Aktif faz: **Faz 3.2 (REST catch-up) kodu tamam, offline doğrulandı.** REAL_TESTNET kanıtı kısmi (sorgu mekaniği doğrulanabilir, tam uçtan uca kanıt 3.5'i bekliyor). Faz 3.1 `evidence_scope=REAL_TESTNET` ile kapalı. P1 `p1-demo-complete` etiketiyle kapalı. Dal: codex/latest-state-2026-09-20.
+Doğrulanan: tam checker 899/899 PASS (0 skip); frontend değişmedi (tsc/vitest önceki turdan temiz).
+Eksenler: implementation=DONE(3.2 kod) · verification=PASS(offline) · evidence_scope=LOCAL_INTEGRATION(3.2; REAL_TESTNET kısmi — sorgu mekaniği) · review=NOT_RUN(3.2) · deployment=NOT_DEPLOYED
 
-## Faz 3.1 — Reconnect worker: REAL_TESTNET kanıtı alındı (bu oturum)
-- **Kod:** `src/dcabot/application/user_stream_reconnect_worker.py` (önceki turda yazıldı), `tools/run_user_stream_reconnect_worker.py` (canlı çalıştırma aracı, Claude hiç çalıştırmadı — Arda çalıştırdı).
-- **Arda'nın yerelde çalıştırdığı canlı test:** Testnet credential kaydedildi (`tools/configure_testnet_credential.py`; ilk denemede API key yanlış kopyalanmıştı — venue `Illegal characters... apiKey` diye redde reddetti, teşhis için secret'a hiç dokunmayan geçici bir script yazıldı, sorun bulundu ve düzeltildi). Worker gerçek testnet'e bağlandı, ağ birden çok kez kesilip açıldı.
-- **Gerçek bug bulundu ve düzeltildi:** İlk canlı çalıştırmada program çöktü — `websockets.exceptions.ConnectionClosedError` (Exception alt sınıfı, OSError DEĞİL) `recv_execution_report`/`recv_order_list_event`'in except bloğunca yakalanmıyordu. Offline sahte-socket testleri bunu yapısal olarak kaçırıyordu (yalnız OSError fırlatıyorlardı). Fix: `connect()`'in zaten sahip olduğu `except Exception` catch-all deseni her iki `recv_*` metoduna da eklendi; 2 yeni test gerçek `ConnectionClosedError` sınıfıyla kanıtlıyor (bkz. docs/KARARLAR.md).
-- **İkinci canlı çalıştırma:** Birden fazla gerçek disconnect/reconnect döngüsü (biri `attempt=5`'e, backoff sınırına kadar gidip tam zamanında toparlandı) çökmeden atlatıldı. `CONNECTED_READ_ONLY → STALE → RECONCILIATION_REQUIRED` yayı defalarca gözlendi. Gerçek bir GAP gözlenmedi (testnet hesabında o sırada trafik yoktu) — roadmap bunu garanti etmiyordu zaten.
-- **Sonuç:** Faz 3.1 kapandı. `evidence_scope=REAL_TESTNET` sağlandı.
+## Faz 3.2 — REST catch-up (bu oturum, Claude yaptı, delege edilmedi)
+- **Ne yapıldı:** `src/dcabot/application/rest_catch_up.py` (`run_rest_catch_up`) — blocking attempt'leri gerçek signed WS-API sorgusuyla çözüp `apply_authoritative_snapshot`'a bağlıyor.
+- **Kapsam onaylandıktan sonra ortaya çıkan 3 zorunlu ek** (bkz. docs/KARARLAR.md, hepsi minimal/additive):
+  1. `query_binance_testnet_order_status_by_client_id` — SENDING→UNKNOWN attempt'lerin (asıl kritik durum) `venue_order_id`'si hiç yok; `client_order_id` ile sorgu gerekiyordu.
+  2. `ReconciliationCoordinator.last_accepted_event` (yeni salt-okunur property + `_last_event` alanı) — gerçek bir snapshot cursor'ı sahte veri uydurmadan kurmak için zorunluydu. 34/34 önceki reconciliation testi hâlâ PASS.
+  3. Venue'nun `-2013` (order not found) cevabı artık exception değil `OrderLookup.not_found()`.
+- **Yeni:** `AttemptStore.list_resolvable_attempts()` (yalnız UNKNOWN/RECONCILING — UNRESOLVED kasıtlı hariç, `can_transition` ona çıkış vermiyor, kalıcı blok tasarım gereği).
+- **Test:** 6 yeni `tests/test_rest_catch_up.py` + 4 yeni order-status testi (`tests/test_binance_testnet_user_stream.py`), tümü offline sahte-socket. Tam checker 899/899 PASS.
+- **REAL_TESTNET durumu:** `tools/run_order_status_lookup_diagnostic.py` ile sorgu mekaniği (clientOrderId alan adı, -2013 kodu) gerçek venue'ya karşı doğrulanabilir — henüz Arda çalıştırmadı. Tam uçtan uca (gerçek kesintiye uğramış bir emir) kanıt Faz 3.5'i (emir gönderme) bekliyor.
 
-## Faz 3.1 kapsam netleştirmesi (önceki tur, hâlâ geçerli)
-SYNCED'e ulaşmak authoritative REST snapshot gerektiriyor (3.2, henüz yok). 3.1'in kanıtladığı yay roadmap'in kısa tanımıyla ("bağlan, düş, yeniden bağlan; gap tespiti") birebir — bkz. docs/KARARLAR.md.
-
-## Faz 2 (P1) özeti — kapandı, `p1-demo-complete` etiketli (ayrıntı git geçmişinde)
+## Faz 3.1 — Reconnect worker (önceki tur, kapalı, `evidence_scope=REAL_TESTNET`)
+Gerçek testnet'e karşı çalıştırıldı, bir gerçek bug (`ConnectionClosedError`) bulundu ve düzeltildi. Ayrıntı git geçmişinde.
 
 ## Kodda mevcut
-- P2 salt-okunur Binance testnet: public/account/user-stream adaptörleri + reconnect worker (**canlı doğrulandı**, gerçek testnet'e karşı çalıştı).
+- P2 salt-okunur Binance testnet: public/account/user-stream adaptörleri + reconnect worker (REAL_TESTNET) + REST catch-up (offline + kısmi REAL_TESTNET).
 - Diğerleri önceki oturumlardan değişmedi (bkz. git geçmişi).
 
 ## Bilinen sınırlar
-- Signed REST/WS emir, mutation ve mainnet: NO-GO. REST catch-up (3.2) henüz yok — SYNCED'e ulaşılamıyor.
+- Signed mutating request (gerçek emir), mutation ve mainnet: NO-GO.
+- 3.2'nin tam REAL_TESTNET kanıtı 3.5'i (tek testnet emri) bekliyor — henüz gerçek bir kesintiye uğramış emir senaryosu yok.
+- Order list (OCO) reconciliation ve toplu `openOrders` sorgusu bu dilimin kapsamı dışında (kasıtlı, bkz. onaylanan kapsam).
 - Simülasyon: OHLC intrabar sırası INDETERMINATE; gerçek likidite modeli yok. Tam stress ekonomik modeli NO-GO.
 - API tek worker'a bağlı. Python 3.13 zorunlu; uv sync --frozen.
 
 ## Kararlar (bkz. `docs/KARARLAR.md`)
-P1 kapanış ölçütü tamamlandı ve etiketlendi; Faz 3.1 kapsamı netleştirildi ve REAL_TESTNET kanıtıyla kapandı (gerçek testnet'in yakaladığı bir bug — `ConnectionClosedError` — düzeltildi).
+Faz 3.1 REAL_TESTNET kanıtıyla kapandı; Faz 3.2 dar kapsamı Arda onayladı, implementasyon sırasında 3 zorunlu ek keşfedildi ve uygulandı (client_order_id lookup, gerçek snapshot cursor, -2013 ayrımı).
 
 ## Sıradaki adım
-**Faz 3.2 — REST catch-up:** gap sonrası açık emir/işlem sorgusuyla snapshot; `ReconciliationCoordinator.apply_authoritative_snapshot`'a bağlanan authoritative REST lookup. Kritik/persistence sınırına giren bir dilim — Claude yapar, Codex'e verilmez. Henüz TASK.md brief'i yazılmadı.
+İki seçenek: (1) `tools/run_order_status_lookup_diagnostic.py`'yi Arda çalıştırıp 3.2'nin sorgu mekaniğini gerçek venue'ya karşı doğrulasın (hızlı, opsiyonel — kod zaten offline kanıtlı). (2) Doğrudan **Faz 3.3 — salt-okunur hesap ekranı**'na geç. Roadmap sırası zaten 3.3, ama 3.2'nin tam kanıtı olmadan devam etmek proje kuralınca sorun değil (yalnız 3.1 gibi "evidence_scope=REAL_TESTNET üretmiyorsa iş sayılmaz" kuralı 3.2'nin *kendi kapanışı* için geçerli, 3.3'ü engellemiyor).

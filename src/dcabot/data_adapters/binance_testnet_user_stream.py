@@ -32,6 +32,8 @@ BINANCE_SPOT_TESTNET_WS_API_URL = "wss://ws-api.testnet.binance.vision/ws-api/v3
 MAX_USER_STREAM_FRAME_BYTES = 256 * 1024
 DEFAULT_USER_STREAM_TIMEOUT_SECONDS = 5
 _IDENTIFIER = re.compile(r"[A-Za-z0-9_.:-]{1,128}\Z", re.ASCII)
+_CLIENT_ORDER_ID = re.compile(r"[A-Za-z0-9_-]{1,36}\Z", re.ASCII)
+_BINANCE_ORDER_NOT_FOUND_CODE = -2013
 
 
 class BinanceTestnetUserStreamError(RuntimeError):
@@ -268,8 +270,75 @@ async def query_binance_testnet_order_status(
     request_id_factory: Callable[[], str] = lambda: str(uuid4()),
     timeout_seconds: int = DEFAULT_USER_STREAM_TIMEOUT_SECONDS,
 ) -> OrderLookup:
-    """Query one order through a separate signed, read-only WebSocket call."""
+    """Query one order by venue order ID through a signed, read-only WebSocket call."""
 
+    if type(venue_order_id) is not int or venue_order_id < 0:
+        raise BinanceTestnetUserStreamError(
+            "ORDER_STATUS_ORDER_ID_INVALID", "Order status order ID değeri geçersiz."
+        )
+    return await _query_order_status(
+        credential_id,
+        symbol,
+        ("orderId", venue_order_id),
+        expected_field="orderId",
+        expected_value=venue_order_id,
+        provider=provider,
+        clock=clock,
+        websocket_factory=websocket_factory,
+        request_id_factory=request_id_factory,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+async def query_binance_testnet_order_status_by_client_id(
+    credential_id: str,
+    symbol: str,
+    client_order_id: str,
+    *,
+    provider: CredentialProvider,
+    clock: Clock,
+    websocket_factory: WebSocketFactory = connect,
+    request_id_factory: Callable[[], str] = lambda: str(uuid4()),
+    timeout_seconds: int = DEFAULT_USER_STREAM_TIMEOUT_SECONDS,
+) -> OrderLookup:
+    """Query one order by client order ID — the only identity available when a
+    send never received an acknowledgement (the attempt has no venue order ID yet).
+    """
+
+    if (
+        not isinstance(client_order_id, str)
+        or _CLIENT_ORDER_ID.fullmatch(client_order_id) is None
+    ):
+        raise BinanceTestnetUserStreamError(
+            "ORDER_STATUS_CLIENT_ORDER_ID_INVALID", "Order status client order ID değeri geçersiz."
+        )
+    return await _query_order_status(
+        credential_id,
+        symbol,
+        ("origClientOrderId", client_order_id),
+        expected_field="clientOrderId",
+        expected_value=client_order_id,
+        provider=provider,
+        clock=clock,
+        websocket_factory=websocket_factory,
+        request_id_factory=request_id_factory,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+async def _query_order_status(
+    credential_id: str,
+    symbol: str,
+    id_param: tuple[str, str | int],
+    *,
+    expected_field: str,
+    expected_value: str | int,
+    provider: CredentialProvider,
+    clock: Clock,
+    websocket_factory: WebSocketFactory,
+    request_id_factory: Callable[[], str],
+    timeout_seconds: int,
+) -> OrderLookup:
     if type(timeout_seconds) is not int or not 1 <= timeout_seconds <= 30:
         raise BinanceTestnetUserStreamError(
             "ORDER_STATUS_TIMEOUT_INVALID", "Order status timeout değeri geçersiz."
@@ -282,10 +351,6 @@ async def query_binance_testnet_order_status(
     ):
         raise BinanceTestnetUserStreamError(
             "ORDER_STATUS_SYMBOL_INVALID", "Order status symbol değeri geçersiz."
-        )
-    if type(venue_order_id) is not int or venue_order_id < 0:
-        raise BinanceTestnetUserStreamError(
-            "ORDER_STATUS_ORDER_ID_INVALID", "Order status order ID değeri geçersiz."
         )
     socket: UserDataSocket | None = None
     try:
@@ -301,7 +366,7 @@ async def query_binance_testnet_order_status(
             )
         params = build_signed_ws_api_params(
             material.api_key,
-            (("orderId", venue_order_id), ("symbol", symbol)),
+            (id_param, ("symbol", symbol)),
             clock=clock,
             recv_window_ms=DEFAULT_RECV_WINDOW_MS,
             signer=HmacSha256Signer(material.secret),
@@ -327,6 +392,12 @@ async def query_binance_testnet_order_status(
                 "ORDER_STATUS_RESPONSE_ID_MISMATCH", "Order status yanıt ID eşleşmesi başarısız."
             )
         if payload.get("status") != 200:
+            error = payload.get("error")
+            if (
+                isinstance(error, dict)
+                and error.get("code") == _BINANCE_ORDER_NOT_FOUND_CODE
+            ):
+                return OrderLookup.not_found()
             raise BinanceTestnetUserStreamError(
                 "ORDER_STATUS_QUERY_REJECTED", "Order status sorgusu venue tarafından reddedildi."
             )
@@ -334,10 +405,15 @@ async def query_binance_testnet_order_status(
         if (
             not isinstance(result, dict)
             or result.get("symbol") != symbol
-            or result.get("orderId") != venue_order_id
+            or result.get(expected_field) != expected_value
         ):
             raise BinanceTestnetUserStreamError(
                 "ORDER_STATUS_RESPONSE_INVALID", "Order status kimliği doğrulanamadı."
+            )
+        venue_order_id = result.get("orderId")
+        if type(venue_order_id) is not int or venue_order_id < 0:
+            raise BinanceTestnetUserStreamError(
+                "ORDER_STATUS_RESPONSE_INVALID", "Order status venue order ID'si geçersiz."
             )
         return OrderLookup.found(venue_order_id)
     except BinanceTestnetUserStreamError:

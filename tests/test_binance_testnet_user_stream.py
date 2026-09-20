@@ -13,6 +13,7 @@ from dcabot.data_adapters.binance_testnet_user_stream import (
     BinanceTestnetUserStreamError,
     UserDataOrderListEvent,
     query_binance_testnet_order_status,
+    query_binance_testnet_order_status_by_client_id,
 )
 
 
@@ -348,6 +349,118 @@ class BinanceTestnetUserDataStreamTests(unittest.IsolatedAsyncioTestCase):
                 request_id_factory=lambda: "request-1",
             )
         self.assertTrue(socket.closed)
+
+    async def test_order_status_not_found_is_a_lookup_result_not_an_exception(self):
+        # Binance's real "order does not exist" error code is -2013. An UNKNOWN
+        # attempt whose order genuinely never got created must resolve to
+        # NOT_FOUND (so reconciliation can proceed), not fail closed forever.
+        socket = FakeSocket(
+            json.dumps(
+                {
+                    "id": "request-1",
+                    "status": 400,
+                    "error": {"code": -2013, "msg": "Order does not exist."},
+                }
+            )
+        )
+
+        result = await query_binance_testnet_order_status(
+            "testnet-readonly",
+            "BTCUSDT",
+            777,
+            provider=provider(),
+            clock=FixedClock(),
+            websocket_factory=lambda _url, **_kwargs: socket,
+            request_id_factory=lambda: "request-1",
+        )
+
+        self.assertEqual(result, OrderLookup.not_found())
+        self.assertTrue(socket.closed)
+
+    async def test_order_status_other_rejection_still_fails_closed(self):
+        socket = FakeSocket(
+            json.dumps(
+                {"id": "request-1", "status": 401, "error": {"code": -2015, "msg": "Invalid key."}}
+            )
+        )
+
+        with self.assertRaisesRegex(BinanceTestnetUserStreamError, "ORDER_STATUS_QUERY_REJECTED"):
+            await query_binance_testnet_order_status(
+                "testnet-readonly",
+                "BTCUSDT",
+                777,
+                provider=provider(),
+                clock=FixedClock(),
+                websocket_factory=lambda _url, **_kwargs: socket,
+                request_id_factory=lambda: "request-1",
+            )
+        self.assertTrue(socket.closed)
+
+    async def test_order_status_by_client_id_resolves_the_venue_order_id(self):
+        # This is the case that matters most: a send that never received an
+        # acknowledgement has a client_order_id but no venue_order_id yet.
+        socket = FakeSocket(
+            json.dumps(
+                {
+                    "id": "request-1",
+                    "status": 200,
+                    "result": {"symbol": "BTCUSDT", "orderId": 999, "clientOrderId": "attempt-42"},
+                }
+            )
+        )
+
+        result = await query_binance_testnet_order_status_by_client_id(
+            "testnet-readonly",
+            "BTCUSDT",
+            "attempt-42",
+            provider=provider(),
+            clock=FixedClock(),
+            websocket_factory=lambda _url, **_kwargs: socket,
+            request_id_factory=lambda: "request-1",
+        )
+
+        self.assertEqual(result, OrderLookup.found(999))
+        request = json.loads(socket.sent[0])
+        self.assertEqual(request["params"]["origClientOrderId"], "attempt-42")
+        self.assertNotIn("orderId", request["params"])
+        self.assertTrue(socket.closed)
+
+    async def test_order_status_by_client_id_not_found(self):
+        socket = FakeSocket(
+            json.dumps(
+                {
+                    "id": "request-1",
+                    "status": 400,
+                    "error": {"code": -2013, "msg": "Order does not exist."},
+                }
+            )
+        )
+
+        result = await query_binance_testnet_order_status_by_client_id(
+            "testnet-readonly",
+            "BTCUSDT",
+            "attempt-42",
+            provider=provider(),
+            clock=FixedClock(),
+            websocket_factory=lambda _url, **_kwargs: socket,
+            request_id_factory=lambda: "request-1",
+        )
+
+        self.assertEqual(result, OrderLookup.not_found())
+
+    async def test_order_status_by_client_id_rejects_malformed_identifier(self):
+        with self.assertRaisesRegex(
+            BinanceTestnetUserStreamError, "ORDER_STATUS_CLIENT_ORDER_ID_INVALID"
+        ):
+            await query_binance_testnet_order_status_by_client_id(
+                "testnet-readonly",
+                "BTCUSDT",
+                "has a space",
+                provider=provider(),
+                clock=FixedClock(),
+                websocket_factory=lambda _url, **_kwargs: None,
+                request_id_factory=lambda: "request-1",
+            )
 
 
 if __name__ == "__main__":

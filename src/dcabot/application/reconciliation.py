@@ -172,12 +172,22 @@ class ReconciliationCoordinator:
         self._seen_events: dict[str, str] = {}
         self._last_event_time_ms: int | None = None
         self._last_event_id: str | None = None
+        self._last_event: UserDataEvent | None = None
         self._seen_order_list_events: dict[str, str] = {}
         self._last_order_list_cursor: tuple[int, int] | None = None
         self._order_list_terminal = False
         self._order_list_resync_required = False
         self._reset_pending = False
         self._snapshot_required = False
+
+    @property
+    def last_accepted_event(self) -> "UserDataEvent | None":
+        """The full last ACCEPTED event, for building a real snapshot cursor.
+
+        Read-only; callers must not mutate the coordinator through this.
+        """
+
+        return self._last_event
 
     def begin_connect(self) -> ConnectionState:
         self.state = ConnectionState.CONNECTING
@@ -272,6 +282,7 @@ class ReconciliationCoordinator:
         seen_events: dict[str, str] = {}
         last_event_time_ms: int | None = None
         last_event_id: str | None = None
+        last_event: UserDataEvent | None = None
         restored_state = ConnectionState.RECONCILIATION_REQUIRED
         state_priority = {
             ConnectionState.RECONCILIATION_REQUIRED: 0,
@@ -320,6 +331,7 @@ class ReconciliationCoordinator:
                 seen_events[event.event_id] = event.payload_fingerprint
                 last_event_time_ms = event.event_time_ms
                 last_event_id = event.event_id
+                last_event = event
             elif decision is EventDecision.DUPLICATE:
                 if seen_events.get(event.event_id) != event.payload_fingerprint:
                     raise ReconciliationError(
@@ -332,6 +344,7 @@ class ReconciliationCoordinator:
         self._seen_events = seen_events
         self._last_event_time_ms = last_event_time_ms
         self._last_event_id = last_event_id
+        self._last_event = last_event
         self.state = restored_state
         self._snapshot_required = True
         return self.state
@@ -419,6 +432,7 @@ class ReconciliationCoordinator:
         self._seen_events[event.event_id] = event.payload_fingerprint
         self._last_event_time_ms = event.event_time_ms
         self._last_event_id = event.event_id
+        self._last_event = event
         return EventDecision.ACCEPTED
 
     def accept_order_list_event(self, event: UserDataOrderListEvent) -> EventDecision:
@@ -690,6 +704,7 @@ class ReconciliationCoordinator:
         self._seen_events.clear()
         self._last_event_time_ms = None
         self._last_event_id = None
+        self._last_event = None
         self._seen_order_list_events.clear()
         self._last_order_list_cursor = None
         self._order_list_terminal = False

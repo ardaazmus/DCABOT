@@ -1,22 +1,21 @@
-# Aktif iş — Faz 3.2: REST catch-up (KAPSAM, Claude sahibi)
+# Aktif iş — Faz 3.2 kodu tamam; sıradaki adım Arda'nın tercihi
 
-Faz 3.1 kapandı (`evidence_scope=REAL_TESTNET`, bkz. STATE.md/docs/KARARLAR.md). Sırada **3.2 — REST catch-up**: gap sonrası açık emir/işlem sorgusuyla snapshot, `ReconciliationCoordinator.apply_authoritative_snapshot`'a bağlanan authoritative REST lookup.
+`src/dcabot/application/rest_catch_up.py` yazıldı, offline test edildi (10 yeni test, tam checker 899/899 PASS). Ayrıntı: STATE.md, docs/KARARLAR.md.
 
-## Neden Claude sahibi
-`application/reconciliation.py` (kritik dosya listesinde) ve signed REST çağrısı içeren bir persistence/adapter dilimi. Codex'e devredilmez.
+## Arda'nın yapabileceği (opsiyonel, kod zaten offline kanıtlı)
+Sorgu mekaniğini gerçek testnet'e karşı doğrulamak istersen:
+```powershell
+$env:PYTHONPATH='src'; uv run --frozen python tools/run_order_status_lookup_diagnostic.py testnet-readonly BTCUSDT --client-order-id hicvarolmayan-bir-id
+```
+`kind=NOT_FOUND` beklenir — bu, `-2013` ayrımının ve `clientOrderId` alan adı varsayımının gerçek venue ile uyumlu olduğunu kanıtlar. Gerçek bir emrin `venue_order_id`'sini biliyorsan (elle testnet.binance.vision'da bir emir verdiysen) `--order-id <id>` ile `kind=FOUND` da doğrulanabilir.
 
-## İlk adımlar (kod yazmadan önce netleştirilecek)
-1. `application/reconciliation.py`'deki `apply_authoritative_snapshot`/`AuthoritativeReconciliationSnapshot`'ı tekrar oku — snapshot'ın hangi alanları (`event_cursor`, `observed_at_ms`) taşıması gerektiğini kesinleştir.
-2. Mevcut `query_binance_testnet_order_status` (`binance_testnet_user_stream.py`) zaten tek-emir REST-benzeri sorgu yapıyor (WS API üzerinden) — REST catch-up'ın bunu mu genişleteceğini yoksa ayrı bir "açık emirler" toplu sorgusu mu gerektirdiğini araştır (Binance'in `openOrders`/`myTrades` benzeri salt-okunur uç noktaları).
-3. Dar bir kapsam öner: yalnız GAP/RECONCILIATION_REQUIRED durumunda tetiklenen, salt-okunur, mevcut credential/signing altyapısını (`signed_request.py`) yeniden kullanan bir snapshot sorgusu. Yeni mutation/emir YOK.
+## Sıradaki adım (ikisinden biri, Arda seçer)
+1. Yukarıdaki teşhisi çalıştırıp 3.2'yi tam REAL_TESTNET kanıtına yaklaştırmak (tam kanıt yine de 3.5'i — gerçek emir gönderme — bekler).
+2. Doğrudan **Faz 3.3 — salt-okunur hesap ekranı**'na geçmek (bakiye + açık emirler, "TESTNET" rozetiyle). Roadmap sırası zaten bu.
 
 ## Değişmez sınırlar
-- Credential, secret, signed mutating request, gerçek emir ve mainnet: yok.
-- `engine.py` çekirdek State/apply/decision değişmez.
+- Credential, secret, signed mutating request, gerçek emir, mutation ve mainnet: Arda onayı olmadan asla.
 - STATE.md/TASK.md yalnız Claude günceller.
-- Claude gerçek testnet'e karşı hiçbir şey çalıştırmaz — REAL_TESTNET kanıtı yine Arda'nın yerelde çalıştırmasıyla gelir.
 
 ## Kabul
-- Kod yazılmadan önce dar kapsam Arda'ya sunulur ve onaylanır (Faz 2.5'teki gibi).
-- Onaylanırsa: test-first, offline sahte-socket/sahte-REST testleri + tam checker.
-- REAL_TESTNET kanıtı Arda'dan gelmeden 3.2 "tamam" sayılmaz.
+- Arda 1 veya 2'yi seçtiğinde Claude devam eder; 3.3 için henüz brief yazılmadı.
