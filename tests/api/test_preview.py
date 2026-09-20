@@ -100,3 +100,15 @@ class PreviewApiContractTests(unittest.TestCase):
             finally:
                 api.CONFIG_PATH = original_path
                 api._PAPER_CONFIG_CACHE = original_cache
+
+    def test_cors_origins_are_env_configurable_without_wildcard(self):
+        import os
+        from unittest.mock import patch
+
+        from dcabot.server import api
+
+        self.assertEqual(api._cors_origins(), list(api.DEFAULT_CORS_ORIGINS))
+        with patch.dict(os.environ, {"DCABOT_CORS_ORIGINS": "https://one.example, https://two.example"}):
+            self.assertEqual(api._cors_origins(), ["https://one.example", "https://two.example"])
+        with patch.dict(os.environ, {"DCABOT_CORS_ORIGINS": "https://one.example,*"}):
+            self.assertEqual(api._cors_origins(), list(api.DEFAULT_CORS_ORIGINS))

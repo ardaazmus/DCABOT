@@ -1,6 +1,7 @@
 """Small local-only HTTP API that delegates preview calculations to the core."""
 
 import json
+import os
 from copy import deepcopy
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -85,6 +86,19 @@ from dcabot.persistence.historical_runs import (
 ROOT = Path(__file__).resolve().parents[3]
 CONFIG_PATH = ROOT / "config" / "paper.json"
 _PAPER_CONFIG_CACHE: tuple[int, dict[str, Any]] | None = None
+DEFAULT_CORS_ORIGINS = (
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+)
+
+def _cors_origins() -> list[str]:
+    raw_origins = os.getenv("DCABOT_CORS_ORIGINS")
+    if raw_origins is None:
+        return list(DEFAULT_CORS_ORIGINS)
+    origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+    if not origins or "*" in origins:
+        return list(DEFAULT_CORS_ORIGINS)
+    return origins
 PREVIEW_FIELDS = {"anchor", "safety_qty", "safety_count", "deviation", "revision"}
 SMALL_JSON_BODY_LIMIT_BYTES = 4 * 1024
 SMALL_JSON_BODY_LIMITS = {
@@ -1004,7 +1018,7 @@ def list_profiles(response: Response):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=_cors_origins(),
     allow_methods=["GET", "POST", "PUT"],
     allow_headers=["Content-Type", "X-Filename"],
 )
