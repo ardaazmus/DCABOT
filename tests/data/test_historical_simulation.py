@@ -210,6 +210,7 @@ class HistoricalSimulationTests(unittest.TestCase):
 
         self.assertEqual(result.execution_status, "COMPLETED")
         self.assertEqual([action.role for action in result.actions], ["BASE", "SAFETY:1", "EXIT"])
+        self.assertEqual([action.deal_sequence for action in result.actions], [1, 1, 1])
         self.assertEqual(result.position_status, "CLOSED")
         self.assertEqual(result.funding_status, "NOT_MODELED")
         self.assertEqual(result.mark_status, "NOT_AVAILABLE")
@@ -242,6 +243,38 @@ class HistoricalSimulationTests(unittest.TestCase):
 
         self.assertEqual([action.role for action in result.actions], ["BASE", "SAFETY:1"])
         self.assertEqual(result.position_status, "OPEN_AT_END")
+
+    def test_bot_restarts_a_new_deal_after_the_prior_deal_closes_flat(self):
+        from dcabot.application.historical_simulation import simulate_historical_ohlcv
+
+        dataset = _dataset(
+            ("100", "100", "100", "100", "", ""),
+            ("95", "100", "89", "90", "", ""),
+            ("97", "98", "97", "97", "", ""),
+            ("110", "110", "110", "110", "", ""),
+            ("113", "113", "113", "113", "", ""),
+        )
+
+        result = simulate_historical_ohlcv(dataset, _config(), config_hash="b" * 64)
+
+        self.assertEqual(result.execution_status, "COMPLETED")
+        self.assertEqual(
+            [action.role for action in result.actions],
+            ["BASE", "SAFETY:1", "EXIT", "BASE", "EXIT"],
+        )
+        self.assertEqual([action.bar_index for action in result.actions], [1, 2, 3, 4, 5])
+        self.assertEqual(
+            [action.deal_sequence for action in result.actions],
+            [1, 1, 1, 2, 2],
+        )
+        self.assertEqual(result.position_status, "CLOSED")
+        self.assertEqual(result.processed_bar_count, 5)
+        self.assertEqual(result.fee_amount, "0.607")
+        self.assertEqual(result.summary["realized_gross"], "7")
+        self.assertEqual(result.summary["action_count"], 5)
+        self.assertEqual(result.summary["average_entry_price"], "100")
+        self.assertEqual(result.summary["time_in_position_us"], 10_800_000_000)
+        self.assertIn("max_drawdown", result.summary)
 
     def test_same_inputs_produce_the_same_result(self):
         from dcabot.application.historical_simulation import simulate_historical_ohlcv

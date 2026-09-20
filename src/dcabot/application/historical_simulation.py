@@ -44,6 +44,7 @@ class HistoricalSimulationAction:
     fill_price: str
     quantity: str
     fee: str
+    deal_sequence: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -242,12 +243,25 @@ def simulate_historical_ohlcv(
     started_at = monotonic()
     state = State()
     actions: list[HistoricalSimulationAction] = []
+    deal_sequence = 1
     first_bar = dataset.bars[first_bar_index]
-    state = _apply_action(state, config, first_bar, first_bar_index + 1, "BASE", config.base_qty, first_bar.open, actions)
+    state = _apply_action(state, config, first_bar, first_bar_index + 1, "BASE", config.base_qty, first_bar.open, actions, deal_sequence)
     state = apply(state, {"type": "MARK", "price": first_bar.close}, config)
 
     for index, bar in enumerate(dataset.bars[first_bar_index + 1 :], start=first_bar_index + 2):
         _check_budget(started_at, timeout_seconds)
+        if (
+            not state.position.qty
+            and state.orders
+            and not state.unsettled
+            and not state.halted
+            and not state.blockers
+        ):
+            state = _start_new_deal(state)
+            deal_sequence += 1
+            state = _apply_action(state, config, bar, index, "BASE", config.base_qty, bar.open, actions, deal_sequence)
+            state = apply(state, {"type": "MARK", "price": bar.close}, config)
+            continue
         safety = _next_safety(state, config)
         take_profit = target(state, config) if state.position.qty else None
         safety_reachable = safety is not None and _buy_reachable(bar, safety.price)
@@ -267,10 +281,10 @@ def simulate_historical_ohlcv(
             )
         if safety_reachable and safety is not None:
             raw_reference = bar.open if number(bar.open) <= safety.price else exact_text(safety.price)
-            state = _apply_action(state, config, bar, index, f"SAFETY:{_next_safety_index(state) + 1}", safety.qty, raw_reference, actions)
+            state = _apply_action(state, config, bar, index, f"SAFETY:{_next_safety_index(state) + 1}", safety.qty, raw_reference, actions, deal_sequence)
         elif take_profit_reachable and take_profit is not None:
             raw_reference = bar.open if number(bar.open) >= take_profit else exact_text(take_profit)
-            state = _apply_action(state, config, bar, index, "EXIT", state.position.qty, raw_reference, actions)
+            state = _apply_action(state, config, bar, index, "EXIT", state.position.qty, raw_reference, actions, deal_sequence)
         state = apply(state, {"type": "MARK", "price": bar.close}, config)
 
     _check_budget(started_at, timeout_seconds)
@@ -297,6 +311,7 @@ def _apply_action(
     quantity: Q,
     raw_reference: str,
     actions: list[HistoricalSimulationAction],
+    deal_sequence: int,
 ) -> State:
     buy = role not in ("EXIT", "STOP")
     try:
@@ -360,9 +375,64 @@ def _apply_action(
             fill_price=fill_text,
             quantity=exact_text(quantity),
             fee=exact_text(fee),
+            deal_sequence=deal_sequence,
         )
     )
     return state
+
+
+def _start_new_deal(state: State) -> State:
+    """Open a fresh deal-scoped State after a prior deal closed flat.
+
+    Carries forward cumulative economics (realized, fees, funding, peak,
+    max_dd, halted) and the already-flat position; resets deal-scoped
+    tracking (orders, anchor, safety_stopped, blockers) so the core
+    "one base order per deal" invariant in engine.apply() is satisfied by
+    construction, without touching engine.py or core State semantics.
+    """
+
+    return State(
+        position=state.position,
+        realized=state.realized,
+        fees=state.fees,
+        funding=state.funding,
+        entry_notional=Q(0),
+        mark=state.mark,
+        anchor=None,
+        peak=state.peak,
+        max_dd=state.max_dd,
+        halted=state.halted,
+        safety_stopped=False,
+        orders={},
+        blockers=[],
+        last_rejection=state.last_rejection,
+    )
+
+
+def _average_entry_price(actions: list[HistoricalSimulationAction]) -> str | None:
+    """Quantity-weighted average fill price across every BUY-side action in the run."""
+
+    total_qty = Q(0)
+    total_cost = Q(0)
+    for action in actions:
+        if action.role == "BASE" or action.role.startswith("SAFETY:"):
+            qty = number(action.quantity)
+            total_qty += qty
+            total_cost += qty * number(action.fill_price)
+    return exact_text(total_cost / total_qty) if total_qty else None
+
+
+def _time_in_position_us(actions: list[HistoricalSimulationAction]) -> int:
+    """Sum of entry-bar-open to exit-bar-open duration for every deal that has closed."""
+
+    deal_start_us: dict[int, int] = {}
+    total = 0
+    for action in actions:
+        if action.role == "BASE":
+            deal_start_us[action.deal_sequence] = action.open_time_us
+        elif action.role == "EXIT" and action.deal_sequence in deal_start_us:
+            total += action.open_time_us - deal_start_us[action.deal_sequence]
+    return total
 
 
 def _next_safety(state: State, config: Config):
@@ -458,6 +528,9 @@ def _result(
             "position_status": position_status,
             "funding_status": "NOT_MODELED",
             "mark_status": "NOT_AVAILABLE",
+            "action_count": len(actions),
+            "average_entry_price": _average_entry_price(actions),
+            "time_in_position_us": _time_in_position_us(actions),
         }
     )
     return HistoricalSimulationResult(

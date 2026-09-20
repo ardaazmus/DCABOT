@@ -480,6 +480,36 @@ class HistoricalSimulationSummaryResponse(BaseModel):
     anchor: str | None
     take_profit_price: str | None
     entry_notional: str
+    peak_equity: str
+    max_drawdown: str
+    current_drawdown: str | None
+    action_count: int
+    average_entry_price: str | None
+    time_in_position_us: int
+    deal_count: int
+    completed_deal_count: int
+    position_status: Literal["CLOSED", "OPEN_AT_END"]
+    funding_status: Literal["NOT_MODELED"]
+    mark_status: Literal["NOT_AVAILABLE"]
+
+
+class HistoricalFixedSliceSummaryResponse(BaseModel):
+    """Fixed-slice final summary: no deal/action-count metrics, that model has no deal concept."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    symbol: str
+    qty: str
+    cost: str
+    realized_gross: str
+    fees: str
+    funding: str
+    realized_net_after_all_costs: str
+    unrealized: str | None
+    equity: str
+    anchor: str | None
+    take_profit_price: str | None
+    entry_notional: str
     position_status: Literal["CLOSED", "OPEN_AT_END"]
     funding_status: Literal["NOT_MODELED"]
     mark_status: Literal["NOT_AVAILABLE"]
@@ -608,7 +638,7 @@ class HistoricalFixedSliceSimulationResponse(BaseModel):
     marker_authority: Literal["FULL", "PREFIX_BOUNDARY_ONLY", "NONE"]
     marker_kind: Literal["TRADE_EXECUTION", "INCOMPLETE_BOUNDARY", "NONE"]
     actions: list[HistoricalFixedSliceActionResponse]
-    final_economic_summary: HistoricalSimulationSummaryResponse | None
+    final_economic_summary: HistoricalFixedSliceSummaryResponse | None
     ambiguity: HistoricalFixedSliceAmbiguityResponse | None
     explanations: list[ReadOnlyExplanationResponse]
 
@@ -767,6 +797,18 @@ class HistoricalRunListResponse(BaseModel):
 
     runs: list[HistoricalRunListItemResponse]
     count: int = Field(ge=0, le=MAX_RUN_LIST_LIMIT)
+
+
+class HistoricalRunReproduceResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    run_id: str = Field(pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+    reproduced: bool
+    result_sha256_match: bool
+    canonical_input_sha256_match: bool
+    execution_identity_sha256_match: bool
+    stored_result_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    new_result_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
 class HistoricalRunDetailResponse(BaseModel):
@@ -1434,6 +1476,8 @@ def _historical_simulation_response(
             bar_index=result.first_ambiguous_bar_index,
             code="AMBIGUOUS_OHLC_PATH",
         )
+    deal_count = max((action.deal_sequence for action in result.actions), default=0)
+    completed_deal_count = max(deal_count - (1 if result.position_status == "OPEN_AT_END" else 0), 0)
     return HistoricalSimulationResponse(
         execution_id=execution_id,
         execution_status=result.execution_status,
@@ -1487,6 +1531,14 @@ def _historical_simulation_response(
             anchor=summary["anchor"],
             take_profit_price=summary["take_profit_price"],
             entry_notional=summary["entry_notional"],
+            peak_equity=summary["peak_equity"],
+            max_drawdown=summary["max_drawdown"],
+            current_drawdown=summary.get("current_drawdown"),
+            action_count=summary["action_count"],
+            average_entry_price=summary.get("average_entry_price"),
+            time_in_position_us=summary["time_in_position_us"],
+            deal_count=deal_count,
+            completed_deal_count=completed_deal_count,
             position_status=result.position_status,
             funding_status=result.funding_status,
             mark_status=result.mark_status,
@@ -1588,7 +1640,7 @@ def _historical_fixed_slice_response(
             )
             for action in public_actions
         ],
-        final_economic_summary=HistoricalSimulationSummaryResponse(
+        final_economic_summary=HistoricalFixedSliceSummaryResponse(
             symbol=summary["symbol"],
             qty=summary["qty"],
             cost=summary["cost"],
@@ -2165,6 +2217,106 @@ def get_historical_run(run_id: str, response: Response):
             "Historical run detail izin verilen response byte sınırını aşıyor.",
         )
     return result
+
+
+@app.post("/api/historical-runs/{run_id}/reproduce", response_model=HistoricalRunReproduceResponse)
+def reproduce_historical_run(run_id: str, response: Response):
+    """Re-run a stored historical simulation from its exact recorded config/dataset and compare hashes."""
+
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        parsed_run_id = UUID(run_id)
+    except (AttributeError, ValueError):
+        return _problem(
+            422,
+            "RUN_ID_INVALID",
+            "Historical run kimliği geçersiz",
+            "Run kimliği desteklenen UUID biçiminde değil.",
+        )
+    if str(parsed_run_id) != run_id:
+        return _problem(
+            422,
+            "RUN_ID_INVALID",
+            "Historical run kimliği geçersiz",
+            "Run kimliği canonical UUID biçiminde değil.",
+        )
+    if not HISTORICAL_RUNS_PATH.exists():
+        return _problem(
+            404,
+            "RUN_NOT_FOUND",
+            "Historical run bulunamadı",
+            "İstenen historical run local store içinde yok.",
+        )
+    try:
+        with HistoricalRunStore(HISTORICAL_RUNS_PATH) as store:
+            stored = store.get(run_id)
+    except HistoricalRunStoreError as exc:
+        return _historical_run_store_read_problem(exc)
+    if stored.execution.get("model_id") != "historical_ohlcv_v1":
+        return _problem(
+            422,
+            "REPRODUCE_MODEL_UNSUPPORTED",
+            "Reproduce desteklenmiyor",
+            "Bu run kayıtlı model için reproduce henüz desteklenmiyor.",
+        )
+    if not HISTORICAL_EXECUTION_LOCK.acquire(blocking=False):
+        return _problem(
+            409,
+            "EXECUTION_BUSY",
+            "Simülasyon meşgul",
+            "Başka bir tarihsel simülasyon çalışıyor.",
+        )
+    try:
+        preflight = _dataset_preflight(stored.dataset["dataset_id"])
+        if isinstance(preflight, JSONResponse):
+            return preflight
+        loaded, _preflight = preflight
+        if loaded.metadata.artifact_sha256 != stored.dataset["artifact_sha256"]:
+            return _problem(
+                409,
+                "REPRODUCE_ARTIFACT_CHANGED",
+                "Dataset değişti",
+                "Kayıtlı run'ın dataset artifact'ı yerel cache'teki güncel artifact ile eşleşmiyor; reproduce güvenli değil.",
+            )
+        raw_config = stored.config["snapshot"]
+        config_hash = stored.config["config_hash"]
+        try:
+            config = Config.parse(raw_config)
+            result = simulate_historical_ohlcv(loaded, config, config_hash=config_hash)
+        except HistoricalSimulationError as exc:
+            status = 503 if exc.code == "EXECUTION_BUDGET_EXCEEDED" else 422
+            return _problem(status, exc.code, "Reproduce simülasyonu çalıştırılamadı", str(exc))
+        try:
+            new_capture = build_historical_run_capture(
+                loaded,
+                raw_config,
+                result,
+                config_hash=config_hash,
+                profile_id=stored.execution.get("profile_id", "paper"),
+            )
+        except HistoricalRunContractError:
+            return _problem(
+                422,
+                "RUN_CAPTURE_INVALID",
+                "Reproduce sonucu doğrulanamadı",
+                "Yeniden üretilen sonuç güvenli tarihsel koşu snapshot sözleşmesine uymuyor.",
+            )
+        result_sha256_match = new_capture.result_sha256 == stored.result_sha256
+        canonical_input_sha256_match = new_capture.canonical_input_sha256 == stored.dataset["canonical_input_sha256"]
+        execution_identity_sha256_match = (
+            new_capture.execution.identity_sha256 == stored.execution["execution_identity_sha256"]
+        )
+        return HistoricalRunReproduceResponse(
+            run_id=run_id,
+            reproduced=result_sha256_match and canonical_input_sha256_match and execution_identity_sha256_match,
+            result_sha256_match=result_sha256_match,
+            canonical_input_sha256_match=canonical_input_sha256_match,
+            execution_identity_sha256_match=execution_identity_sha256_match,
+            stored_result_sha256=stored.result_sha256,
+            new_result_sha256=new_capture.result_sha256,
+        )
+    finally:
+        HISTORICAL_EXECUTION_LOCK.release()
 
 
 @app.post(

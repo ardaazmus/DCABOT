@@ -96,3 +96,97 @@ class HistoricalRunContractTests(unittest.TestCase):
             build_historical_run_capture(dataset, raw_config, tampered, config_hash=config_hash)
 
         self.assertEqual(context.exception.code, "ACTION_REFERENCE_UNSAFE")
+
+    def test_capture_exposes_deal_and_event_sequence_for_a_multi_deal_run(self):
+        from dcabot.application.historical import build_historical_run_plan
+        from dcabot.application.historical_run_contract import build_historical_run_capture
+        from dcabot.application.historical_simulation import simulate_historical_ohlcv
+
+        raw_config = _raw_config()
+        metadata = _dataset().metadata
+        prices = (
+            ("100", "100", "100", "100"),
+            ("95", "100", "89", "90"),
+            ("97", "98", "97", "97"),
+            ("110", "110", "110", "110"),
+            ("113", "113", "113", "113"),
+        )
+        dataset = HistoricalDatasetInput(
+            metadata=metadata,
+            bars=tuple(
+                CanonicalBar(
+                    index * 3_600_000_000,
+                    index * 3_600_000_000 + 3_599_999_999,
+                    open_price,
+                    high,
+                    low,
+                    close,
+                    "1",
+                    True,
+                )
+                for index, (open_price, high, low, close) in enumerate(prices, start=1)
+            ),
+        )
+        config = Config.parse(raw_config)
+        config_hash = build_historical_run_plan(dataset, raw_config).config.config_hash
+        result = simulate_historical_ohlcv(dataset, config, config_hash=config_hash)
+
+        capture = build_historical_run_capture(dataset, raw_config, result, config_hash=config_hash)
+        result_snapshot = json.loads(capture.result_json)
+
+        self.assertEqual(
+            [action["deal_sequence"] for action in result_snapshot["actions"]],
+            [1, 1, 1, 2, 2],
+        )
+        self.assertEqual(
+            [action["event_sequence"] for action in result_snapshot["actions"]],
+            [1, 2, 3, 4, 5],
+        )
+        self.assertEqual(result_snapshot["summary"]["deal_count"], 2)
+        self.assertEqual(result_snapshot["summary"]["completed_deal_count"], 2)
+
+    def test_capture_exposes_faz_2_2_economic_metrics(self):
+        from dcabot.application.historical import build_historical_run_plan
+        from dcabot.application.historical_run_contract import build_historical_run_capture
+        from dcabot.application.historical_simulation import simulate_historical_ohlcv
+
+        raw_config = _raw_config()
+        metadata = _dataset().metadata
+        prices = (
+            ("100", "100", "100", "100"),
+            ("95", "100", "89", "90"),
+            ("97", "98", "97", "97"),
+            ("110", "110", "110", "110"),
+            ("113", "113", "113", "113"),
+        )
+        dataset = HistoricalDatasetInput(
+            metadata=metadata,
+            bars=tuple(
+                CanonicalBar(
+                    index * 3_600_000_000,
+                    index * 3_600_000_000 + 3_599_999_999,
+                    open_price,
+                    high,
+                    low,
+                    close,
+                    "1",
+                    True,
+                )
+                for index, (open_price, high, low, close) in enumerate(prices, start=1)
+            ),
+        )
+        config = Config.parse(raw_config)
+        config_hash = build_historical_run_plan(dataset, raw_config).config.config_hash
+        result = simulate_historical_ohlcv(dataset, config, config_hash=config_hash)
+
+        capture = build_historical_run_capture(dataset, raw_config, result, config_hash=config_hash)
+        summary = json.loads(capture.result_json)["summary"]
+
+        self.assertEqual(summary["realized_net_after_all_costs"], "6.393")
+        self.assertEqual(summary["fees"], "0.607")
+        self.assertEqual(summary["action_count"], 5)
+        self.assertEqual(summary["average_entry_price"], "100")
+        self.assertEqual(summary["time_in_position_us"], 10_800_000_000)
+        self.assertIn("max_drawdown", summary)
+        self.assertIn("peak_equity", summary)
+        self.assertIn("current_drawdown", summary)

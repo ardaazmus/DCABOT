@@ -38,7 +38,64 @@ def _capture():
     return build_historical_run_capture(dataset, raw_config, result, config_hash=config_hash)
 
 
+def _multi_deal_capture():
+    raw_config = json.loads(Path("config/paper.json").read_text(encoding="utf-8"))
+    prices = (
+        ("100", "100", "100", "100"),
+        ("95", "100", "89", "90"),
+        ("97", "98", "97", "97"),
+        ("110", "110", "110", "110"),
+        ("113", "113", "113", "113"),
+    )
+    dataset = HistoricalDatasetInput(
+        metadata=HistoricalDatasetMetadata(
+            dataset_id="synthetic-btcusdt-1h",
+            source_id="synthetic-source",
+            symbol="BTCUSDT",
+            interval="1h",
+            period_start="2025-01-01",
+            period_end="2025-01-10",
+            artifact_sha256="a" * 64,
+            artifact_bytes=1,
+            timestamp_unit="microseconds",
+            timezone="UTC",
+        ),
+        bars=tuple(
+            CanonicalBar(
+                index * 3_600_000_000,
+                index * 3_600_000_000 + 3_599_999_999,
+                open_price,
+                high,
+                low,
+                close,
+                "1",
+                True,
+            )
+            for index, (open_price, high, low, close) in enumerate(prices, start=1)
+        ),
+    )
+    config = Config.parse(raw_config)
+    config_hash = build_historical_run_plan(dataset, raw_config).config.config_hash
+    result = simulate_historical_ohlcv(dataset, config, config_hash=config_hash)
+    return build_historical_run_capture(dataset, raw_config, result, config_hash=config_hash)
+
+
 class HistoricalRunStoreTests(unittest.TestCase):
+    def test_save_composes_deal_id_from_source_execution_id_and_deal_sequence(self):
+        from dcabot.persistence.historical_runs import HistoricalRunStore
+
+        with tempfile.TemporaryDirectory() as directory, HistoricalRunStore(Path(directory) / "runs.sqlite3") as store:
+            saved = store.save(_multi_deal_capture(), source_execution_id="exec-abc", created_at="2026-09-20T10:00:00Z")
+            detail = store.get(saved.run_id)
+
+            deal_ids = [action["deal_id"] for action in detail.result_snapshot["actions"]]
+            self.assertEqual(
+                deal_ids,
+                ["exec-abc:deal:1", "exec-abc:deal:1", "exec-abc:deal:1", "exec-abc:deal:2", "exec-abc:deal:2"],
+            )
+            self.assertEqual(detail.result_snapshot["summary"]["deal_count"], 2)
+
+
     def test_save_reopen_and_list_keep_an_immutable_record(self):
         from dcabot.persistence.historical_runs import HistoricalRunStore
 

@@ -256,7 +256,7 @@ def _result_payload(
         raise HistoricalRunContractError("ACTION_SCOPE_EXCEEDED", "Result action kapsamı sınırı aşıyor.")
     actions: list[dict[str, object]] = []
     seen_bars: set[int] = set()
-    for action in result.actions:
+    for event_sequence, action in enumerate(result.actions, start=1):
         if action.bar_index in seen_bars or not 1 <= action.bar_index <= len(dataset.bars):
             raise HistoricalRunContractError("ACTION_JOIN_INVALID", "Action bar eşleşmesi geçersiz.")
         if dataset.bars[action.bar_index - 1].open_time_us != action.open_time_us:
@@ -271,6 +271,8 @@ def _result_payload(
         _plain_decimal(action.raw_reference, "ACTION_REFERENCE_UNSAFE")
         for value in (action.fill_price, action.quantity, action.fee):
             _plain_decimal(value, "ACTION_VALUE_INVALID")
+        if type(action.deal_sequence) is not int or action.deal_sequence < 1:
+            raise HistoricalRunContractError("ACTION_DEAL_SEQUENCE_INVALID", "Action deal sırası geçersiz.")
         actions.append(
             {
                 "bar_index": action.bar_index,
@@ -280,6 +282,8 @@ def _result_payload(
                 "fill_price": action.fill_price,
                 "quantity": action.quantity,
                 "fee": action.fee,
+                "deal_sequence": action.deal_sequence,
+                "event_sequence": event_sequence,
             }
         )
 
@@ -293,14 +297,22 @@ def _result_payload(
         "realized_net_after_all_costs",
         "equity",
         "entry_notional",
+        "peak_equity",
+        "max_drawdown",
     )
     for name in numeric_summary_fields:
         _plain_decimal(summary.get(name), "RESULT_VALUE_INVALID")
-    for name in ("unrealized", "anchor", "take_profit_price"):
+    for name in ("unrealized", "anchor", "take_profit_price", "current_drawdown", "average_entry_price"):
         if summary.get(name) is not None:
             _plain_decimal(summary[name], "RESULT_VALUE_INVALID")
+    if type(summary.get("action_count")) is not int or summary["action_count"] < 0:
+        raise HistoricalRunContractError("RESULT_VALUE_INVALID", "Result action sayısı geçersiz.")
+    if type(summary.get("time_in_position_us")) is not int or summary["time_in_position_us"] < 0:
+        raise HistoricalRunContractError("RESULT_VALUE_INVALID", "Result pozisyon süresi geçersiz.")
     if summary.get("symbol") != dataset.metadata.symbol or raw_config["quote_asset"] != "USDT":
         raise HistoricalRunContractError("RESULT_CONTEXT_INVALID", "Result para birimi veya sembol context’i geçersiz.")
+    deal_count = max((action["deal_sequence"] for action in actions), default=0)
+    completed_deal_count = max(deal_count - (1 if result.position_status == "OPEN_AT_END" else 0), 0)
     safe_summary = {name: summary[name] for name in (*numeric_summary_fields, "unrealized", "anchor", "take_profit_price")}
     safe_summary.update(
         {
@@ -309,6 +321,12 @@ def _result_payload(
             "position_status": result.position_status,
             "funding_status": result.funding_status,
             "mark_status": result.mark_status,
+            "deal_count": deal_count,
+            "completed_deal_count": completed_deal_count,
+            "current_drawdown": summary.get("current_drawdown"),
+            "action_count": summary["action_count"],
+            "average_entry_price": summary.get("average_entry_price"),
+            "time_in_position_us": summary["time_in_position_us"],
         }
     )
     return {

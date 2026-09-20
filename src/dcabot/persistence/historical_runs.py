@@ -121,7 +121,9 @@ class HistoricalRunStore:
 
         _validate_source_execution_id(source_execution_id)
         _validate_created_at(created_at)
-        record_json, record = _build_record(capture, created_at=created_at, run_id=str(uuid4()))
+        record_json, record = _build_record(
+            capture, created_at=created_at, run_id=str(uuid4()), source_execution_id=source_execution_id
+        )
         if len(record_json.encode("utf-8")) > MAX_RUN_RECORD_BYTES:
             raise HistoricalRunStoreError("RUN_RECORD_TOO_LARGE", "Historical run kaydı byte sınırını aşıyor.")
         self.db.execute("BEGIN IMMEDIATE")
@@ -256,7 +258,9 @@ class HistoricalRunStore:
             self.db.close()
 
 
-def _build_record(capture: HistoricalRunCapture, *, created_at: str, run_id: str) -> tuple[str, dict[str, object]]:
+def _build_record(
+    capture: HistoricalRunCapture, *, created_at: str, run_id: str, source_execution_id: str
+) -> tuple[str, dict[str, object]]:
     try:
         input_snapshot = json.loads(capture.input_snapshot_json)
         config_snapshot = json.loads(capture.config_json)
@@ -267,6 +271,7 @@ def _build_record(capture: HistoricalRunCapture, *, created_at: str, run_id: str
         raise HistoricalRunStoreError("RUN_CAPTURE_INVALID", "Historical run capture JSON geçersiz.") from exc
     if not all(isinstance(value, dict) for value in (input_snapshot, config_snapshot, instrument_risk_snapshot, execution, result_snapshot)):
         raise HistoricalRunStoreError("RUN_CAPTURE_INVALID", "Historical run capture nesne sözleşmesi geçersiz.")
+    result_snapshot = _with_deal_ids(result_snapshot, source_execution_id)
     evaluation_lineage = _evaluation_lineage_from_capture(capture)
     record: dict[str, object] = {
         "schema_version": RUN_STORE_SCHEMA_VERSION,
@@ -308,6 +313,20 @@ def _build_record(capture: HistoricalRunCapture, *, created_at: str, run_id: str
     record_body_json = canonical_json(record)
     record["record_sha256"] = _sha256(record_body_json)
     return canonical_json(record), record
+
+
+def _with_deal_ids(result_snapshot: dict[str, object], source_execution_id: str) -> dict[str, object]:
+    """Compose each action's full deal_id from the outer run identity plus its deal_sequence."""
+
+    actions = result_snapshot.get("actions")
+    if not isinstance(actions, list):
+        return result_snapshot
+    tagged = []
+    for action in actions:
+        if isinstance(action, dict) and isinstance(action.get("deal_sequence"), int):
+            action = {**action, "deal_id": f"{source_execution_id}:deal:{action['deal_sequence']}"}
+        tagged.append(action)
+    return {**result_snapshot, "actions": tagged}
 
 
 def _decode_record(record_json: str, record_sha256: str, *, expected_run_id: str) -> dict[str, object]:
