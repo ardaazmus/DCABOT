@@ -26,5 +26,8 @@ Amaç: gerçekten çalışan bir DCA/grid trading ürünü. Sıra: P1 yerel demo
 Dur ve Arda'ya kısa, tek soru sor: credential/hesap gerektiğinde; ürün veya ekonomi kararı gerektiğinde; gerçek emir gerektiğinde; bir araştırma oturumundan sonra kanıt hâlâ yetersizse.
 Araştırma kutusu: bir belirsizlik için en fazla bir oturum. Çıktı: ≤ 10 satır karar notu (`docs/KARARLAR.md`) + soru. Belirsizliği kapatmak için yeni "güvenli dilim" üretme. `NO-GO` / `DEFERRED` "durdum, karar bekliyor" demektir.
 
+## Ajanlar arası işbölümü
+Kritik dosyalar (`src/dcabot/domain/`, `application/historical_simulation.py`, `application/historical_run_contract.py`, `persistence/`, her Decimal/Fraction/hash hesabı) yalnız Claude değiştirir. UI-only, backend'e dokunmayan dilimler başka bir ajana (ör. Codex) TASK.md üzerinden, dosya allowlist'li bir brief ile devredilebilir; devralan ajan STATE.md/TASK.md/docs/KARARLAR.md'yi değiştirmez, yalnız kodu+testini yazar ve brief'teki durma koşullarına uyar. Claude her devirden sonra diff + tam checker + frontend tsc/vitest ile kontrol eder, belgeleri kendisi günceller.
+
 ## Boyut limiti
 Bayt olarak `tools/check_workspace.py` zorlar: AGENTS/STATE/TASK/WORKFLOW ≤ 6 KB, docs/YOL_HARITASI ≤ 10 KB, CLAUDE/GEMINI/OPENCODE ≤ 1 KB. Limit aşılırsa içeriği kısalt, limiti büyütme.
