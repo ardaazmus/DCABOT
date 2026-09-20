@@ -18,3 +18,10 @@ Kullanıcının son ürün sırası önceki N serisi önerilerini değiştirir. 
 | ADR12 | Veri modu ile execution modu ayrıdır; riskli mod yalnız açık yetki | Public veri bağlantısı canlı emir yetkisi açmaz |
 
 Tam rakip eşdeğerliği, kâr üstünlüğü veya tamamlanmış UI bu belgeyle ilan edilmez. Kullanıcı hedefi kabul edilen bir ürün kapsamıdır; her gereksinim implementation/test kanıtıyla kapanır. Dış platforma bağımlı özellikler ayrıca görünürdür.
+
+## 2026-09-20 — CORE01 tek-deal sınırı
+- Karar: `State` tek-deal değişmezi ve “One base order per deal” kuralı çekirdekte kalır; nihai ürün kapsamını tek deal ile sınırlamaz.
+- Gerekçe: `engine.py:292` BASE kolu yalnız taze, emirsiz `State` için geçerlidir; terminal emirler temizlenmez.
+- Sonuç: deal bitince `global_new_risk_gate_open` kapanır; çekirdek aynı state içinde ikinci deal başlatmaz.
+- Sınır: Çoklu deal üst katmanda sıralı deal olarak, yeni `State` ve yeni `deal_id` ile ele alınacaktır.
+- Karar notu: Bu oturumda yalnız belgeleme yapıldı; `engine.py` değiştirilmedi.

@@ -61,7 +61,7 @@ def _quality_response(report):
 
 ## 🟡 ORTA SEVİYE HATALAR
 
-### 3. `quality.py` — `quote_volume`/`trade_count` Parse Sonuçları Kayıp
+### 3. `quality.py` — `quote_volume`/`trade_count` Parse Sonuçları Kayıp — KAPALI (2026-09-20)
 
 **Dosya:** `src/dcabot/data_adapters/quality.py` (~satır 200)
 
@@ -73,6 +73,8 @@ _integer(fields[8], "trade_count", row_number)      # Sonuç hiçbir yere kayded
 **Açıklama:** Binance kline formatındaki `quote_volume` ve `trade_count` alanları doğrulanıyor ama parsed değerler hiçbir yere kaydedilmiyor.
 
 **Etki:** `quote_volume` veya `trade_count` hatalı olsa bile rapor "PASS" döndürebilir (sadece format doğrulanıyor, değer aralığı kontrol edilmiyor).
+
+**Kapanış:** KAPALI. Güncel canonical bar sözleşmesi bu iki alanı ekonomik state'e taşımaz; parser bunları yalnız format/aralık doğrulaması için okur ve geçersiz girdiyi reddeder. Bu, aktif ürün borcu olarak açılmadı; kod değişikliği yok.
 
 ---
 
