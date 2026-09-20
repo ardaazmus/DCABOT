@@ -70,3 +70,33 @@ class PreviewApiContractTests(unittest.TestCase):
     def test_config_path_is_the_active_paper_config(self):
         config = json.loads((ROOT / "config/paper.json").read_text(encoding="utf-8"))
         self.assertEqual(config["mode"], "offline")
+    def test_paper_config_is_cached_until_mtime_changes(self):
+        import os
+        import tempfile
+        from unittest.mock import patch
+
+        from dcabot.server import api
+
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "paper.json"
+            config = json.loads((ROOT / "config/paper.json").read_text(encoding="utf-8"))
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            original_path = api.CONFIG_PATH
+            original_cache = getattr(api, "_PAPER_CONFIG_CACHE", None)
+            try:
+                api.CONFIG_PATH = config_path
+                api._PAPER_CONFIG_CACHE = None
+                with patch.object(Path, "open", autospec=True, side_effect=Path.open) as open_mock:
+                    first = api._load_config()
+                    second = api._load_config()
+                    self.assertEqual(open_mock.call_count, 1)
+                    self.assertEqual(first, second)
+                    second["mode"] = "tampered"
+                    self.assertEqual(api._load_config()["mode"], "offline")
+                    stat = config_path.stat()
+                    os.utime(config_path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+                    api._load_config()
+                    self.assertEqual(open_mock.call_count, 2)
+            finally:
+                api.CONFIG_PATH = original_path
+                api._PAPER_CONFIG_CACHE = original_cache

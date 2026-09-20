@@ -1,6 +1,7 @@
 """Small local-only HTTP API that delegates preview calculations to the core."""
 
 import json
+from copy import deepcopy
 from datetime import date, datetime, timezone
 from pathlib import Path
 from threading import Lock
@@ -83,6 +84,7 @@ from dcabot.persistence.historical_runs import (
 
 ROOT = Path(__file__).resolve().parents[3]
 CONFIG_PATH = ROOT / "config" / "paper.json"
+_PAPER_CONFIG_CACHE: tuple[int, dict[str, Any]] | None = None
 PREVIEW_FIELDS = {"anchor", "safety_qty", "safety_count", "deviation", "revision"}
 SMALL_JSON_BODY_LIMIT_BYTES = 4 * 1024
 SMALL_JSON_BODY_LIMITS = {
@@ -881,9 +883,13 @@ def _quality_response(report: dict[str, object]):
 
 
 def _load_config(profile_id: str = "paper") -> dict[str, Any]:
+    global _PAPER_CONFIG_CACHE
     if profile_id == "paper":
-        with CONFIG_PATH.open(encoding="utf-8") as handle:
-            return json.load(handle)
+        mtime_ns = CONFIG_PATH.stat().st_mtime_ns
+        if _PAPER_CONFIG_CACHE is None or _PAPER_CONFIG_CACHE[0] != mtime_ns:
+            with CONFIG_PATH.open(encoding="utf-8") as handle:
+                _PAPER_CONFIG_CACHE = (mtime_ns, json.load(handle))
+        return deepcopy(_PAPER_CONFIG_CACHE[1])
     _profile, raw_config = load_historical_profile_config(ROOT, profile_id)
     return raw_config
 
