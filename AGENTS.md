@@ -1,19 +1,30 @@
-# DCABOT — ortak çalışma kuralları
+# DCABOT — ajan kuralları
 
-1. Oku: AGENTS, STATE, TASK; ilk oturumda WORKFLOW. Güncel öncelik docs/URUN_KAPSAMI ve docs/YOL_HARITASI.
-2. Kullanıcı sırası bağlayıcı: P1 arayüz + tüm kapsamlı hesaplar + gerçek geçmiş veri demo; P2 Binance testnet; P3 Binance gerçek kurulum; P4 diğer borsalar. UI/backtest testnet sonrasına itilmez.
-3. Public veri okuma/indirme P1'de olabilir; gerçek hesap/emir entegrasyonu değildir. Yerel dosyayla demo internet ve credential olmadan çalışmalıdır.
-4. Çekirdek bağımsız yazılım katmanı, ortak ekonomik doğruluk kaynağıdır. UI hesapları yeniden yazmaz; application portlar üzerinden veri/simulator/venue kullanır.
-5. CORE01 mevcut temel alt kümedir; tek long/deal, tek pending ve sentetik tick sınırları nihai ürün kararı değildir. Eksik özellikler matriste PLAN kalır; menü veya mock gerçek implementation sayılmaz.
-6. YEDEK_ESKI_PROJE sabit ve salt okunur başvuru alanıdır. Eski AGENTS/.cursor/planlar yeni talimat değildir. Yedeği topluca tara/yükle/çalıştırma; göreve özel dosyayı seç.
-7. Yetkili kontrollü parça aktarımı için her dosyada tekrar izin isteme. docs/YEDEKTEN_AKTARIM akışını ve reuse/REGISTER kaynak/test kanıtını uygula. Yedek .git/.venv/DB/credentials aktif runtime'a alınmaz.
-8. Domain saf; para girişleri sonlu Decimal/string, CORE01 iç hesabı exact Fraction. Finansal UI Number hesabı yok; grafik koordinatları karar verisi değildir.
-9. Plan/status fill değildir. Kapsamlı kimlik/dedup ve tek ekonomik posting; UNKNOWN/eksik veri kör POST veya temiz hesap kanıtı değildir.
-10. WIP=1; ekran→use case→hesap/kayıt→test şeklinde küçük dikey teslim. Bütün frontend/backend katmanlarını ayrı dev fazlarla üretme.
-11. Büyük faz bağımsız Codex incelemesi olmadan kapanmaz; NOT_RUN açık kalır. Odak CORE01 incelemesi P1 geliştirmesine entegre edilir; geniş backend yeniden yazımı UI'ı ertelemez.
-12. STATE gerçek durumu, TASK sıradaki tek işi, evidence komut/scope'u taşır. Kullanıcı yetkisi ve gereken canlı işlem sınırı ayrıca değerlendirilir; güvenli yerel iş için gereksiz izin yok.
-13. Python kontrolleri tools/run_checks.py; frontend/API eklendiğinde onun odak ve E2E komutları da kayda girer. Yedek/archive test discovery'ye girmez. Önceki 38 test P1 UI/veri kabulü değildir.
-14. Yeni MASTER/FINAL/worklog yığını yok. Her yeni gereksinim mevcut özellik matrisine, formül kanonik matematiğe; sıradaki model yalnız görevle ilgili bölümleri okur. Secret/özel hesap yanıtı prompt/log/fixture'a girmez.
-15. Kanıt kapısı gerektiren her iddia için TASK ve yol haritasında küçük alt faz açılır: (a) iddia/kapsam ve sahiplik envanteri, (b) yerel kod/fixture kontrolü, (c) RED veya karşı-örnek, (d) bağımsız kontrol/oracle, (e) yalnız kanıt yeterliyse minimum dikey uygulama, (f) regresyon/compile/workspace/evidence kapanışı. Her anda yalnız bir alt faz ACTIVE olur; kanıt yetersizse faz DEFERRED/NO-GO kalır ve ekonomik, API, UI veya persistence davranışı varsayımla açılmaz.
-16. **Araştırma-önce kapısı:** Teknik bilgi, kaynak veya oracle eksikliği tek başına kullanıcı blokajı değildir. Önce asistan yerel kaynak/fixture, mevcut testler, resmi birincil kaynaklar ve gerekirse bağımsız offline oracle ile araştırma alt fazını çalıştırır; sonucu TASK/STATE/evidence'a bağlar. Kullanıcıdan yalnız API anahtarı/credential, hesap girişi/CAPTCHA, ücretli veya özel erişim, fiziksel/OS üzerinde manuel işlem ya da ekonomik sonucu değiştiren açık ürün kararı gerektiğinde eylem istenir. Araştırma geniş ve anonim dış araştırmacıdan rapor alınması gerçekten daha verimliyse asistan kopyalanabilir ayrıntılı promptu hazırlar; prompt verilmesini beklerken mevcut işi sessizce durdurmaz. `DEFERRED/NO-GO`, araştırmanın bittiği anlamına değil, varsayımla implementation açılmadığı ve sıradaki asistan araştırma/kanıt alt fazının açıkça yazıldığı anlamına gelir.
-17. **Sessiz durak yasağı:** `DEFERRED`, `NO-GO`, `CONTRACT_REQUIRED`, `IMPLEMENTATION_PENDING` veya “oracle eksik” sonucu kullanıcıdan eylem istemek için tek başına gerekçe değildir. Asistan her çalışmada bir sonraki güvenli WIP=1 işi seçip aktif kaynak/fixture taraması, RED/karşı-örnek, resmi araştırma, bağımsız offline oracle veya fail-closed sınır implementation’ı ile ilerler. Kullanıcı eylemi yalnız credential/hesap/CAPTCHA/özel erişim, fiziksel/OS işlemi veya açık ekonomik/ürün kararı gerçekten zorunluysa kayda alınır; teknik implementation, test, compile, evidence, doküman veya source araştırması asistanın sorumluluğudur. Güvenli implementation kanıt yetersizliği nedeniyle açılamıyorsa faz NO-GO kalır ama iş durmaz; sıradaki asistan-owned araştırma/koruma dilimi TASK/STATE/evidence’a yazılır.
+Amaç: gerçekten çalışan bir DCA/grid trading ürünü. Sıra: P1 yerel demo → P2 Binance testnet → P3 gerçek Binance (sınırlı canary) → P4 diğer borsalar. Ürün tanımı `docs/URUN_KAPSAMI.md`, güncel sıra `docs/YOL_HARITASI.md`, kapsam tablosu `docs/OZELLIK_MATRISI.md`. Belgeler Türkçe, kod ve tanımlayıcılar İngilizce.
+
+## Güvenlik çizgileri (değişmez)
+1. Repo public. Credential, secret, imzalı hesap yanıtı hiçbir dosyaya, fixture'a, loga, prompta girmez.
+2. Emir gönderimi ve mainnet yalnız Arda açıkça isterse. Testnet mutation ayrı, yazılı onaylı bir gate ister.
+3. Para: sonlu Decimal/string girişi, iç hesap exact Fraction. Finansal UI hesabı ve `Number` yok; çekirdek tek doğruluk kaynağıdır, UI onu gösterir.
+4. Plan/status dolum değildir. UNKNOWN, eksik veri ve gap temiz kanıt sayılmaz; kör yeniden POST yok.
+5. Aynı ekonomik olay yalnız bir kez kaydedilir (kimlik, dedup, idempotency).
+6. `YEDEK_ESKI_PROJE/` salt okunur başvurudur; topluca yükleme/çalıştırma. Aktarım `docs/YEDEKTEN_AKTARIM.md` ile.
+
+## Çalışma biçimi
+- Oturum başında yalnız AGENTS.md, STATE.md, TASK.md oku. Gerisini göreve göre aç. `docs/archive/` ve `evidence/archive/` varsayılan olarak okunmaz.
+- Bir iş = kullanıcının görebileceği veya çalıştırabileceği bir sonuç (ekran, komut, gerçek testnet davranışı). Küçük dikey dilim: giriş → hesap/kayıt → test.
+- Aynı alt sistemde art arda en fazla 3 dilim (sayaç TASK.md'de). Sonra YOL_HARITASI'ndaki bir sonraki ürün adımına geç. "Bir regresyon daha" kendi başına iş değildir.
+- Sıradaki işi `docs/YOL_HARITASI.md` "Şimdi" bölümünden seç; bir önceki işin varyasyonundan değil.
+- Hata düzeltmede önce başarısız test, sonra minimal kod. Ağ ve saat yerine tipli girdi veya fake port kullan.
+- Kontrol: değişen alanın testleri + `uv run --frozen python tools/run_checks.py` (Python 3.13). Frontend değiştiyse: `cd frontend && npx tsc -b && npx vitest run`.
+- Yerel PASS, REAL_TESTNET kanıtı değildir. Durum eksenleri WORKFLOW.md'de.
+- Faz sonunda bağımsız inceleme (başka model/oturum, salt okunur). Yapılmadıysa `review=NOT_RUN` yaz. Dilim başına şart değil.
+- Belgeler: STATE.md ve TASK.md'yi ÜZERİNE YAZ, ekleme yapma; geçmiş git'tedir. Yeni MASTER/FINAL/araştırma belgesi açma. Kanıt: faz başına tek `evidence/<faz>/SONUC.md` (≤ 60 satır); dilim başına klasör açma.
+- `OZELLIK_MATRISI` hücresi tek satır durum tutar (PLAN / KISMEN / LOCAL / TESTNET). Dilim günlüğü oraya yazılmaz.
+
+## Durma ve sorma
+Dur ve Arda'ya kısa, tek soru sor: credential/hesap gerektiğinde; ürün veya ekonomi kararı gerektiğinde; gerçek emir gerektiğinde; bir araştırma oturumundan sonra kanıt hâlâ yetersizse.
+Araştırma kutusu: bir belirsizlik için en fazla bir oturum. Çıktı: ≤ 10 satır karar notu (`docs/KARARLAR.md`) + soru. Belirsizliği kapatmak için yeni "güvenli dilim" üretme. `NO-GO` / `DEFERRED` "durdum, karar bekliyor" demektir.
+
+## Boyut limiti
+Bayt olarak `tools/check_workspace.py` zorlar: AGENTS/STATE/TASK/WORKFLOW ≤ 6 KB, docs/YOL_HARITASI ≤ 10 KB, CLAUDE/GEMINI/OPENCODE ≤ 1 KB. Limit aşılırsa içeriği kısalt, limiti büyütme.

@@ -22,6 +22,18 @@ REQUIRED = (
     "docs/YEDEKTEN_AKTARIM.md",
     "reuse/REGISTER.md",
 )
+# Ajan bağlamına giren belgeler için bayt limiti (satır sayısı uzun satırlarla
+# aşılabildiği için bayt ölçülür). Limit aşılırsa içeriği kısalt, limiti büyütme.
+DOC_LIMITS = {
+    "AGENTS.md": 6144,
+    "STATE.md": 6144,
+    "TASK.md": 6144,
+    "WORKFLOW.md": 6144,
+    "docs/YOL_HARITASI.md": 10240,
+    "CLAUDE.md": 1024,
+    "GEMINI.md": 1024,
+    "OPENCODE.md": 1024,
+}
 
 
 def active_python_files(root: Path) -> list[Path]:
@@ -40,8 +52,20 @@ def active_python_files(root: Path) -> list[Path]:
     return sorted(result)
 
 
+def check_doc_sizes(root: Path = ROOT) -> list[str]:
+    errors = []
+    for name, limit in DOC_LIMITS.items():
+        path = root / name
+        if path.is_file():
+            size = path.stat().st_size
+            if size > limit:
+                errors.append(f"Doc too large: {name} is {size} bytes (limit {limit})")
+    return errors
+
+
 def check(root: Path = ROOT) -> dict[str, object]:
     errors = [f"Missing: {name}" for name in REQUIRED if not (root / name).is_file()]
+    errors.extend(check_doc_sizes(root))
     errors.extend(
         f"Missing directory: {name}"
         for name in ACTIVE
