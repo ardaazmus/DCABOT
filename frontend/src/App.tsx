@@ -145,13 +145,17 @@ const initialSimulationState: SimulationState = {
 };
 
 type SavedRunsState = {
-  savedRunView: "studio" | "list" | "detail";
+  savedRunView: "studio" | "list" | "detail" | "compare";
   savedRuns: SavedRunListItem[];
   savedRunsStatus: "idle" | "loading" | "ready" | "error";
   savedRunsError: string;
   savedRunDetail: SavedRunDetail | null;
   savedRunDetailStatus: "idle" | "loading" | "ready" | "error";
   savedRunDetailError: string;
+  savedRunCompareSelection: string[];
+  savedRunCompareDetails: [SavedRunDetail, SavedRunDetail] | null;
+  savedRunCompareStatus: "idle" | "loading" | "ready" | "error";
+  savedRunCompareError: string;
 };
 
 const initialSavedRunsState: SavedRunsState = {
@@ -162,6 +166,10 @@ const initialSavedRunsState: SavedRunsState = {
   savedRunDetail: null,
   savedRunDetailStatus: "idle",
   savedRunDetailError: "",
+  savedRunCompareSelection: [],
+  savedRunCompareDetails: null,
+  savedRunCompareStatus: "idle",
+  savedRunCompareError: "",
 };
 
 type GroupAction<T extends object> = {
@@ -249,6 +257,10 @@ function App() {
     savedRunDetail,
     savedRunDetailStatus,
     savedRunDetailError,
+    savedRunCompareSelection,
+    savedRunCompareDetails,
+    savedRunCompareStatus,
+    savedRunCompareError,
   } = savedRunsState;
   const [binancePublicSnapshot, setBinancePublicSnapshot] = useState<BinancePublicSnapshot | null>(null);
   const [binancePublicSnapshotStatus, setBinancePublicSnapshotStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -608,6 +620,48 @@ function App() {
     }
   }
 
+  function toggleCompareSelection(runId: string) {
+    const next = savedRunCompareSelection.includes(runId)
+      ? savedRunCompareSelection.filter((id) => id !== runId)
+      : savedRunCompareSelection.length < 2
+        ? [...savedRunCompareSelection, runId]
+        : savedRunCompareSelection;
+    setSavedRunsState("savedRunCompareSelection", next);
+  }
+
+  async function openSavedRunCompare() {
+    if (savedRunCompareSelection.length !== 2) return;
+    const [firstId, secondId] = savedRunCompareSelection;
+    savedRunDetailController.current?.abort();
+    const requestController = new AbortController();
+    savedRunDetailController.current = requestController;
+    setSavedRunsState("savedRunView", "compare");
+    setSavedRunsState("savedRunCompareDetails", null);
+    setSavedRunsState("savedRunCompareError", "");
+    setSavedRunsState("savedRunCompareStatus", "loading");
+    try {
+      const [firstResponse, secondResponse] = await Promise.all([
+        fetch(`/api/historical-runs/${encodeURIComponent(firstId)}`, { cache: "no-store", signal: requestController.signal }),
+        fetch(`/api/historical-runs/${encodeURIComponent(secondId)}`, { cache: "no-store", signal: requestController.signal }),
+      ]);
+      const [firstBody, secondBody] = await Promise.all([
+        firstResponse.json() as Promise<SavedRunDetail & SavedRunApiError>,
+        secondResponse.json() as Promise<SavedRunDetail & SavedRunApiError>,
+      ]);
+      if (!firstResponse.ok || !secondResponse.ok || firstBody.storage_state !== "STORED" || secondBody.storage_state !== "STORED") {
+        setSavedRunsState("savedRunCompareError", "Seçilen koşulardan biri okunamadı; karşılaştırma açılmadı.");
+        setSavedRunsState("savedRunCompareStatus", "error");
+        return;
+      }
+      setSavedRunsState("savedRunCompareDetails", [firstBody, secondBody]);
+      setSavedRunsState("savedRunCompareStatus", "ready");
+    } catch (error) {
+      if (requestController.signal.aborted) return;
+      setSavedRunsState("savedRunCompareError", "Karşılaştırma API'sine bağlanılamadı. Local API'nin çalıştığını kontrol edin.");
+      setSavedRunsState("savedRunCompareStatus", "error");
+    }
+  }
+
   async function saveHistoricalRun() {
     if (!historicalSimulation || historicalSimulation.execution_id === null || !["completed", "indeterminate"].includes(historicalSimulationStatus) || historicalSaveStatus === "saving" || historicalSaveStatus === "saved" || historicalSaveStatus === "already_saved") return;
     historicalSaveController.current?.abort();
@@ -830,7 +884,7 @@ function App() {
           </div>
         </header>
 
-        {savedRunView !== "studio" && <div className="saved-runs-workspace"><SavedRunsPanel view={savedRunView} runs={savedRuns} listStatus={savedRunsStatus} listError={savedRunsError} detail={savedRunDetail} detailStatus={savedRunDetailStatus} detailError={savedRunDetailError} onOpenDetail={(runId) => void openSavedRunDetail(runId)} onBackToList={openSavedRuns} /></div>}
+        {savedRunView !== "studio" && <div className="saved-runs-workspace"><SavedRunsPanel view={savedRunView} runs={savedRuns} listStatus={savedRunsStatus} listError={savedRunsError} detail={savedRunDetail} detailStatus={savedRunDetailStatus} detailError={savedRunDetailError} onOpenDetail={(runId) => void openSavedRunDetail(runId)} onBackToList={openSavedRuns} compareSelection={savedRunCompareSelection} onToggleCompareSelection={toggleCompareSelection} onOpenCompare={() => void openSavedRunCompare()} compareDetails={savedRunCompareDetails} compareStatus={savedRunCompareStatus} compareError={savedRunCompareError} /></div>}
         {savedRunView === "studio" && <div className="workspace">
           <section className="panel builder-panel" aria-labelledby="builder-title">
             <div className="panel-heading"><div><p className="eyebrow">CONFIGURATION</p><h2 id="builder-title">Bot stüdyosu</h2></div><span className="revision">r{preview?.revision ?? "—"}</span></div>
