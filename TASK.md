@@ -1,20 +1,26 @@
-# Aktif iş — Faz 3.4 kapandı (karar); sıradaki adım Faz 3.5 teknik tasarımı
+# Aktif iş — Faz 3.5 kodu tamam; REAL_TESTNET kanıtı Arda'yı bekliyor
 
-Faz 3.4 (Mutation gate) 7 kuralla onaylandı, bkz. STATE.md/docs/KARARLAR.md. Kod yazılmadı — roadmap bunu kasıtlı "belge, kod değil" tanımlıyor.
+`data_adapters/binance_testnet_order_execution.py` (projede mutation yapabilen TEK dosya), `application/testnet_order_execution.py` (Faz 3.4'ün 7 kuralını uygulayan kapı), `tools/run_single_testnet_order.py` (CLI kanıt aracı) yazıldı, 19 yeni offline test, tam checker 929/929 PASS. Ayrıntı: STATE.md, docs/KARARLAR.md.
 
-## Sıradaki: Faz 3.5 — Tek testnet emri (KAPSAM ARAŞTIRMASI, kod yazmadan önce)
-Hedef: limit emir gönder → gör → iptal et; journal kaydı. Faz 3.4'ün 7 kuralını (kill-switch, max_entry_notional, execution-anında onay, idempotent clientOrderId + durable-before-send, tek eşzamanlı mutation, cancel aynı disiplin, testnet hard-code) uygulayan dar bir implementasyon.
+## Arda'nın yapması gereken (Claude yapamaz — credential + gerçek mutation gerekir)
+1. Testnet credential zaten kayıtlıysa (`testnet-readonly`) tekrar gerekmez.
+2. Kill-switch'i aç ve çalıştır:
+```powershell
+$env:PYTHONPATH='src'
+$env:DCABOT_TRADING_ENABLED='true'
+uv run --frozen python tools/run_single_testnet_order.py testnet-readonly BTCUSDT BUY 0.001 20000
+```
+(Fiyatı güncel testnet BTCUSDT fiyatından uzak, dolmayacak şekilde seç — örn. güncel fiyatın çok altında bir BUY limit, hemen dolup "gör" adımını anlamsızlaştırmasın.)
+3. İki onay isteyecek (gönder, iptal) — her birinde tam `EVET` yaz.
+4. Çıktıyı (venue_order_id, durum, sorgu sonucu, iptal sonucu — credential/secret içermez) buraya yapıştır.
 
-## İlk adımlar
-1. Binance signed order-placement (`POST /api/v3/order` veya WS API `order.place`) ve cancel (`DELETE /api/v3/order`) uç noktalarının signing şeklini `signed_request.py`/`binance_testnet_account.py`/`binance_testnet_user_stream.py` ile tutarlı şekilde araştır.
-2. Kill-switch (`DCABOT_TRADING_ENABLED`) ve tek-eşzamanlı-mutation kilidinin nereye (hangi katmana) konacağını netleştir.
-3. UI onay ekranının (execution-anında açık onay) hangi bileşene ekleneceğini belirle.
-4. Dar kapsamı Arda'ya sun, onaysız kod yazma.
+## Bu geldiğinde Claude'un yapacağı
+- STATE.md'yi `evidence_scope=REAL_TESTNET` olarak günceller.
+- Sıradaki: **Faz 3.6 — Dolum + restart kurtarma** (süreç ortada öldürülür, yeniden başlayınca tek ekonomik kayıt) için kapsam araştırması.
 
 ## Değişmez sınırlar
-- Credential, secret, gerçek emir, mutation ve mainnet: Arda onayı olmadan asla; Faz 3.4'ün 7 kuralı hiçbiri atlanmadan uygulanacak.
-- Claude gerçek testnet'e karşı hiçbir mutation çalıştırmaz — REAL_TESTNET kanıtı yine Arda'nın yerelde çalıştırmasıyla gelir.
+- Credential, secret, gerçek emir, mutation ve mainnet: Arda onayı olmadan asla. Claude `tools/run_single_testnet_order.py`'yi kendisi hiç çalıştırmaz.
 - STATE.md/TASK.md yalnız Claude günceller.
 
 ## Kabul
-- Kod yazılmadan önce dar kapsam Arda'ya sunulur ve onaylanır (Faz 2.5/3.2/3.3 örneğindeki gibi).
+- REAL_TESTNET kanıtı geldiğinde STATE.md güncellenir ve 3.6 brief'i yazılır.

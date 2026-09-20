@@ -235,6 +235,24 @@ class AttemptStore:
             f"SELECT count(*) FROM attempts WHERE state IN ({placeholders})", states
         ).fetchone()[0]
 
+    def count_in_flight_attempts(self) -> int:
+        """Count attempts still between durable-prepare and a venue answer.
+
+        Faz 3.4 rule 5 (docs/KARARLAR.md, 2026-09-21): at most one mutation
+        may be in flight globally at a time. Callers check this is 0 before
+        preparing a new attempt.
+        """
+
+        states = (
+            AttemptState.PREPARED.value,
+            AttemptState.PERSISTED.value,
+            AttemptState.SENDING.value,
+        )
+        placeholders = ",".join("?" for _ in states)
+        return self.db.execute(
+            f"SELECT count(*) FROM attempts WHERE state IN ({placeholders})", states
+        ).fetchone()[0]
+
     def list_resolvable_attempts(self) -> tuple[OrderAttempt, ...]:
         """List blocking attempts that a fresh lookup can still resolve.
 
