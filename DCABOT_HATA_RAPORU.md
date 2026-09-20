@@ -33,7 +33,7 @@ if s.orders or qty != c.base_qty:
 
 ---
 
-### 2. `api.py` — `_quality_response()` Tutarsız Return Tipi
+### 2. api.py — _quality_response() Tutarsız Return Tipi — KAPALI (2026-09-20)
 
 **Dosya:** `src/dcabot/server/api.py` (~satır 544)
 
@@ -51,11 +51,11 @@ def _quality_response(report):
     return content           # ← dict döndürülüyor! (JSONResponse değil)
 ```
 
-**Açıklama:** 200 durumunda `dict` döndürülüyor (FastAPI otomatik serialize eder), 422'de `JSONResponse`. Bu **tip tutarsızlığı** — `Cache-Control: no-store` header'ı 200 yanıtına eklenemez.
+**Doğrulama sonucu:** Güncel _quality_response() hem 200 hem 422 durumunda JSONResponse döndürüyor ve her iki yanıta da Cache-Control: no-store ekliyor. Bu bulgu kapanmıştır; ek kod değişikliği gerekmiyor.
 
-**Etki:** Kalite raporu succeeded olduğunda cache header eksik; intermediate proxy cache'leyebilir.
+**Eski etki:** Bu bölüm yalnız önceki davranışın kaydıdır; güncel kod için geçerli değildir.
 
-**Öneri:** Her iki durumda da `JSONResponse` döndür.
+**Eski öneri:** Her iki durumda JSONResponse döndürülmesi güncel kodda uygulanmıştır.
 
 ---
 
@@ -106,7 +106,7 @@ if declared_size < 0:
 
 ---
 
-### 6. `reconciliation.py` — `hydrate_event_continuity()` State Priority Yanlış Sıralaması
+### 6. reconciliation.py — hydrate_event_continuity() State Priority — KABUL EDİLEN FAIL-CLOSED SINIR (2026-09-20)
 
 **Dosya:** `src/dcabot/application/reconciliation.py` (~satır 286)
 
@@ -120,9 +120,9 @@ state_priority = {
 }
 ```
 
-**Açıklama:** `FAILED` en yüksek priority (4) olarak tanımlı. Bir FAILED gözlemi tüm eski state'leri (SYNCED dahil) eziyor. Geri dönüş yolu yok.
+**Doğrulama sonucu:** FAILED en yüksek priority (4) olarak tanımlı; hydration sırasında en kötü durum kazanıyor. Bu, geri dönüşü varsaymak yerine fail-closed davranıştır ve mevcut test test_hydration_keeps_failed_state_over_less_severe_observations ile korunur. Bulgu kapatılmış kabul edilir; kod değişikliği gerekmiyor.
 
-**Risk:** Testnet reset sonrası veya network kesintisinde FAILED observation tüm reconciled state'i bozabilir.
+**Kabul edilen sınır:** Testnet reseti veya ağ kesintisi sonrası FAILED gözlem güvenilir senkron iddiasını açmaz; yeni authoritative reconciliation gerekir.
 
 ---
 
@@ -193,7 +193,7 @@ Tek component'te 30'dan fazla `useState` hook'u var. Bu, component'in çok karma
 | **Exact Arithmetic** | ✅ İyi | Fraction tabanlı; round-trip precision kontrolleri var |
 | **Idempotency** | ✅ İyi | Duplicate batch/execution/event kontrolü tutarlı |
 | **Persistence** | ✅ İyi | WAL + FULL synchronous + per-event balanced postings |
-| **Test Coverage** | ✅ İyi | 437+ test, compileall, workspace, frontend build PASS |
+| **Test Coverage** | ✅ İyi | 869 test, compileall, workspace, frontend build PASS |
 | **API Design** | ⚠️ Orta | Problem Details formatı tutarlı, ama tip tutarsızlıkları var |
 | **Multi-worker** | ❌ Zayıf | Global mutable state tek worker ile sınırlı |
 | **Dokümantasyon** | ⚠️ Orta | STATE.md kapsamlı ama tek-deal sınırlaması net değil |
@@ -202,7 +202,7 @@ Tek component'te 30'dan fazla `useState` hook'u var. Bu, component'in çok karma
 
 ## 🎯 Öncelikli Düzeltme Önerileri
 
-1. **`_quality_response()`** → Her iki durumda da `JSONResponse` döndür
+1. _quality_response(): KAPALI; iki durum da JSONResponse + Cache-Control: no-store.
 2. **`decision()`** → Ölü kodu kaldır veya docstring'de açıkla
 3. **`_load_config()`** → Config dosyasını cache'le
 4. **CORS** → Configurable origin ekle
@@ -212,7 +212,7 @@ Tek component'te 30'dan fazla `useState` hook'u var. Bu, component'in çok karma
 
 ## 📝 Proje Güçlü Yönleri
 
-- **Kapsamlı Test Kapsamı:** 437+ test, her fazda RED→GREEN döngüsü
+- **Kapsamlı Test Kapsamı:** 869 test, her fazda RED→GREEN döngüsü
 - **Fail-Closed Tasarım:** Bilinmeyen veri durumları her zaman reddediliyor
 - **Exact Financial Arithmetic:** Fraction tabanlı; kesin round-trip dönüşüm kontrolü
 - **İdempotent Persistence:** Duplicate batch/execution ID koruması
@@ -221,4 +221,4 @@ Tek component'te 30'dan fazla `useState` hook'u var. Bu, component'in çok karma
 
 ---
 
-*Bu rapor 437+ testin PASS durumu, compileall/workspace/frontend build PASS ve mevcut kanıt dosyaları doğrultusunda hazırlanmıştır.*
+*Bu rapor 869 testin PASS durumu, compileall/workspace/frontend build PASS ve mevcut kanıt dosyaları doğrultusunda hazırlanmıştır.*
