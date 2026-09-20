@@ -1,6 +1,6 @@
 # Durum — 2026-09-21
 
-Aktif faz: **Faz 3.3 (salt-okunur hesap ekranı) tamamen kapandı.** Faz 3.1 (`evidence_scope=REAL_TESTNET`), 3.2 (kod tamam, kısmi REAL_TESTNET) kapalı. P1 `p1-demo-complete` etiketiyle kapalı. Dal: codex/latest-state-2026-09-20.
+Aktif faz: **Faz 3.4 (Mutation gate kararı) ONAYLANDI — 7 kural belirlendi, kod yok (roadmap tanımı gereği).** Faz 3.1 (`evidence_scope=REAL_TESTNET`), 3.2 (kod tamam, kısmi REAL_TESTNET) kapalı. P1 `p1-demo-complete` etiketiyle kapalı. Dal: codex/latest-state-2026-09-20.
 Doğrulanan: tam checker 910/910 PASS; frontend tsc -b temiz, vitest 31/31 PASS; canlı sunucuda `not_configured` durumu ekran görüntüsüyle doğrulandı.
 Eksenler: implementation=DONE(3.3) · verification=PASS · evidence_scope=LOCAL_INTEGRATION+kısmi_REAL_TESTNET · review=NOT_RUN(3.3) · deployment=NOT_DEPLOYED
 
@@ -25,5 +25,8 @@ Ayrıntı git geçmişinde.
 ## Kararlar (bkz. `docs/KARARLAR.md`)
 Faz 3.1-3.3 kapandı. Üçüncü ardışık temiz Codex devri — dosya allowlist disiplini tutarlı çalışıyor.
 
+## Faz 3.4 — Mutation gate kararı (bu oturum, Arda'nın "en güvenli en iyi yolu seç" yetkilendirmesiyle)
+7 kural onaylandı (bkz. docs/KARARLAR.md, docs/YOL_HARITASI.md): kill-switch, mevcut `max_entry_notional`'ın mutation'da da uygulanması, execution-anında açık onay, idempotent clientOrderId + durable-before-send (mevcut `AttemptStore` sırası), tek eşzamanlı mutation, cancel aynı disiplin, testnet hard-code. Her madde ya mevcut test edilmiş bir mekanizmayı genişletiyor ya da yalnız bir kısıt ekliyor — sıfırdan icat edilen güvenlik mantığı yok. Kod yazılmadı (roadmap Faz 3.4'ü kasıtlı olarak "belge, kod değil" tanımlıyor).
+
 ## Sıradaki adım
-Roadmap sırası: **Faz 3.4 — Mutation gate kararı** (belge, kod değil: hangi koşulda emir gider? Onay ekranı, tutar limiti, kill-switch, idempotent clientOrderId — Arda onaylar). Bu bir kod dilimi değil, bir ürün/güvenlik kararı — Claude bunu tek başına karara bağlamaz, TASK.md'de Arda'ya sunulacak bir taslak hazırlanabilir.
+**Faz 3.5 — Tek testnet emri:** limit emir gönder → gör → iptal et; journal kaydı. Faz 3.4'ün 7 kuralını uygulayan implementasyon. Kod yazılmadan önce dar bir teknik tasarım (hangi dosyalar, hangi sıra) Arda'ya sunulacak.

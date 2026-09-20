@@ -1,15 +1,20 @@
-# Aktif iş — Faz 3.3 kapandı; sıradaki adım Faz 3.4 (mutation gate kararı)
+# Aktif iş — Faz 3.4 kapandı (karar); sıradaki adım Faz 3.5 teknik tasarımı
 
-Faz 3.1-3.3 tamamlandı (bkz. STATE.md, docs/KARARLAR.md). Şu anda Claude'un elinde açık kod görevi yok.
+Faz 3.4 (Mutation gate) 7 kuralla onaylandı, bkz. STATE.md/docs/KARARLAR.md. Kod yazılmadı — roadmap bunu kasıtlı "belge, kod değil" tanımlıyor.
 
-## Sıradaki adım: Faz 3.4 — Mutation gate kararı (kod değil, karar)
-docs/YOL_HARITASI.md: "hangi koşulda emir gider? Onay ekranı, tutar limiti, kill-switch, idempotent clientOrderId. Arda onaylar." Bu, AGENTS.md'nin "gerçek emir" çizgisine ilk kez yaklaşan karar — Claude tek başına karara bağlamaz.
+## Sıradaki: Faz 3.5 — Tek testnet emri (KAPSAM ARAŞTIRMASI, kod yazmadan önce)
+Hedef: limit emir gönder → gör → iptal et; journal kaydı. Faz 3.4'ün 7 kuralını (kill-switch, max_entry_notional, execution-anında onay, idempotent clientOrderId + durable-before-send, tek eşzamanlı mutation, cancel aynı disiplin, testnet hard-code) uygulayan dar bir implementasyon.
 
-Claude'un yapabileceği: mevcut kod tabanının (idempotency zaten `AttemptStore`/`reconcile_attempt`'te var, credential zaten Windows Credential Manager'da, reconciliation state machine zaten kurulu) neyi hazır sağladığını özetleyen bir taslak hazırlayıp Arda'ya sunmak — onay ekranı UX'i, tutar limiti değeri, kill-switch mekanizması gibi ürün kararlarını Arda verir.
+## İlk adımlar
+1. Binance signed order-placement (`POST /api/v3/order` veya WS API `order.place`) ve cancel (`DELETE /api/v3/order`) uç noktalarının signing şeklini `signed_request.py`/`binance_testnet_account.py`/`binance_testnet_user_stream.py` ile tutarlı şekilde araştır.
+2. Kill-switch (`DCABOT_TRADING_ENABLED`) ve tek-eşzamanlı-mutation kilidinin nereye (hangi katmana) konacağını netleştir.
+3. UI onay ekranının (execution-anında açık onay) hangi bileşene ekleneceğini belirle.
+4. Dar kapsamı Arda'ya sun, onaysız kod yazma.
 
 ## Değişmez sınırlar
-- Credential, secret, signed mutating request, gerçek emir, mutation ve mainnet: Arda onayı olmadan asla.
+- Credential, secret, gerçek emir, mutation ve mainnet: Arda onayı olmadan asla; Faz 3.4'ün 7 kuralı hiçbiri atlanmadan uygulanacak.
+- Claude gerçek testnet'e karşı hiçbir mutation çalıştırmaz — REAL_TESTNET kanıtı yine Arda'nın yerelde çalıştırmasıyla gelir.
 - STATE.md/TASK.md yalnız Claude günceller.
 
 ## Kabul
-- Arda 3.4 kararını onayladığında (veya taslak istediğinde), Claude devam eder.
+- Kod yazılmadan önce dar kapsam Arda'ya sunulur ve onaylanır (Faz 2.5/3.2/3.3 örneğindeki gibi).
