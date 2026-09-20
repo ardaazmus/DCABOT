@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useReducer, useRef, useState } from "react";
 import { DatasetCatalogPanel } from "./DatasetCatalogPanel";
 import { HistoricalProfileStatus } from "./HistoricalProfileSelector";
 import { SavedRunsPanel } from "./SavedRunsPanel";
@@ -74,6 +74,123 @@ const initialForm: FormState = {
   deviation: "0.1",
 };
 
+type DatasetState = {
+  datasets: DatasetSummary[];
+  datasetCatalogStatus: DatasetCatalogStatus;
+  datasetCatalogError: string;
+  datasetFilter: DatasetFilter;
+  activeDatasetId: string | null;
+  selectedDatasetId: string | null;
+  datasetSelectionStatus: DatasetSelectionStatus;
+  datasetSelectionError: string;
+  downloadJob: DatasetDownloadJob | null;
+  downloadUiStatus: DownloadJobUiStatus;
+  downloadError: string;
+  historicalProfiles: HistoricalProfile[];
+  historicalProfilesStatus: HistoricalProfileStatus;
+  historicalProfilesError: string;
+  selectedHistoricalProfileId: string | null;
+  datasetPreflight: DatasetPreflight | null;
+  datasetPreflightStatus: "idle" | "pending" | "ready" | "error";
+  datasetPreflightError: string;
+  datasetRunPlan: DatasetRunPlan | null;
+  datasetRunPlanStatus: "idle" | "pending" | "ready" | "error";
+  datasetRunPlanError: string;
+};
+
+const initialDatasetState: DatasetState = {
+  datasets: [],
+  datasetCatalogStatus: "idle",
+  datasetCatalogError: "",
+  datasetFilter: "ALL",
+  activeDatasetId: null,
+  selectedDatasetId: null,
+  datasetSelectionStatus: "idle",
+  datasetSelectionError: "",
+  downloadJob: null,
+  downloadUiStatus: "idle",
+  downloadError: "",
+  historicalProfiles: [],
+  historicalProfilesStatus: "idle",
+  historicalProfilesError: "",
+  selectedHistoricalProfileId: null,
+  datasetPreflight: null,
+  datasetPreflightStatus: "idle",
+  datasetPreflightError: "",
+  datasetRunPlan: null,
+  datasetRunPlanStatus: "idle",
+  datasetRunPlanError: "",
+};
+
+type SimulationState = {
+  historicalSimulation: HistoricalSimulationResult | null;
+  historicalSimulationStatus: HistoricalSimulationUiStatus;
+  historicalSimulationError: string;
+  historicalChartData: HistoricalChartData | null;
+  historicalChartStatus: "idle" | "loading" | "ready" | "error";
+  historicalChartError: string;
+  historicalSaveStatus: "idle" | "saving" | "saved" | "already_saved" | "error";
+  historicalSaveError: string;
+};
+
+const initialSimulationState: SimulationState = {
+  historicalSimulation: null,
+  historicalSimulationStatus: "idle",
+  historicalSimulationError: "",
+  historicalChartData: null,
+  historicalChartStatus: "idle",
+  historicalChartError: "",
+  historicalSaveStatus: "idle",
+  historicalSaveError: "",
+};
+
+type SavedRunsState = {
+  savedRunView: "studio" | "list" | "detail";
+  savedRuns: SavedRunListItem[];
+  savedRunsStatus: "idle" | "loading" | "ready" | "error";
+  savedRunsError: string;
+  savedRunDetail: SavedRunDetail | null;
+  savedRunDetailStatus: "idle" | "loading" | "ready" | "error";
+  savedRunDetailError: string;
+};
+
+const initialSavedRunsState: SavedRunsState = {
+  savedRunView: "studio",
+  savedRuns: [],
+  savedRunsStatus: "idle",
+  savedRunsError: "",
+  savedRunDetail: null,
+  savedRunDetailStatus: "idle",
+  savedRunDetailError: "",
+};
+
+type GroupAction<T extends object> = {
+  [K in keyof T]: {
+    key: K;
+    value: T[K] | ((current: T[K]) => T[K]);
+  };
+}[keyof T];
+
+export function groupReducer<T extends object>(state: T, action: GroupAction<T>): T {
+  const current = state[action.key];
+  const value =
+    typeof action.value === "function"
+      ? (action.value as (current: T[keyof T]) => T[keyof T])(current)
+      : action.value;
+  return { ...state, [action.key]: value };
+}
+
+function useReducerGroup<T extends object>(initialState: T) {
+  const [state, dispatch] = useReducer(
+    (current: T, action: GroupAction<T>) => groupReducer(current, action),
+    initialState,
+  );
+  function setGroup<K extends keyof T>(key: K, value: T[K] | ((current: T[K]) => T[K])) {
+    dispatch({ key, value } as GroupAction<T>);
+  }
+  return [state, setGroup] as const;
+}
+
 function App() {
   const [form, setForm] = useState(initialForm);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -86,42 +203,53 @@ function App() {
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [mappingStatus, setMappingStatus] = useState<"idle" | "valid" | "error">("idle");
   const [mappingError, setMappingError] = useState("");
-  const [datasets, setDatasets] = useState<DatasetSummary[]>([]);
-  const [datasetCatalogStatus, setDatasetCatalogStatus] = useState<DatasetCatalogStatus>("idle");
-  const [datasetCatalogError, setDatasetCatalogError] = useState("");
-  const [datasetFilter, setDatasetFilter] = useState<DatasetFilter>("ALL");
-  const [activeDatasetId, setActiveDatasetId] = useState<string | null>(null);
-  const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null);
-  const [datasetSelectionStatus, setDatasetSelectionStatus] = useState<DatasetSelectionStatus>("idle");
-  const [datasetSelectionError, setDatasetSelectionError] = useState("");
-  const [downloadJob, setDownloadJob] = useState<DatasetDownloadJob | null>(null);
-  const [downloadUiStatus, setDownloadUiStatus] = useState<DownloadJobUiStatus>("idle");
-  const [downloadError, setDownloadError] = useState("");
-  const [historicalProfiles, setHistoricalProfiles] = useState<HistoricalProfile[]>([]);
-  const [historicalProfilesStatus, setHistoricalProfilesStatus] = useState<HistoricalProfileStatus>("idle");
-  const [historicalProfilesError, setHistoricalProfilesError] = useState("");
-  const [selectedHistoricalProfileId, setSelectedHistoricalProfileId] = useState<string | null>(null);
-  const [datasetPreflight, setDatasetPreflight] = useState<DatasetPreflight | null>(null);
-  const [datasetPreflightStatus, setDatasetPreflightStatus] = useState<"idle" | "pending" | "ready" | "error">("idle");
-  const [datasetPreflightError, setDatasetPreflightError] = useState("");
-  const [datasetRunPlan, setDatasetRunPlan] = useState<DatasetRunPlan | null>(null);
-  const [datasetRunPlanStatus, setDatasetRunPlanStatus] = useState<"idle" | "pending" | "ready" | "error">("idle");
-  const [datasetRunPlanError, setDatasetRunPlanError] = useState("");
-  const [historicalSimulation, setHistoricalSimulation] = useState<HistoricalSimulationResult | null>(null);
-  const [historicalSimulationStatus, setHistoricalSimulationStatus] = useState<HistoricalSimulationUiStatus>("idle");
-  const [historicalSimulationError, setHistoricalSimulationError] = useState("");
-  const [historicalChartData, setHistoricalChartData] = useState<HistoricalChartData | null>(null);
-  const [historicalChartStatus, setHistoricalChartStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
-  const [historicalChartError, setHistoricalChartError] = useState("");
-  const [savedRunView, setSavedRunView] = useState<"studio" | "list" | "detail">("studio");
-  const [savedRuns, setSavedRuns] = useState<SavedRunListItem[]>([]);
-  const [savedRunsStatus, setSavedRunsStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
-  const [savedRunsError, setSavedRunsError] = useState("");
-  const [savedRunDetail, setSavedRunDetail] = useState<SavedRunDetail | null>(null);
-  const [savedRunDetailStatus, setSavedRunDetailStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
-  const [savedRunDetailError, setSavedRunDetailError] = useState("");
-  const [historicalSaveStatus, setHistoricalSaveStatus] = useState<"idle" | "saving" | "saved" | "already_saved" | "error">("idle");
-  const [historicalSaveError, setHistoricalSaveError] = useState("");
+  const [datasetState, setDatasetState] = useReducerGroup(initialDatasetState);
+  const {
+    datasets,
+    datasetCatalogStatus,
+    datasetCatalogError,
+    datasetFilter,
+    activeDatasetId,
+    selectedDatasetId,
+    datasetSelectionStatus,
+    datasetSelectionError,
+    downloadJob,
+    downloadUiStatus,
+    downloadError,
+    historicalProfiles,
+    historicalProfilesStatus,
+    historicalProfilesError,
+    selectedHistoricalProfileId,
+    datasetPreflight,
+    datasetPreflightStatus,
+    datasetPreflightError,
+    datasetRunPlan,
+    datasetRunPlanStatus,
+    datasetRunPlanError,
+  } = datasetState;
+  const setDatasetFilter = (value: DatasetFilter) => setDatasetState("datasetFilter", value);
+  const setActiveDatasetId = (value: string | null) => setDatasetState("activeDatasetId", value);
+  const [simulationState, setSimulationState] = useReducerGroup(initialSimulationState);
+  const {
+    historicalSimulation,
+    historicalSimulationStatus,
+    historicalSimulationError,
+    historicalChartData,
+    historicalChartStatus,
+    historicalChartError,
+    historicalSaveStatus,
+    historicalSaveError,
+  } = simulationState;
+  const [savedRunsState, setSavedRunsState] = useReducerGroup(initialSavedRunsState);
+  const {
+    savedRunView,
+    savedRuns,
+    savedRunsStatus,
+    savedRunsError,
+    savedRunDetail,
+    savedRunDetailStatus,
+    savedRunDetailError,
+  } = savedRunsState;
   const [binancePublicSnapshot, setBinancePublicSnapshot] = useState<BinancePublicSnapshot | null>(null);
   const [binancePublicSnapshotStatus, setBinancePublicSnapshotStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [binancePublicSnapshotError, setBinancePublicSnapshotError] = useState("");
@@ -230,22 +358,22 @@ function App() {
     historicalProfilesController.current?.abort();
     const requestController = new AbortController();
     historicalProfilesController.current = requestController;
-    setHistoricalProfilesStatus("loading");
-    setHistoricalProfilesError("");
+    setDatasetState("historicalProfilesStatus", "loading");
+    setDatasetState("historicalProfilesError", "");
     try {
       const response = await fetch("/api/historical-profiles", { cache: "no-store", signal: requestController.signal });
       const body = (await response.json()) as HistoricalProfile[] & DatasetApiError;
       if (!response.ok || !Array.isArray(body)) {
-        setHistoricalProfilesError(body.detail ?? body.title ?? "Historical profile katalogu okunamadı.");
-        setHistoricalProfilesStatus("error");
+        setDatasetState("historicalProfilesError", body.detail ?? body.title ?? "Historical profile katalogu okunamadı.");
+        setDatasetState("historicalProfilesStatus", "error");
         return;
       }
-      setHistoricalProfiles(body);
-      setHistoricalProfilesStatus("ready");
+      setDatasetState("historicalProfiles", body);
+      setDatasetState("historicalProfilesStatus", "ready");
     } catch (error) {
       if (requestController.signal.aborted) return;
-      setHistoricalProfilesError("Historical profile API'ye bağlanamadı. Local API'nin çalıştığını kontrol edin.");
-      setHistoricalProfilesStatus("error");
+      setDatasetState("historicalProfilesError", "Historical profile API'ye bağlanamadı. Local API'nin çalıştığını kontrol edin.");
+      setDatasetState("historicalProfilesStatus", "error");
     }
   }
 
@@ -253,23 +381,23 @@ function App() {
     datasetController.current?.abort();
     const requestController = new AbortController();
     datasetController.current = requestController;
-    setDatasetCatalogStatus("pending");
-    setDatasetCatalogError("");
+    setDatasetState("datasetCatalogStatus", "pending");
+    setDatasetState("datasetCatalogError", "");
     try {
       const response = await fetch("/api/datasets", { signal: requestController.signal });
       const body = (await response.json()) as { datasets?: DatasetSummary[]; count?: number } & DatasetApiError;
       if (!response.ok || !body.datasets) {
-        setDatasetCatalogError(body.detail ?? body.title ?? "Dataset kataloğu okunamadı.");
-        setDatasetCatalogStatus("error");
+        setDatasetState("datasetCatalogError", body.detail ?? body.title ?? "Dataset kataloğu okunamadı.");
+        setDatasetState("datasetCatalogStatus", "error");
         return;
       }
-      setDatasets(body.datasets);
-      setActiveDatasetId(body.datasets[0]?.dataset_id ?? null);
-      setDatasetCatalogStatus("ready");
+      setDatasetState("datasets", body.datasets);
+      setDatasetState("activeDatasetId", body.datasets[0]?.dataset_id ?? null);
+      setDatasetState("datasetCatalogStatus", "ready");
     } catch (error) {
       if (requestController.signal.aborted) return;
-      setDatasetCatalogError("Dataset kataloğu API'ye bağlanamadı. Local API'nin çalıştığını kontrol edin.");
-      setDatasetCatalogStatus("error");
+      setDatasetState("datasetCatalogError", "Dataset kataloğu API'ye bağlanamadı. Local API'nin çalıştığını kontrol edin.");
+      setDatasetState("datasetCatalogStatus", "error");
     }
   }
 
@@ -278,44 +406,44 @@ function App() {
     preflightController.current?.abort();
     runPlanController.current?.abort();
     runPlanRequestGeneration.current += 1;
-    setSelectedHistoricalProfileId(null);
-    setDatasetPreflight(null);
-    setDatasetPreflightError("");
-    setDatasetRunPlan(null);
-    setDatasetRunPlanError("");
-    setDatasetRunPlanStatus("idle");
-    setHistoricalSimulation(null);
-    setHistoricalSimulationStatus("idle");
-    setHistoricalSimulationError("");
-    setHistoricalSaveStatus("idle");
-    setHistoricalSaveError("");
+    setDatasetState("selectedHistoricalProfileId", null);
+    setDatasetState("datasetPreflight", null);
+    setDatasetState("datasetPreflightError", "");
+    setDatasetState("datasetRunPlan", null);
+    setDatasetState("datasetRunPlanError", "");
+    setDatasetState("datasetRunPlanStatus", "idle");
+    setSimulationState("historicalSimulation", null);
+    setSimulationState("historicalSimulationStatus", "idle");
+    setSimulationState("historicalSimulationError", "");
+    setSimulationState("historicalSaveStatus", "idle");
+    setSimulationState("historicalSaveError", "");
     historicalChartController.current?.abort();
-    setHistoricalChartData(null);
-    setHistoricalChartStatus("idle");
-    setHistoricalChartError("");
+    setSimulationState("historicalChartData", null);
+    setSimulationState("historicalChartStatus", "idle");
+    setSimulationState("historicalChartError", "");
     if (!activeDataset || activeDataset.status !== "VERIFIED") {
-      setDatasetPreflightStatus("idle");
+      setDatasetState("datasetPreflightStatus", "idle");
       return;
     }
     const activeDatasetIdForRequest = activeDataset.dataset_id;
     const requestController = new AbortController();
     preflightController.current = requestController;
-    setDatasetPreflightStatus("pending");
+    setDatasetState("datasetPreflightStatus", "pending");
     async function loadPreflight() {
       try {
         const response = await fetch(`/api/datasets/${encodeURIComponent(activeDatasetIdForRequest)}/preflight`, { signal: requestController.signal });
         const body = (await response.json()) as DatasetPreflight & DatasetApiError;
         if (!response.ok || body.preflight_status !== "READY") {
-          setDatasetPreflightError(body.detail ?? body.title ?? "Ön kontrol gösterilemedi. Dataset seçimi korunuyor.");
-          setDatasetPreflightStatus("error");
+          setDatasetState("datasetPreflightError", body.detail ?? body.title ?? "Ön kontrol gösterilemedi. Dataset seçimi korunuyor.");
+          setDatasetState("datasetPreflightStatus", "error");
           return;
         }
-        setDatasetPreflight(body);
-        setDatasetPreflightStatus("ready");
+        setDatasetState("datasetPreflight", body);
+        setDatasetState("datasetPreflightStatus", "ready");
       } catch (error) {
         if (requestController.signal.aborted) return;
-        setDatasetPreflightError("Ön kontrol gösterilemedi. Dataset seçimi korunuyor.");
-        setDatasetPreflightStatus("error");
+        setDatasetState("datasetPreflightError", "Ön kontrol gösterilemedi. Dataset seçimi korunuyor.");
+        setDatasetState("datasetPreflightStatus", "error");
       }
     }
     void loadPreflight();
@@ -330,34 +458,34 @@ function App() {
     runPlanController.current?.abort();
     const requestController = new AbortController();
     runPlanController.current = requestController;
-    setSelectedHistoricalProfileId(selectedProfile.profile_id);
-    setDatasetRunPlan(null);
-    setDatasetRunPlanError("");
-    setDatasetRunPlanStatus("pending");
-    setHistoricalSimulation(null);
-    setHistoricalSimulationStatus("idle");
-    setHistoricalSimulationError("");
+    setDatasetState("selectedHistoricalProfileId", selectedProfile.profile_id);
+    setDatasetState("datasetRunPlan", null);
+    setDatasetState("datasetRunPlanError", "");
+    setDatasetState("datasetRunPlanStatus", "pending");
+    setSimulationState("historicalSimulation", null);
+    setSimulationState("historicalSimulationStatus", "idle");
+    setSimulationState("historicalSimulationError", "");
     historicalChartController.current?.abort();
-    setHistoricalChartData(null);
-    setHistoricalChartStatus("idle");
-    setHistoricalChartError("");
-    setHistoricalSaveStatus("idle");
-    setHistoricalSaveError("");
+    setSimulationState("historicalChartData", null);
+    setSimulationState("historicalChartStatus", "idle");
+    setSimulationState("historicalChartError", "");
+    setSimulationState("historicalSaveStatus", "idle");
+    setSimulationState("historicalSaveError", "");
     try {
       const response = await fetch(`/api/datasets/${encodeURIComponent(activeDatasetId)}/run-plan?profile_id=${encodeURIComponent(selectedProfile.profile_id)}`, { cache: "no-store", signal: requestController.signal });
       const body = (await response.json()) as Partial<DatasetRunPlan> & DatasetApiError;
       if (requestGeneration !== runPlanRequestGeneration.current) return;
       if (!response.ok || body.run_status !== "NOT_STARTED" || !body.config || !body.dataset || !body.profile || body.profile.profile_id !== selectedProfile.profile_id || body.dataset.dataset_id !== activeDatasetId) {
-        setDatasetRunPlanError(body.detail ?? body.title ?? "Seçili historical profile bu dataset ile güvenli biçimde eşleştirilemedi.");
-        setDatasetRunPlanStatus("error");
+        setDatasetState("datasetRunPlanError", body.detail ?? body.title ?? "Seçili historical profile bu dataset ile güvenli biçimde eşleştirilemedi.");
+        setDatasetState("datasetRunPlanStatus", "error");
         return;
       }
-      setDatasetRunPlan(body as DatasetRunPlan);
-      setDatasetRunPlanStatus("ready");
+      setDatasetState("datasetRunPlan", body as DatasetRunPlan);
+      setDatasetState("datasetRunPlanStatus", "ready");
     } catch (error) {
       if (requestController.signal.aborted || requestGeneration !== runPlanRequestGeneration.current) return;
-      setDatasetRunPlanError("Seçili historical profile için koşu planı alınamadı. Local API'nin çalıştığını kontrol edin.");
-      setDatasetRunPlanStatus("error");
+      setDatasetState("datasetRunPlanError", "Seçili historical profile için koşu planı alınamadı. Local API'nin çalıştığını kontrol edin.");
+      setDatasetState("datasetRunPlanStatus", "error");
     }
   }
 
@@ -365,23 +493,23 @@ function App() {
     historicalChartController.current?.abort();
     const requestController = new AbortController();
     historicalChartController.current = requestController;
-    setHistoricalChartData(null);
-    setHistoricalChartError("");
-    setHistoricalChartStatus("loading");
+    setSimulationState("historicalChartData", null);
+    setSimulationState("historicalChartError", "");
+    setSimulationState("historicalChartStatus", "loading");
     try {
       const response = await fetch(`/api/datasets/${encodeURIComponent(datasetId)}/chart-data`, { cache: "no-store", signal: requestController.signal });
       const body = (await response.json()) as HistoricalChartData & DatasetApiError;
       if (!response.ok || body.model_id !== "historical_ohlcv_v1" || body.dataset_id !== datasetId || body.artifact_sha256 !== expectedArtifactSha256 || body.processed_bar_count !== expectedProcessedBarCount || !Array.isArray(body.bars)) {
-        setHistoricalChartError(response.status === 409 ? "Grafik kapsamı izin verilen sınır içinde değil; görünüm oluşturulmadı." : "Tarihsel OHLC görünümü güvenli biçimde oluşturulamadı.");
-        setHistoricalChartStatus("error");
+        setSimulationState("historicalChartError", response.status === 409 ? "Grafik kapsamı izin verilen sınır içinde değil; görünüm oluşturulmadı." : "Tarihsel OHLC görünümü güvenli biçimde oluşturulamadı.");
+        setSimulationState("historicalChartStatus", "error");
         return;
       }
-      setHistoricalChartData(body);
-      setHistoricalChartStatus("ready");
+      setSimulationState("historicalChartData", body);
+      setSimulationState("historicalChartStatus", "ready");
     } catch (error) {
       if (requestController.signal.aborted) return;
-      setHistoricalChartError("Tarihsel OHLC görünümü alınamadı. Local API'nin çalıştığını kontrol edin.");
-      setHistoricalChartStatus("error");
+      setSimulationState("historicalChartError", "Tarihsel OHLC görünümü alınamadı. Local API'nin çalıştığını kontrol edin.");
+      setSimulationState("historicalChartStatus", "error");
     }
   }
 
@@ -390,11 +518,11 @@ function App() {
     historicalSimulationController.current?.abort();
     const requestController = new AbortController();
     historicalSimulationController.current = requestController;
-    setHistoricalSimulation(null);
-    setHistoricalSimulationError("");
-    setHistoricalSaveStatus("idle");
-    setHistoricalSaveError("");
-    setHistoricalSimulationStatus("starting");
+    setSimulationState("historicalSimulation", null);
+    setSimulationState("historicalSimulationError", "");
+    setSimulationState("historicalSaveStatus", "idle");
+    setSimulationState("historicalSaveError", "");
+    setSimulationState("historicalSimulationStatus", "starting");
     try {
       const response = await fetch("/api/historical-runs/simulate", {
         method: "POST",
@@ -411,19 +539,19 @@ function App() {
       });
       const body = (await response.json()) as HistoricalSimulationResult & DatasetApiError;
       if (!response.ok || !body.execution_status) {
-        setHistoricalSimulationError(body.detail ?? body.title ?? "Tarihsel simülasyon başlatılamadı.");
-        setHistoricalSimulationStatus("error");
+        setSimulationState("historicalSimulationError", body.detail ?? body.title ?? "Tarihsel simülasyon başlatılamadı.");
+        setSimulationState("historicalSimulationStatus", "error");
         return;
       }
-      setHistoricalSimulation(body);
+      setSimulationState("historicalSimulation", body);
       const completed = body.execution_status === "COMPLETED";
-      setHistoricalSimulationStatus(completed ? "completed" : "indeterminate");
+      setSimulationState("historicalSimulationStatus", completed ? "completed" : "indeterminate");
       if (completed) void loadHistoricalChartData(datasetRunPlan.dataset.dataset_id, body.dataset.artifact_sha256, body.dataset.processed_bar_count);
       else if (body.marker_authority === "PREFIX_BOUNDARY_ONLY" && datasetPreflight) void loadHistoricalChartData(datasetRunPlan.dataset.dataset_id, body.dataset.artifact_sha256, datasetPreflight.bar_count);
     } catch (error) {
       if (requestController.signal.aborted) return;
-      setHistoricalSimulationError("Simülasyon API'sine bağlanılamadı. Local API'nin çalıştığını kontrol edin.");
-      setHistoricalSimulationStatus("error");
+      setSimulationState("historicalSimulationError", "Simülasyon API'sine bağlanılamadı. Local API'nin çalıştığını kontrol edin.");
+      setSimulationState("historicalSimulationStatus", "error");
     }
   }
 
@@ -431,27 +559,27 @@ function App() {
     savedRunsController.current?.abort();
     const requestController = new AbortController();
     savedRunsController.current = requestController;
-    setSavedRunsStatus("loading");
-    setSavedRunsError("");
+    setSavedRunsState("savedRunsStatus", "loading");
+    setSavedRunsState("savedRunsError", "");
     try {
       const response = await fetch("/api/historical-runs?limit=50", { cache: "no-store", signal: requestController.signal });
       const body = (await response.json()) as SavedRunListResponse & SavedRunApiError;
       if (!response.ok || !Array.isArray(body.runs) || typeof body.count !== "number") {
-        setSavedRunsError(body.detail ?? body.title ?? "Kaydedilmiş koşular okunamadı.");
-        setSavedRunsStatus("error");
+        setSavedRunsState("savedRunsError", body.detail ?? body.title ?? "Kaydedilmiş koşular okunamadı.");
+        setSavedRunsState("savedRunsStatus", "error");
         return;
       }
-      setSavedRuns(body.runs);
-      setSavedRunsStatus("ready");
+      setSavedRunsState("savedRuns", body.runs);
+      setSavedRunsState("savedRunsStatus", "ready");
     } catch (error) {
       if (requestController.signal.aborted) return;
-      setSavedRunsError("Saved Runs API'sine bağlanılamadı. Local API'nin çalıştığını kontrol edin.");
-      setSavedRunsStatus("error");
+      setSavedRunsState("savedRunsError", "Saved Runs API'sine bağlanılamadı. Local API'nin çalıştığını kontrol edin.");
+      setSavedRunsState("savedRunsStatus", "error");
     }
   }
 
   function openSavedRuns() {
-    setSavedRunView("list");
+    setSavedRunsState("savedRunView", "list");
     void loadSavedRuns();
   }
 
@@ -459,24 +587,24 @@ function App() {
     savedRunDetailController.current?.abort();
     const requestController = new AbortController();
     savedRunDetailController.current = requestController;
-    setSavedRunView("detail");
-    setSavedRunDetail(null);
-    setSavedRunDetailError("");
-    setSavedRunDetailStatus("loading");
+    setSavedRunsState("savedRunView", "detail");
+    setSavedRunsState("savedRunDetail", null);
+    setSavedRunsState("savedRunDetailError", "");
+    setSavedRunsState("savedRunDetailStatus", "loading");
     try {
       const response = await fetch(`/api/historical-runs/${encodeURIComponent(runId)}`, { cache: "no-store", signal: requestController.signal });
       const body = (await response.json()) as SavedRunDetail & SavedRunApiError;
       if (!response.ok || body.storage_state !== "STORED" || !body.run_id) {
-        setSavedRunDetailError(response.status === 409 ? "Bu kayıt doğrulanamadı; güvenli ayrıntı görünümü açılmadı." : body.detail ?? body.title ?? "Koşu ayrıntısı okunamadı.");
-        setSavedRunDetailStatus("error");
+        setSavedRunsState("savedRunDetailError", response.status === 409 ? "Bu kayıt doğrulanamadı; güvenli ayrıntı görünümü açılmadı." : body.detail ?? body.title ?? "Koşu ayrıntısı okunamadı.");
+        setSavedRunsState("savedRunDetailStatus", "error");
         return;
       }
-      setSavedRunDetail(body);
-      setSavedRunDetailStatus("ready");
+      setSavedRunsState("savedRunDetail", body);
+      setSavedRunsState("savedRunDetailStatus", "ready");
     } catch (error) {
       if (requestController.signal.aborted) return;
-      setSavedRunDetailError("Koşu ayrıntısı API'sine bağlanılamadı. Local API'nin çalıştığını kontrol edin.");
-      setSavedRunDetailStatus("error");
+      setSavedRunsState("savedRunDetailError", "Koşu ayrıntısı API'sine bağlanılamadı. Local API'nin çalıştığını kontrol edin.");
+      setSavedRunsState("savedRunDetailStatus", "error");
     }
   }
 
@@ -485,8 +613,8 @@ function App() {
     historicalSaveController.current?.abort();
     const requestController = new AbortController();
     historicalSaveController.current = requestController;
-    setHistoricalSaveStatus("saving");
-    setHistoricalSaveError("");
+    setSimulationState("historicalSaveStatus", "saving");
+    setSimulationState("historicalSaveError", "");
     try {
       const response = await fetch("/api/historical-runs", {
         method: "POST",
@@ -496,16 +624,16 @@ function App() {
       });
       const body = (await response.json()) as SavedRunSaveResponse & SavedRunApiError;
       if (!response.ok || !body.run_id || body.record_health !== "OK") {
-        setHistoricalSaveError(body.detail ?? body.title ?? "Tarihsel koşu kalıcı olarak kaydedilemedi.");
-        setHistoricalSaveStatus("error");
+        setSimulationState("historicalSaveError", body.detail ?? body.title ?? "Tarihsel koşu kalıcı olarak kaydedilemedi.");
+        setSimulationState("historicalSaveStatus", "error");
         return;
       }
-      setHistoricalSaveStatus(body.created ? "saved" : "already_saved");
+      setSimulationState("historicalSaveStatus", body.created ? "saved" : "already_saved");
       void loadSavedRuns();
     } catch (error) {
       if (requestController.signal.aborted) return;
-      setHistoricalSaveError("Koşuyu kaydetme API'sine bağlanılamadı. Local API'nin çalıştığını kontrol edin.");
-      setHistoricalSaveStatus("error");
+      setSimulationState("historicalSaveError", "Koşuyu kaydetme API'sine bağlanılamadı. Local API'nin çalıştığını kontrol edin.");
+      setSimulationState("historicalSaveStatus", "error");
     }
   }
 
@@ -514,9 +642,9 @@ function App() {
     downloadActionController.current?.abort();
     const requestController = new AbortController();
     downloadActionController.current = requestController;
-    setDownloadJob(null);
-    setDownloadError("");
-    setDownloadUiStatus("starting");
+    setDatasetState("downloadJob", null);
+    setDatasetState("downloadError", "");
+    setDatasetState("downloadUiStatus", "starting");
     try {
       const response = await fetch("/api/dataset-downloads", {
         method: "POST",
@@ -526,16 +654,16 @@ function App() {
       });
       const body = (await response.json()) as { job?: DatasetDownloadJob } & DatasetApiError;
       if (!response.ok || !body.job) {
-        setDownloadError(response.status === 409 ? "Bu dataset için başka bir indirme devam ediyor." : body.detail ?? body.title ?? "Dataset download başlatılamadı.");
-        setDownloadUiStatus("error");
+        setDatasetState("downloadError", response.status === 409 ? "Bu dataset için başka bir indirme devam ediyor." : body.detail ?? body.title ?? "Dataset download başlatılamadı.");
+        setDatasetState("downloadUiStatus", "error");
         return;
       }
-      setDownloadJob(body.job);
-      setDownloadUiStatus("polling");
+      setDatasetState("downloadJob", body.job);
+      setDatasetState("downloadUiStatus", "polling");
     } catch (error) {
       if (requestController.signal.aborted) return;
-      setDownloadError("Download job API'ye bağlanamadı. Local API'nin çalıştığını kontrol edin.");
-      setDownloadUiStatus("error");
+      setDatasetState("downloadError", "Download job API'ye bağlanamadı. Local API'nin çalıştığını kontrol edin.");
+      setDatasetState("downloadUiStatus", "error");
     }
   }
 
@@ -550,31 +678,31 @@ function App() {
         const response = await fetch(`/api/dataset-downloads/${encodeURIComponent(activeJobId)}`, { signal: requestController.signal });
         const body = (await response.json()) as DatasetDownloadJob & DatasetApiError;
         if (response.status === 404) {
-          setDownloadJob(null);
-          setDownloadError("İş kaydı artık bulunamıyor. Uygulama yeniden başlatılmış olabilir; katalog durumu yeniden kontrol edildi.");
-          setDownloadUiStatus("error");
+          setDatasetState("downloadJob", null);
+          setDatasetState("downloadError", "İş kaydı artık bulunamıyor. Uygulama yeniden başlatılmış olabilir; katalog durumu yeniden kontrol edildi.");
+          setDatasetState("downloadUiStatus", "error");
           void loadDatasets();
           return;
         }
         if (!response.ok || !body.job_id) {
-          setDownloadError("Durum güncellenemiyor; indirme arka planda devam ediyor olabilir. Son bilinen durum gösteriliyor.");
-          setDownloadUiStatus("error");
+          setDatasetState("downloadError", "Durum güncellenemiyor; indirme arka planda devam ediyor olabilir. Son bilinen durum gösteriliyor.");
+          setDatasetState("downloadUiStatus", "error");
           timer = window.setTimeout(poll, 1200);
           return;
         }
-        setDownloadJob(body);
+        setDatasetState("downloadJob", body);
         if (isActiveDownloadJob(body.status)) {
-          setDownloadError("");
-          setDownloadUiStatus("polling");
+          setDatasetState("downloadError", "");
+          setDatasetState("downloadUiStatus", "polling");
           timer = window.setTimeout(poll, 750);
           return;
         }
-        setDownloadUiStatus("idle");
+        setDatasetState("downloadUiStatus", "idle");
         if (body.status === "SUCCEEDED") void loadDatasets();
       } catch (error) {
         if (requestController.signal.aborted) return;
-        setDownloadError("Durum güncellenemiyor; indirme arka planda devam ediyor olabilir. Son bilinen durum gösteriliyor.");
-        setDownloadUiStatus("error");
+        setDatasetState("downloadError", "Durum güncellenemiyor; indirme arka planda devam ediyor olabilir. Son bilinen durum gösteriliyor.");
+        setDatasetState("downloadUiStatus", "error");
         timer = window.setTimeout(poll, 1200);
       }
     }
@@ -590,29 +718,29 @@ function App() {
     downloadActionController.current?.abort();
     const requestController = new AbortController();
     downloadActionController.current = requestController;
-    setDownloadError("");
-    setDownloadUiStatus("canceling");
+    setDatasetState("downloadError", "");
+    setDatasetState("downloadUiStatus", "canceling");
     try {
       const response = await fetch(`/api/dataset-downloads/${encodeURIComponent(downloadJob.job_id)}/cancel`, { method: "POST", signal: requestController.signal });
       const body = (await response.json()) as DatasetDownloadJob & DatasetApiError;
       if (!response.ok || !body.job_id) {
-        setDownloadError(body.detail ?? body.title ?? "İptal isteği gönderilemedi. Durumu yeniden kontrol edin.");
-        setDownloadUiStatus("error");
+        setDatasetState("downloadError", body.detail ?? body.title ?? "İptal isteği gönderilemedi. Durumu yeniden kontrol edin.");
+        setDatasetState("downloadUiStatus", "error");
         return;
       }
-      setDownloadJob(body);
-      setDownloadUiStatus(isActiveDownloadJob(body.status) ? "polling" : "idle");
+      setDatasetState("downloadJob", body);
+      setDatasetState("downloadUiStatus", isActiveDownloadJob(body.status) ? "polling" : "idle");
     } catch (error) {
       if (requestController.signal.aborted) return;
-      setDownloadError("İptal isteği gönderilemedi. Durumu yeniden kontrol edin.");
-      setDownloadUiStatus("error");
+      setDatasetState("downloadError", "İptal isteği gönderilemedi. Durumu yeniden kontrol edin.");
+      setDatasetState("downloadUiStatus", "error");
     }
   }
 
   async function selectDataset(dataset: DatasetSummary) {
     if (dataset.status !== "VERIFIED") return;
-    setDatasetSelectionStatus("pending");
-    setDatasetSelectionError("");
+    setDatasetState("datasetSelectionStatus", "pending");
+    setDatasetState("datasetSelectionError", "");
     try {
       const response = await fetch("/api/dataset-selection", {
         method: "PUT",
@@ -621,16 +749,16 @@ function App() {
       });
       const body = (await response.json()) as { selected?: DatasetSummary } & DatasetApiError;
       if (!response.ok || !body.selected) {
-        setDatasetSelectionError(body.detail ?? body.title ?? "Dataset seçilemedi.");
-        setDatasetSelectionStatus("error");
+        setDatasetState("datasetSelectionError", body.detail ?? body.title ?? "Dataset seçilemedi.");
+        setDatasetState("datasetSelectionStatus", "error");
         return;
       }
-      setSelectedDatasetId(body.selected.dataset_id);
-      setDatasets((current) => current.map((item) => item.dataset_id === body.selected?.dataset_id ? body.selected : item));
-      setDatasetSelectionStatus("ready");
+      setDatasetState("selectedDatasetId", body.selected.dataset_id);
+      setDatasetState("datasets", (current) => current.map((item) => item.dataset_id === body.selected?.dataset_id ? body.selected : item));
+      setDatasetState("datasetSelectionStatus", "ready");
     } catch (error) {
-      setDatasetSelectionError("Dataset seçimi API'ye gönderilemedi. Local API'nin çalıştığını kontrol edin.");
-      setDatasetSelectionStatus("error");
+      setDatasetState("datasetSelectionError", "Dataset seçimi API'ye gönderilemedi. Local API'nin çalıştığını kontrol edin.");
+      setDatasetState("datasetSelectionStatus", "error");
     }
   }
 
@@ -685,7 +813,7 @@ function App() {
       <aside className="sidebar" aria-label="Ana menü">
         <div className="brand"><span>DCA</span>BOT</div>
         <nav>
-          <a className={`nav-item ${savedRunView === "studio" ? "active" : ""}`} href="#studio" onClick={() => setSavedRunView("studio")}><span className="nav-icon">▦</span>Bot stüdyosu</a>
+          <a className={`nav-item ${savedRunView === "studio" ? "active" : ""}`} href="#studio" onClick={() => setSavedRunsState("savedRunView", "studio")}><span className="nav-icon">▦</span>Bot stüdyosu</a>
           <a className="nav-item disabled" href="#settings"><span className="nav-icon">⚙</span>Ayarlar</a>
           <a className="nav-item disabled" href="#plans"><span className="nav-icon">▤</span>Planlar</a>
           <a className={`nav-item ${savedRunView !== "studio" ? "active" : ""}`} href="#history" onClick={(event) => { event.preventDefault(); openSavedRuns(); }}><span className="nav-icon">◷</span>Geçmiş</a>
