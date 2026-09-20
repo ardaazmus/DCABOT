@@ -27,6 +27,7 @@ from dcabot.application.signed_request import Clock
 from dcabot.data_adapters.binance_testnet_order_execution import (
     BinanceTestnetOrderExecutionError,
     CancelledTestnetOrder,
+    OrderRejectedByVenue,
     PlacedTestnetOrder,
     WebSocketFactory,
     cancel_binance_testnet_order,
@@ -143,6 +144,19 @@ async def place_gated_testnet_limit_order(
             clock=clock,
             **kwargs,
         )
+    except OrderRejectedByVenue as exc:
+        # A clean, synchronous "no" from the venue is not ambiguous: no
+        # reconciliation/REST catch-up is needed, so this must never become
+        # UNKNOWN (found live: an early manual test conflated the two).
+        store.mark_rejected(
+            attempt_id,
+            now_us=now_us,
+            reason="VENUE_REJECTED",
+            venue_error_code=exc.venue_error_code,
+        )
+        raise TestnetOrderExecutionError(
+            "GATE_ORDER_REJECTED", "Emir venue tarafından reddedildi."
+        ) from exc
     except BinanceTestnetOrderExecutionError as exc:
         store.mark_unknown(attempt_id, now_us=now_us, reason="TRANSPORT_FAILED")
         raise TestnetOrderExecutionError(

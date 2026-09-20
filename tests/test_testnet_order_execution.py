@@ -260,6 +260,51 @@ class GatedPlacementTests(unittest.IsolatedAsyncioTestCase):
 
                 self.assertEqual(store.get("attempt-1").state, AttemptState.UNKNOWN)
 
+    async def test_clean_venue_rejection_becomes_rejected_not_unknown(self):
+        # Found live (2026-09-21): a real order priced outside Binance's
+        # PERCENT_PRICE_BY_SIDE band got a clean, synchronous 400 from the
+        # venue, but the gate marked it UNKNOWN -- as if the outcome were
+        # ambiguous and needed REST catch-up. It wasn't ambiguous; the venue
+        # gave a definitive answer. This proves the fix.
+        os.environ[TRADING_ENABLED_ENV_VAR] = "true"
+        socket = FakeSocket(
+            json.dumps(
+                {
+                    "id": "request-1",
+                    "status": 400,
+                    "error": {"code": -1013, "msg": "Filter failure: PERCENT_PRICE_BY_SIDE"},
+                }
+            )
+        )
+        with TemporaryDirectory() as directory:
+            with AttemptStore(Path(directory) / "attempts.sqlite") as store:
+                with self.assertRaisesRegex(TestnetOrderExecutionError, "GATE_ORDER_REJECTED"):
+                    await place_gated_testnet_limit_order(
+                        store=store,
+                        run_id="run-1",
+                        attempt_id="attempt-1",
+                        client_order_id="attempt-1",
+                        symbol="BTCUSDT",
+                        side="BUY",
+                        quantity="0.5",
+                        price="90",
+                        filter_profile=_profile(),
+                        max_entry_notional=number("1000"),
+                        capability_snapshot_hash="a" * 64,
+                        confirmed=True,
+                        credential_id="testnet-readonly",
+                        provider=_provider(),
+                        clock=FixedClock(),
+                        now_us=1_700_000_000_000_000,
+                        websocket_factory=lambda _url, **_kwargs: socket,
+                        request_id_factory=lambda: "request-1",
+                    )
+
+                resolved = store.get("attempt-1")
+                self.assertEqual(resolved.state, AttemptState.REJECTED)
+                self.assertEqual(resolved.venue_error_code, -1013)
+                self.assertNotEqual(resolved.state, AttemptState.UNKNOWN)
+
 
 class GatedCancelTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):

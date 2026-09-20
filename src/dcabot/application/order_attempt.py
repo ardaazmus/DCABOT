@@ -129,10 +129,19 @@ class OrderAttempt:
             (self.venue_event_time_ms, "ATTEMPT_VENUE_EVENT_TIME_INVALID"),
             (self.venue_transaction_time_ms, "ATTEMPT_VENUE_TRANSACTION_TIME_INVALID"),
             (self.http_status, "ATTEMPT_HTTP_STATUS_INVALID"),
-            (self.venue_error_code, "ATTEMPT_VENUE_ERROR_CODE_INVALID"),
         ):
             if value is not None and (type(value) is not int or value < 0):
                 raise OrderAttemptError(code, "Integer alan negatif olamaz.")
+        # Binance's own venue error codes are signed (e.g. -1013, -2013), unlike
+        # the other venue_* fields above, which are genuinely non-negative IDs
+        # and timestamps -- found live when a real -1013 rejection failed this
+        # check. Bounded to a sane magnitude, sign allowed either way.
+        if self.venue_error_code is not None and (
+            type(self.venue_error_code) is not int or abs(self.venue_error_code) > 1_000_000
+        ):
+            raise OrderAttemptError(
+                "ATTEMPT_VENUE_ERROR_CODE_INVALID", "Venue error code bounded integer olmalıdır."
+            )
         if type(self.recovery_query_count) is not int or self.recovery_query_count < 0:
             raise OrderAttemptError(
                 "ATTEMPT_RECOVERY_COUNT_INVALID", "Recovery sorgu sayısı geçersiz."

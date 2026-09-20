@@ -54,6 +54,23 @@ class BinanceTestnetOrderExecutionError(RuntimeError):
         self.code = code
 
 
+class OrderRejectedByVenue(BinanceTestnetOrderExecutionError):
+    """A definitive, synchronous "no" from the venue -- never ambiguous.
+
+    Raised only when the venue itself answered with a clean non-200 response
+    (e.g. a filter failure). Distinct from the base error so a caller can
+    tell "the venue said no" (REJECTED, terminal, no reconciliation needed)
+    apart from a genuine transport failure (UNKNOWN, needs REST catch-up) --
+    found live: an early manual test conflated the two and marked a cleanly
+    rejected order UNKNOWN, which would have queued it for catch-up it never
+    needed.
+    """
+
+    def __init__(self, code: str, message: str, *, venue_error_code: int | None) -> None:
+        super().__init__(code, message)
+        self.venue_error_code = venue_error_code
+
+
 class OrderSocket(Protocol):
     async def send(self, message: str) -> None: ...
 
@@ -260,8 +277,14 @@ async def _send_order_request(
                 "ORDER_RESPONSE_ID_MISMATCH", "Yanıt request ID ile eşleşmiyor."
             )
         if payload.get("status") != 200:
-            raise BinanceTestnetOrderExecutionError(
-                "ORDER_REQUEST_REJECTED", "İstek venue tarafından reddedildi."
+            error = payload.get("error")
+            venue_error_code = error.get("code") if isinstance(error, dict) else None
+            if type(venue_error_code) is not int:
+                venue_error_code = None
+            raise OrderRejectedByVenue(
+                "ORDER_REQUEST_REJECTED",
+                "İstek venue tarafından reddedildi.",
+                venue_error_code=venue_error_code,
             )
         result = payload.get("result")
         if not isinstance(result, dict):

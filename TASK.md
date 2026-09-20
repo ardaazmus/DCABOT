@@ -1,26 +1,19 @@
-# Aktif iş — Faz 3.5 kodu tamam; REAL_TESTNET kanıtı Arda'yı bekliyor
+# Aktif iş — Faz 3.5 kapandı; sıradaki adım Faz 3.6 kapsam araştırması
 
-`data_adapters/binance_testnet_order_execution.py` (projede mutation yapabilen TEK dosya), `application/testnet_order_execution.py` (Faz 3.4'ün 7 kuralını uygulayan kapı), `tools/run_single_testnet_order.py` (CLI kanıt aracı) yazıldı, 19 yeni offline test, tam checker 929/929 PASS. Ayrıntı: STATE.md, docs/KARARLAR.md.
+Faz 3.5 (tek testnet emri) `evidence_scope=REAL_TESTNET` ile kapandı. Bkz. STATE.md, docs/KARARLAR.md. Şu anda Claude'un elinde açık kod görevi yok.
 
-## Arda'nın yapması gereken (Claude yapamaz — credential + gerçek mutation gerekir)
-1. Testnet credential zaten kayıtlıysa (`testnet-readonly`) tekrar gerekmez.
-2. Kill-switch'i aç ve çalıştır:
-```powershell
-$env:PYTHONPATH='src'
-$env:DCABOT_TRADING_ENABLED='true'
-uv run --frozen python tools/run_single_testnet_order.py testnet-readonly BTCUSDT BUY 0.001 20000
-```
-(Fiyatı güncel testnet BTCUSDT fiyatından uzak, dolmayacak şekilde seç — örn. güncel fiyatın çok altında bir BUY limit, hemen dolup "gör" adımını anlamsızlaştırmasın.)
-3. İki onay isteyecek (gönder, iptal) — her birinde tam `EVET` yaz.
-4. Çıktıyı (venue_order_id, durum, sorgu sonucu, iptal sonucu — credential/secret içermez) buraya yapıştır.
+## Sıradaki: Faz 3.6 — Dolum + restart kurtarma (KAPSAM ARAŞTIRMASI, kod yazmadan önce)
+Hedef (docs/YOL_HARITASI.md): süreç ortada öldürülür, yeniden başlayınca tek ekonomik kayıt (duplicate yok, kayıp yok).
 
-## Bu geldiğinde Claude'un yapacağı
-- STATE.md'yi `evidence_scope=REAL_TESTNET` olarak günceller.
-- Sıradaki: **Faz 3.6 — Dolum + restart kurtarma** (süreç ortada öldürülür, yeniden başlayınca tek ekonomik kayıt) için kapsam araştırması.
+## İlk adımlar
+1. `ReconciliationCoordinator.startup`/`startup_with_durable_recovery` ve `AttemptStore.recover_after_restart` zaten var — bunların mevcut restart-kurtarma kapsamını (Faz 3.2'de kullanıldı) 3.6'nın istediği "dolum sırasında öldürme" senaryosuna ne kadar karşıladığını netleştir.
+2. Testnet'te gerçek bir "process ortada öldürülürken bir emrin SENDING/ACKNOWLEDGED durumda kalması" senaryosunu nasıl güvenle simüle edeceğini (Arda'nın yerelde Ctrl+C ile mi keseceği, yoksa ayrı bir kill sinyali mi) belirle.
+3. Dar kapsamı Arda'ya sun, onaysız kod yazma.
 
 ## Değişmez sınırlar
-- Credential, secret, gerçek emir, mutation ve mainnet: Arda onayı olmadan asla. Claude `tools/run_single_testnet_order.py`'yi kendisi hiç çalıştırmaz.
+- Credential, secret, gerçek emir, mutation ve mainnet: Arda onayı olmadan asla.
+- Claude gerçek testnet'e karşı hiçbir mutation çalıştırmaz.
 - STATE.md/TASK.md yalnız Claude günceller.
 
 ## Kabul
-- REAL_TESTNET kanıtı geldiğinde STATE.md güncellenir ve 3.6 brief'i yazılır.
+- Kod yazılmadan önce dar kapsam Arda'ya sunulur ve onaylanır.
