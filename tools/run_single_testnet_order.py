@@ -26,12 +26,14 @@ is automatic.
 
 import argparse
 import asyncio
+import os
 import sys
 import time
 from pathlib import Path
 from tempfile import gettempdir
 
 from dcabot.application.instrument_filters import InstrumentFilterProfile
+from dcabot.application.order_attempt import AttemptOperation, AttemptState, OrderAttempt, request_fingerprint
 from dcabot.application.signed_request import Clock
 from dcabot.application.testnet_order_execution import (
     TestnetOrderExecutionError,
@@ -81,6 +83,41 @@ def _filter_profile(symbol: str, filters: list[dict[str, str]]) -> InstrumentFil
     )
 
 
+def _simulate_crash(store: AttemptStore, *, attempt_id: str, symbol: str, now_us: int, stop_at: str) -> None:
+    """Faz 3.6 evidence helper: leave a real attempt in exactly one non-terminal
+    state, then hard-exit with os._exit -- no cleanup, no finally blocks, as
+    close to a real process kill as a Python script can get itself. Uses the
+    exact same AttemptStore transitions the real gate uses (prepare/persist/
+    mark_sending), just stopping partway through on purpose.
+    """
+
+    attempt = OrderAttempt(
+        attempt_id=attempt_id,
+        run_id="single-testnet-order",
+        venue="BINANCE_SPOT_TESTNET",
+        operation=AttemptOperation.PLACE_ORDER,
+        symbol=symbol,
+        client_order_id=attempt_id,
+        request_fingerprint_sha256=request_fingerprint({"symbol": symbol, "simulated_crash": stop_at}),
+        capability_snapshot_hash="a" * 64,
+        filter_snapshot_hash="b" * 64,
+        state=AttemptState.PREPARED,
+        created_at_us=now_us,
+        last_transition_at_us=now_us,
+    )
+    store.prepare(attempt)
+    if stop_at == "prepared":
+        print(f"SIMULE EDILEN COKME: attempt '{attempt_id}' PREPARED durumunda birakildi. Sert cikiliyor...")
+        os._exit(1)
+    store.persist(attempt_id, now_us=now_us)
+    if stop_at == "persisted":
+        print(f"SIMULE EDILEN COKME: attempt '{attempt_id}' PERSISTED durumunda birakildi. Sert cikiliyor...")
+        os._exit(1)
+    store.mark_sending(attempt_id, now_us=now_us)
+    print(f"SIMULE EDILEN COKME: attempt '{attempt_id}' SENDING durumunda birakildi. Sert cikiliyor...")
+    os._exit(1)
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("credential_id")
@@ -88,6 +125,19 @@ async def main() -> None:
     parser.add_argument("side", choices=["BUY", "SELL"])
     parser.add_argument("quantity")
     parser.add_argument("price")
+    parser.add_argument(
+        "--simulate-crash-at",
+        choices=["prepared", "persisted", "sending"],
+        default=None,
+        help=(
+            "Faz 3.6 REAL_TESTNET kanit araci: normal is mantigi yerine "
+            "attempt'i tam bu durumda birakip os._exit ile sert cikar -- "
+            "gercek bir 'Ctrl+C tam dogru anda' denemesi pratikte imkansiz "
+            "oldugu icin, ayni durumu deterministik olarak uretir. Bir "
+            "sonraki (bu bayraksiz) calistirma recover_stuck_attempts "
+            "uzerinden gercek bir venue sorgusuyla kurtarir."
+        ),
+    )
     args = parser.parse_args()
 
     provider = WindowsCredentialManagerProvider()
@@ -127,6 +177,17 @@ async def main() -> None:
 
         attempt_id = f"single-order-{int(time.time())}"
         now_us = int(time.time() * 1_000_000)
+
+        if args.simulate_crash_at is not None:
+            _simulate_crash(
+                store,
+                attempt_id=attempt_id,
+                symbol=args.symbol,
+                now_us=now_us,
+                stop_at=args.simulate_crash_at,
+            )
+            return  # unreachable -- _simulate_crash always os._exit()s
+
         try:
             result = await place_gated_testnet_limit_order(
                 store=store,
