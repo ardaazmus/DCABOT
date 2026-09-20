@@ -1,35 +1,39 @@
 # Durum — 2026-09-20
 
-Aktif faz: **Faz 2 (P1 kapanışı) tamamen kapandı ve `p1-demo-complete` etiketlendi.** Dal: codex/latest-state-2026-09-20.
-Doğrulanan: tam checker 880/880 PASS (0 skip); frontend tsc -b temiz, vitest 23/23 PASS.
-Eksenler: implementation=DONE(P1) · verification=PASS · evidence_scope=LOCAL_INTEGRATION+CLEAN_CLONE · review=APPROVED_WITH_FINDINGS · deployment=NOT_DEPLOYED
+Aktif faz: **Faz 3 (P2 gerçek Binance testnet) başladı — 3.1 kod tamam, offline doğrulandı; REAL_TESTNET kanıtı Arda'yı bekliyor.** P1 (Faz 2) `p1-demo-complete` etiketiyle kapalı. Dal: codex/latest-state-2026-09-20.
+Doğrulanan (offline): tam checker 886/886 PASS (0 skip); frontend tsc -b temiz, vitest 23/23 PASS.
+Eksenler: implementation=IN_PROGRESS(3.1) · verification=PASS(offline) · evidence_scope=LOCAL_INTEGRATION (REAL_TESTNET henüz yok) · review=NOT_RUN(3.1) · deployment=NOT_DEPLOYED
 
-## P1 kapanış ölçütü — bu oturumda tamamlandı (bkz. docs/KARARLAR.md)
-1. **Temiz klon + 9 adım:** gerçek `git clone` (kalıcı git config değişikliği yok, yalnız süreç-bazlı `GIT_CONFIG_*` env override), README komutlarıyla backend+frontend ayağa kaldırıldı, 9 adım (veri indir/doğrula → kalite → bot kur → önizle → koş → grafikten incele → kaydet → kapat/aç → reproduce) tarayıcıda canlı doğrulandı (`reproduced=true`, 3 hash eşleşti).
-2. **Bağımsız review:** Codex/muse (farklı ajan, salt-okunur, tek dosya çıktı izniyle) `git diff main...HEAD`'i üç katmanlı (kritik/ekonomik → API → frontend) inceledi. Sonuç `APPROVED_WITH_FINDINGS`, rapor: `evidence/P1_CLOSURE_INDEPENDENT_REVIEW_2026_09_20/SONUC.md`. Katman 1-2'de davranışsal kusur yok; 1 LOW + 4 INFO bulgu.
-3. **Tek eyleme dönüşen bulgu (F1) Claude tarafından düzeltildi:** `DatasetCatalogPanel.tsx` aksiyon satırının `onClick`'ine, `onKeyDown`'daki hedef-koruma deseninin aynısı (`onRowClick`, `event.target !== event.currentTarget`) eklendi — Kopyala butonuna tıklamak artık satırı seçmiyor. Yeni test eklendi, canlı DOM'da doğrulandı (Copy → `aria-pressed=false`, satır → `aria-pressed=true`).
-4. **`git tag p1-demo-complete` atıldı.**
+## Faz 3.1 — Reconnect worker (bu oturum, Claude yaptı, delege edilmedi)
+- **Ne yapıldı:** `src/dcabot/application/user_stream_reconnect_worker.py` — mevcut `BinanceTestnetUserDataStream` (kasıtlı reconnect'siz, tek bağlantı) ile mevcut `ReconciliationCoordinator`'ı (offline connection/event state machine) sınırlı, deterministic backoff (varsayılan 1/2/4/8/16 sn, en fazla 5 deneme) ile birbirine bağlıyor. Hem `connect()` hem `recv()` hatası aynı `_register_failure` yoluna giriyor — bir socket bağlanıp sonra her `recv()`'de düşerse backoff'suz sıkı döngüye girmez (kendi ilk taslağımda bu riski fark edip düzelttim).
+- **Kapsam netleştirmesi (bkz. docs/KARARLAR.md):** SYNCED'e ulaşmak `ReconciliationCoordinator`'ın kendi kuralı gereği bir authoritative REST snapshot gerektiriyor (3.2, henüz yok). 3.1'in kanıtladığı gerçek yay: `CONNECTED_READ_ONLY → (düş) → STALE → (backoff+reconnect) → RECONCILIATION_REQUIRED → (gerçek gap varsa) → GAP` — roadmap'in kısa tanımıyla ("bağlan, düş, yeniden bağlan; gap tespiti") birebir.
+- **Test:** `tests/test_user_stream_reconnect_worker.py`, 6 test — happy path (connect+event→`CONNECTED_READ_ONLY`), disconnect+başarılı reconnect (→`RECONCILIATION_REQUIRED`), reconnect sonrası gerçek out-of-order event ile gap tespiti (→`GAP`), bounded retry tükenmesi (fail-closed, `ReconnectWorkerError`), constructor doğrulaması. Sahte websocket (`FakeSocket`) ve sahte credential (dummy HMAC, gerçek değil) ile tamamen offline.
+- **Canlı çalıştırma aracı (Claude hiç çalıştırmadı, çalıştıramaz):** `tools/run_user_stream_reconnect_worker.py <credential_id>` — gerçek ağ + Arda'nın Windows Credential Manager'da sakladığı testnet credential'ını kullanır. Import/syntax kontrolü yapıldı (`main` fonksiyonu doğru yükleniyor), ama gerçek testnet'e hiç bağlanılmadı — bu adım Arda'nın yerel makinesinde olmalı.
 
-## Faz 2.5 — Stress modeli (önceki tur, Claude yaptı, delege edilmedi)
-Tam stress ekonomik modeli (spread/latency/queue/reserve) `DEFERRED/NO-GO` kaldı (P1.16.i.b'nin kendi bağımsız kontrolünde iki çelişki + reserve invariant ihlali). Bunun yerine yalnız mevcut exact `config.slippage` ile ikinci bir profil eklendi (`historical_demo_btcusdt_1h_stress_slippage_v1`, slippage=0.002), yeni ekonomik kod yok. Frontend'e dokunulmadı (mevcut profil seçici + compare ekranı yeterliydi).
+## REAL_TESTNET kanıtı için Arda'nın yapması gerekenler (bkz. TASK.md)
+1. Testnet API anahtarı üret (testnet.binance.vision), sonra yerelde kaydet: `uv run --frozen python tools/configure_testnet_credential.py <credential_id>` (repoya girmez, Windows Credential Manager'da kalır).
+2. Çalıştır: `$env:PYTHONPATH='src'; uv run --frozen python tools/run_user_stream_reconnect_worker.py <credential_id>`.
+3. Birkaç saniye bekle (ilk `CONNECTED` satırını gör), sonra ağı kapat/aç (Wi-Fi'yi kapat-aç veya kabloyu çek-tak).
+4. Terminaldeki transition log'unu izle: `DISCONNECTED` → `RECONNECTING` (backoff saniyesiyle) → `RECONNECTED` bekleniyor. Gerçek bir `GAP` yalnız o sırada gerçekten bir event kaçırılırsa görülür — garanti değil, testnet'in o an event üretip üretmediğine bağlı.
+5. Ctrl+C ile durdur, log'u (yalnız redakte edilmiş state/kind satırları, credential/secret yok) Claude'a yapıştır — Claude bunu inceleyip STATE.md'yi `evidence_scope=REAL_TESTNET` olarak günceller.
 
-## Ajanlar arası işbölümü — genişletilmiş kullanım
-Bu oturumda ilk kez Codex/muse **kod yazmak için değil, bağımsız inceleme için** kullanıldı (salt-okunur, tek rapor dosyası izniyle). Sonuç: disiplinli, kanıt-temelli bir rapor — kendi çalıştırdığı komutların gerçek çıktısını verdi, okumadığı alanları `NOT_VERIFIED` bıraktı, tek gerçek bulguyu (F1) doğru şiddet seviyesiyle (LOW) sınıflandırdı. Bu kullanım biçimi ileride büyük diff'lerde ikinci göz olarak tekrarlanabilir.
+## Faz 2 (P1) özeti — kapandı, `p1-demo-complete` etiketli (ayrıntı git geçmişinde)
+Sıralı deal, ekonomik metrikler, reproduce+compare, etkileşimli marker, dar kapsamlı stress-slippage profili, temiz klon + bağımsız review (Codex/muse, `APPROVED_WITH_FINDINGS`) + tag.
 
 ## Kodda mevcut
-- Yerel arayüz (FastAPI 127.0.0.1:8000 + React/Vite 5173): veri seti kaydı, public indirme, kalite raporu, OHLC grafik (etkileşimli marker, klavye+mouse tutarlı), doğrulama, sıralı deal + ekonomik metrikler, SQLite kayıt/listesi, reproduce doğrulama, iki-run karşılaştırma, 4 historical profil (paper, demo v1, demo stress-slippage v1, demo fixed-slice v1).
-- CLI tools/bot.py: demo, init/replay/status/audit, preview.
+- Yerel arayüz (FastAPI 127.0.0.1:8000 + React/Vite 5173): P1'in tam demo akışı (bkz. git geçmişi).
+- CLI tools/bot.py: demo, init/replay/status/audit, preview. Yeni: tools/run_user_stream_reconnect_worker.py (Arda'nın yerelde çalıştıracağı).
 - Çekirdek: exact Decimal/Fraction ladder, net TP, drawdown; idempotent SQLite kayıtları.
-- P2 salt-okunur Binance testnet sınırı: public, account, user-stream adaptörleri.
+- P2 salt-okunur Binance testnet: public/account/user-stream adaptörleri (mevcut) + yeni reconnect worker (bu oturum, offline doğrulandı, canlı doğrulanmadı).
 
 ## Bilinen sınırlar
-- Signed REST/WS emir, mutation ve mainnet: NO-GO. Gerçek reconnect worker ve REST catch-up yok.
+- Signed REST/WS emir, mutation ve mainnet: NO-GO. REST catch-up (3.2) henüz yok — SYNCED'e ulaşılamıyor.
+- Reconnect worker gerçek testnet'e karşı hiç çalıştırılmadı; yalnız offline/sahte-socket testleriyle doğrulandı.
 - Simülasyon: OHLC intrabar sırası INDETERMINATE; gerçek likidite modeli yok. Tam stress ekonomik modeli NO-GO.
 - API tek worker'a bağlı. Python 3.13 zorunlu; uv sync --frozen.
-- Bağımsız review kapsam notları (evidence/P1_CLOSURE_INDEPENDENT_REVIEW_2026_09_20/SONUC.md, NOT_VERIFIED listesi): gerçek tarayıcı/testnet davranışı, yeni ~4.5k satırlık futures/grid/order_list persistence modülleri, evidence/docs içerikleri satır satır incelenmedi — Faz 3 öncesi gerekirse ayrıca ele alınabilir.
 
-## Kararlar (2026-09-20, Claude tarafından alındı — bkz. `docs/KARARLAR.md`)
-Sıralı deal persistence, Faz 2 dondurma listesi, Faz 2.5 stress NO-GO + dar slippage-profili, Claude/Codex işbölümü (kod + bağımsız review), P1 kapanış ölçütü tamamlandı ve etiketlendi.
+## Kararlar (bkz. `docs/KARARLAR.md`)
+P1 kapanış ölçütü tamamlandı ve etiketlendi; Faz 3.1 kapsamı SYNCED'i 3.2'ye bırakacak şekilde netleştirildi (mevcut coordinator/adapter kodunu değiştirmeden).
 
 ## Sıradaki adım
-P1 kapandı. Sırada Arda'nın kapsam kararı: Faz 3'e (P2 — gerçek Binance testnet) geçmek. Bu ilk kez projenin gerçek bir dış sisteme (testnet de olsa) bağlanacağı faz olduğu için TASK.md'de açık soru olarak bırakıldı; Claude roadmap sıralamasına karar verir ama bu geçişin zamanlamasını Arda onaylar.
+Arda'nın `tools/run_user_stream_reconnect_worker.py`'yi yerelde testnet credential'ıyla çalıştırıp ağı kesip/açarak REAL_TESTNET kanıtı üretmesi bekleniyor. Kanıt geldiğinde Claude STATE.md'yi günceller ve **3.2 (REST catch-up)**'a geçer — bu da Claude-owned, kritik/persistence bir dilim olacak.
