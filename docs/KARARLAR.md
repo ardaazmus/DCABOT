@@ -106,3 +106,8 @@ Tam rakip eşdeğerliği, kâr üstünlüğü veya tamamlanmış UI bu belgeyle 
 - Yeni: `fetch_binance_testnet_open_orders` (`GET /api/v3/openOrders`, signed, redakte — gerçek fill/execution iddiası yok, yalnız venue'nun raporu). İki yeni API uç noktası, `DCABOT_TESTNET_CREDENTIAL_ID` env değişkeniyle credential_id'yi çözüyor (yoksa 409 fail-closed) — CORS origin env-var deseniyle tutarlı.
 - Doğrulama: 14 yeni offline test (9 adapter + 5 API), tam checker 910/910 PASS, canlı sunucuda (credential ayarlanmadan) 409 fail-closed + OpenAPI şeması doğrulandı.
 - Frontend paneli Codex'e devredildi (bounded, API sözleşmesi zaten sabit) — bkz. TASK.md.
+
+## 2026-09-21 — Faz 3.3 frontend teslim alındı: üçüncü Codex devri de temiz
+- Karar: Codex/muse brief'i uyguladı — yalnız izinli 4 dosyaya dokundu (`BinanceAccountPanel.tsx`+test yeni, `App.tsx`'e yalnız ekleme, `styles.css`'e 3 satır). `not_configured` durumunu bilinçli olarak sakin/alarmsız tasarladı (role="status", kırmızı değil), mevcut `BinancePublicSnapshotPanel.tsx` desenini birebir taklit etti, iki endpoint'i tek yükleyici fonksiyonda birleştirdi (brief'in izin verdiği seçenek).
+- Claude doğrulaması: diff satır satır incelendi (yalnız 4 dosya, ekleme-ağırlıklı); `npx tsc -b` temiz; `npx vitest run` 31/31 PASS (8 yeni); tam Python checker 910/910 PASS; canlı sunucuda credential ayarlanmadan `not_configured` kartı ekran görüntüsüyle doğrulandı. `ready` durumu canlı test edilmedi (gerçek credential kullanmak Claude'un sınırı dışında) — bunun yerine gerçek API şemasına birebir uyan sahte veriyle yazılmış 8 component testi yeterli kanıt kabul edildi.
+- Üçüncü ardışık temiz Codex devri (Faz 2.4 iki devir + bu) — dosya allowlist disiplini ve "durma koşulu" deseni tutarlı çalışıyor.

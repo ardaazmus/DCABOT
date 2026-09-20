@@ -96,3 +96,6 @@ nav { display: grid; gap: 6px; }.nav-item { color: #8597aa; text-decoration: non
 .historical-action-table tbody tr.historical-action-row-selected:hover { background: rgba(245, 197, 91, .22); }
 /* Faz 2.4 tamamlama: klavyeyle seçilebilir aksiyon satırları için görünür odak halkası. */
 .historical-action-row-interactive:focus-visible, .historical-action-row-selected:focus-visible { outline: var(--ui-focus-ring-width) solid var(--ui-focus-ring); outline-offset: var(--ui-focus-ring-offset); }
+/* Faz 3.3 testnet hesap paneli: salt-okunur bakiye + açık emir görünümü; yapı public panel desenini yeniden kullanır. */
+.binance-heading-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.binance-testnet-badge { padding: 6px 8px; border: 1px solid #365a74; border-radius: 5px; color: #a9d3ef; background: rgba(29, 89, 135, .16); font: 700 9px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; }

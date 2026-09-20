@@ -3,6 +3,7 @@ import { DatasetCatalogPanel } from "./DatasetCatalogPanel";
 import { HistoricalProfileStatus } from "./HistoricalProfileSelector";
 import { SavedRunsPanel } from "./SavedRunsPanel";
 import { BinancePublicSnapshotPanel, isBinancePublicSnapshot, type BinancePublicSnapshot } from "./BinancePublicSnapshotPanel";
+import { BinanceAccountPanel, isBinanceAccountSnapshot, isBinanceOpenOrdersSnapshot, isTestnetCredentialNotConfigured, type BinanceAccountSnapshot, type BinanceOpenOrdersSnapshot } from "./BinanceAccountPanel";
 import { DatasetCatalogStatus, DatasetDownloadJob, DatasetFilter, DatasetPreflight, DatasetRunPlan, DownloadJobUiStatus, DatasetSelectionStatus, DatasetSummary, HistoricalChartData, HistoricalProfile, HistoricalSimulationResult, isActiveDownloadJob } from "./datasetCatalog";
 import { SavedRunApiError, SavedRunDetail, SavedRunListItem, SavedRunListResponse, SavedRunSaveResponse } from "./savedRuns";
 
@@ -265,6 +266,10 @@ function App() {
   const [binancePublicSnapshot, setBinancePublicSnapshot] = useState<BinancePublicSnapshot | null>(null);
   const [binancePublicSnapshotStatus, setBinancePublicSnapshotStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [binancePublicSnapshotError, setBinancePublicSnapshotError] = useState("");
+  const [binanceAccount, setBinanceAccount] = useState<BinanceAccountSnapshot | null>(null);
+  const [binanceOpenOrders, setBinanceOpenOrders] = useState<BinanceOpenOrdersSnapshot | null>(null);
+  const [binanceAccountStatus, setBinanceAccountStatus] = useState<"idle" | "loading" | "ready" | "not_configured" | "error">("idle");
+  const [binanceAccountError, setBinanceAccountError] = useState("");
   const revision = useRef(0);
   const controller = useRef<AbortController | null>(null);
   const qualityController = useRef<AbortController | null>(null);
@@ -280,6 +285,7 @@ function App() {
   const savedRunDetailController = useRef<AbortController | null>(null);
   const historicalSaveController = useRef<AbortController | null>(null);
   const binancePublicSnapshotController = useRef<AbortController | null>(null);
+  const binanceAccountController = useRef<AbortController | null>(null);
 
   async function calculate(nextForm: FormState) {
     const currentRevision = revision.current + 1;
@@ -323,6 +329,7 @@ function App() {
     void loadDatasets();
     void loadHistoricalProfiles();
     void loadBinancePublicSnapshot();
+    void loadBinanceAccount();
     return () => {
       controller.current?.abort();
       qualityController.current?.abort();
@@ -337,6 +344,7 @@ function App() {
       savedRunDetailController.current?.abort();
       historicalSaveController.current?.abort();
       binancePublicSnapshotController.current?.abort();
+      binanceAccountController.current?.abort();
     };
   }, []);
 
@@ -363,6 +371,46 @@ function App() {
       setBinancePublicSnapshot(null);
       setBinancePublicSnapshotError("Public Testnet snapshot API'sine bağlanılamadı. Local API'nin çalıştığını kontrol edin.");
       setBinancePublicSnapshotStatus("error");
+    }
+  }
+
+  async function loadBinanceAccount() {
+    binanceAccountController.current?.abort();
+    const requestController = new AbortController();
+    binanceAccountController.current = requestController;
+    setBinanceAccountStatus("loading");
+    setBinanceAccountError("");
+    try {
+      const accountResponse = await fetch("/api/testnet/account", { cache: "no-store", signal: requestController.signal });
+      const accountBody = (await accountResponse.json()) as unknown;
+      const ordersResponse = await fetch("/api/testnet/open-orders", { cache: "no-store", signal: requestController.signal });
+      const ordersBody = (await ordersResponse.json()) as unknown;
+      if ((accountResponse.status === 409 && isTestnetCredentialNotConfigured(accountBody))
+        || (ordersResponse.status === 409 && isTestnetCredentialNotConfigured(ordersBody))) {
+        setBinanceAccount(null);
+        setBinanceOpenOrders(null);
+        setBinanceAccountStatus("not_configured");
+        return;
+      }
+      const accountValid = accountResponse.ok && isBinanceAccountSnapshot(accountBody);
+      const ordersValid = ordersResponse.ok && isBinanceOpenOrdersSnapshot(ordersBody);
+      if (!accountValid || !ordersValid) {
+        const failingBody = (!accountValid ? accountBody : ordersBody) as { detail?: string; title?: string };
+        setBinanceAccount(null);
+        setBinanceOpenOrders(null);
+        setBinanceAccountError(failingBody.detail ?? failingBody.title ?? "Testnet hesap snapshot sözleşmesi doğrulanamadı.");
+        setBinanceAccountStatus("error");
+        return;
+      }
+      setBinanceAccount(accountBody);
+      setBinanceOpenOrders(ordersBody);
+      setBinanceAccountStatus("ready");
+    } catch (error) {
+      if (requestController.signal.aborted) return;
+      setBinanceAccount(null);
+      setBinanceOpenOrders(null);
+      setBinanceAccountError("Testnet hesap API'sine bağlanılamadı. Local API'nin çalıştığını kontrol edin.");
+      setBinanceAccountStatus("error");
     }
   }
 
@@ -913,6 +961,7 @@ function App() {
            </section>
 
           <BinancePublicSnapshotPanel snapshot={binancePublicSnapshot} status={binancePublicSnapshotStatus} error={binancePublicSnapshotError} onRetry={() => void loadBinancePublicSnapshot()} />
+          <BinanceAccountPanel account={binanceAccount} orders={binanceOpenOrders} status={binanceAccountStatus} error={binanceAccountError} onRetry={() => void loadBinanceAccount()} />
 
            <DatasetCatalogPanel
             datasets={datasets}
