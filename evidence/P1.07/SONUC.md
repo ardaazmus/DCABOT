@@ -48,7 +48,7 @@ Raporun ilk dilim önerisi kavramsal olarak mevcut planla uyumlu olsa da impleme
 
 Anonim ve kanıtlı contract audit promptu hazırlandı:
 
-`docs/P1.07.a_Mevcut_Core_Partial_Fill_Uyumluluk_Arastirma_Promptu.md`
+`docs/archive/arastirma-promptlari/P1.07.a_Mevcut_Core_Partial_Fill_Uyumluluk_Arastirma_Promptu.md` (2026-09-20'de arşivlendi; içerik/hash değişmedi)
 
 Rapor artık alındığı için yeni araştırma bekleme kapısı kapandı; ancak tarihsel partial modelin kalan implementation işi ayrı mikro fazdır. Sonraki tek iş `historical_ohlcv_partial_fixed_v1` için opt-in parser/runner RED testlerini kurmaktır. Stop, queue, volume participation, random latency ve same-bar cancel/fill race hâlâ uygulanmayacaktır.
 
@@ -112,7 +112,7 @@ Gerçek ASGI HTTP request/response smoke ve strict serialization doğrulaması d
 
 P1.07.a public contract tamamlandı. Fixed profile’ı mevcut UI’a açmak yeni UI/UX davranışı olduğu için anonim araştırma kapısı açıldı:
 
-`docs/P1.07.b_Fixed_Slice_UI_UX_Arastirma_Promptu.md`
+`docs/archive/arastirma-promptlari/P1.07.b_Fixed_Slice_UI_UX_Arastirma_Promptu.md` (2026-09-20'de arşivlendi; içerik/hash değişmedi)
 
 Bu rapor alınana kadar profile selector, partial action tablosu, save düğmesi davranışı veya grafik görünümü genişletilmedi; aşağıdaki P1.07.b bölümünde yalnız doğrulanmış ve sınırlı uygulama kaydedilmiştir.
 
@@ -200,7 +200,7 @@ Marker authority/prefix marker, incomplete persistence/save/reopen ve `OPEN_AT_E
 
 ## Sonraki tek iş: P1.07.c.3 marker authority araştırma kapısı
 
-Prompt hazırlandı: `docs/P1.07.c.3_Marker_Authority_Arastirma_Promptu.md`.
+Prompt hazırlandı: `docs/archive/arastirma-promptlari/P1.07.c.3_Marker_Authority_Arastirma_Promptu.md` (2026-09-20'de arşivlendi; içerik/hash değişmedi).
 
 Bu araştırma, `INDETERMINATE` prefix için normal action marker ile nötr incomplete boundary marker’ı ayıracak; doğrudan trading-domain kanıtını genel erişilebilirlik çıkarımından ayıracak; SVG/ARIA, keyboard, screen reader, grayscale, reduced-motion ve 320px kabul testlerini tanımlayacak. Rapor gelmeden marker authority `NONE` kalacak.
 
@@ -281,11 +281,11 @@ Raporun “observation ve fill ayrılmalı” iddiası d.1 testleriyle doğrulan
 
 ### Sonraki tek iş
 
-D.1 policy’sinin DCA strategy state’e bağlanması için anonim araştırma promptu açıldı: docs/P1.07.d.3_DCA_Limit_Strategy_Binding_Arastirma_Promptu.md. D.3 raporu gelmeden public limit contract’ı veya DCA limit behavior’ı uygulanmayacak.
+D.1 policy’sinin DCA strategy state’e bağlanması için anonim araştırma promptu açıldı: docs/archive/arastirma-promptlari/P1.07.d.3_DCA_Limit_Strategy_Binding_Arastirma_Promptu.md (2026-09-20'de arşivlendi; içerik/hash değişmedi). D.3 raporu gelmeden public limit contract’ı veya DCA limit behavior’ı uygulanmayacak.
 
 ### P1.07.d.3 — DCA strategy binding araştırma kapısı
 
-Durum: `RESEARCH_RECEIVED / DEFERRED`; implementation yok. Araştırma raporu: `P1.07.d.3_DCA_Limit_Strategy_Binding_Ayrintili_Arastirma_Raporu(1).md`. Prompt: `docs/P1.07.d.3_DCA_Limit_Strategy_Binding_Arastirma_Promptu.md`.
+Durum: `RESEARCH_RECEIVED / DEFERRED`; implementation yok. Araştırma raporu: `P1.07.d.3_DCA_Limit_Strategy_Binding_Ayrintili_Arastirma_Raporu(1).md`. Prompt: `docs/archive/arastirma-promptlari/P1.07.d.3_DCA_Limit_Strategy_Binding_Arastirma_Promptu.md` (2026-09-20'de arşivlendi; içerik/hash değişmedi).
 
 Raporun BASE-only aday önerisi production’a alınmadı. Yerel kontrolde çekirdeğin INTENT/FILL/ORDER_FINAL, partial leaves, BASE anchor, safety blocker ve late-fill invalidation davranışları mevcut testlerle kanıtlandı; ancak d.1 fixed-limit observation’ının DCA order state’e güvenli adapter olarak bağlandığı, reserve lifecycle’ının ve BASE-only end-to-end ekonomik posting zincirinin kanıtı yok. SAFETY ve EXIT DEFER olarak kaldı. Public API, persistence, UI ve marker kapsam dışıdır.
 

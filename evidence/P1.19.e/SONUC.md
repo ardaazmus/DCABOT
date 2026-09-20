@@ -53,6 +53,8 @@ Raporun “light theme” ve “uzman görünüm” önerileri, gerçek kod kan�
 
 Bağımsız, network-free oracle:
 
+Not (2026-09-20): `.cluster/` klasörü temizlendi; aşağıki script yolu artık diskte yok, tarihsel kayıttır.
+
 ```text
 Oracle: .cluster/P1.19.e-audit/contrast_oracle.mjs
 CSS: frontend/src/styles.css

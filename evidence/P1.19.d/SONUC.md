@@ -29,7 +29,7 @@ Bu mikro fazda P1.19.c ile eklenen koyu tema token/focus davranışı gerçek ye
 | Chrome CDP fallback | PASS | `http://127.0.0.1:9222` üzerinden gerçek sayfa hedefi |
 | Sayfa | PASS | Başlık: `DCABOT — Bot stüdyosu`; URL: `http://127.0.0.1:5173/` |
 | İçerik | PASS | Body metni boş değil; Bot stüdyosu, config, plan ve veri merkezi görünür |
-| QA script | PASS | `.cluster/P1.19.d-qa/cdp_accessibility_qa.cjs` |
+| QA script | PASS | `.cluster/P1.19.d-qa/cdp_accessibility_qa.cjs` (2026-09-20'de `.cluster/` ile birlikte temizlendi; tarihsel kayıt) |
 
 ## DOM ve erişilebilirlik ağacı
 

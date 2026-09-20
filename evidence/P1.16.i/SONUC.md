@@ -5,7 +5,7 @@
 - Durum: `COMPLETE_WITH_LIMITATION / LOCAL_PASS`
 - Alt faz: `P1.16.i.a` tamamlandı
 - Sonraki tek iş: `P1.16.i.b` exact stress economic contract araştırma/karar kapısı
-- Anonim araştırma promptu: `docs/P1.16.i.b_Stress_Ekonomik_Sozlesme_Arastirma_Promptu.md`
+- Anonim araştırma promptu: `docs/archive/arastirma-promptlari/P1.16.i.b_Stress_Ekonomik_Sozlesme_Arastirma_Promptu.md` (2026-09-20'de arşivlendi; içerik/hash değişmedi)
 - Production readiness: `NO`
 
 ## Kanıtlanan mevcut sahiplik

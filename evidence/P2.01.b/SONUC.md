@@ -55,7 +55,7 @@ hesap/API-key yetkisi, bakiye, emir kabulü, fill veya ekonomik sonuç üretmez.
 | Workspace kontrolü | `PASS`, 150 aktif Python dosyası |
 | Gerçek public Testnet GET | `PASS`, `BTCUSDT=TRADING`, 11 filter, 4 rate limit |
 | Yerleşik tarayıcı DOM/screenshot/interaction QA | `PASS`: local Browser ile public snapshot kartı, DOM, desktop/390px screenshot ve etkileşim doğrulandı |
-| Doğrudan Chrome CDP responsive/visual QA | `PASS`: 320/768/1280px’te yatay taşma yok; snapshot ve public/account sınırı DOM’da mevcut; screenshot kanıtı `.cluster/p2-audit-20260911/p2-01b-{320,768,1280}.png` |
+| Doğrudan Chrome CDP responsive/visual QA | `PASS`: 320/768/1280px’te yatay taşma yok; snapshot ve public/account sınırı DOM’da mevcut; screenshot kanıtı `.cluster/p2-audit-20260911/p2-01b-{320,768,1280}.png` (2026-09-20'de `.cluster/` ile birlikte temizlendi; tarihsel kayıt) |
 | Doğrudan Chrome CDP keyboard/focus QA | `PASS`: 23 klavye durağında görünür focus ring; Space ile native disclosure aç/kapa doğrulandı |
 | Güncel kaynakla yeniden başlatılmış local API route smoke | `PASS`: HTTP 200; `BINANCE_SPOT_TESTNET`, `BTCUSDT`, `TRADING`, `read_only=true`, `credential_required=false`; order types döndü |
 | NVDA/JAWS/Windows HCM | `NOT_RUN` |

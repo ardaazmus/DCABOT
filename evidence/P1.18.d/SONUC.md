@@ -24,6 +24,8 @@ canlı ağ, credential, emir veya ekonomik authority açılmadı.
 
 ## Görsel kanıtlar
 
+Not (2026-09-20): Aşağıdaki `.cluster/` yolları artık diskte mevcut değil; bu gitignored geçici klasör Arda onayıyla temizlendi. Bu tablo yalnız o tarihte üretilmiş ekran görüntülerinin var olduğunun tarihsel kaydıdır, tekrar üretilebilir bir kanıt değildir.
+
 - Desktop: `D:\project\DCABOT\.cluster\P1.18.d-visual-qa\DELIVERY\result-1280.png`
 - Mobil 390px: `D:\project\DCABOT\.cluster\P1.18.d-visual-qa\DELIVERY\result-390.png`
 - Mobil 320px: `D:\project\DCABOT\.cluster\P1.18.d-visual-qa\DELIVERY\result-320.png`
@@ -56,6 +58,8 @@ Space klavye etkileşimi doğrulanmış olsa da NVDA/JAWS sonucu iddia edilmemel
 Kullanıcı izniyle resmi NVDA 2026.2 paketi doğrulanmış SHA-256 ile indirildi ve
 sistem kurulumunun UAC gerektirdiği görülünce kalıcı kurulum yerine yalnız bu kanıt
 görevi altında taşınabilir kopya oluşturuldu:
+
+Not (2026-09-20): taşınabilir NVDA kopyası `.cluster/` ile birlikte temizlendi; aşağıki yol tarihsel kayıttır.
 
 ```text
 Portable path: D:\project\DCABOT\.cluster\NVDA-screen-reader-qa\portable

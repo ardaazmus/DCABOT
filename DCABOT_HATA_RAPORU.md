@@ -31,6 +31,8 @@ if s.orders or qty != c.base_qty:
 
 **Öneri:** `decision()` fonksiyonundaki ölü kolu kaldır veya `report()` docstring'inde tek-deal sınırlamasını açıkça belirt.
 
+**Kısmen ele alındı (2026-09-20):** Karar `docs/KARARLAR.md` CORE01'de belgelendi — tek-deal değişmezi kasıtlı çekirdek sınırıdır, `engine.py` bilerek değişmedi. Üst katmanda `historical_simulation.simulate_historical_ohlcv` artık deal kapanınca taze bir `State` açıp yeni BASE başlatıyor (bkz. STATE.md Faz 2.1b), yani ürün seviyesinde "yeni deal başlatılamaz" etkisi orkestrasyon katmanında giderildi. Ama `engine.py:292-293`'teki `decision()` kolu hâlâ hiçbir zaman tetiklenmiyor (`historical_simulation.py` `decision()`'ı hiç çağırmıyor, kendi INTENT/FILL/ORDER_FINAL adımlarını doğrudan uyguluyor) — kod kendisi hâlâ ölü. Canlı/testnet yürütme yolu bu düzeltmeyi henüz kullanmıyor. Tam KAPALI değil; kalan iş bu düzeltmenin canlı yürütme tarafına taşınması veya `decision()`'ın gerçekten kullanılmasıdır.
+
 ---
 
 ### 2. api.py — _quality_response() Tutarsız Return Tipi — KAPALI (2026-09-20)
@@ -78,7 +80,7 @@ _integer(fields[8], "trade_count", row_number)      # Sonuç hiçbir yere kayded
 
 ---
 
-### 4. `api.py` — Config Dosyası Her İstekte Diskten Okunuyor
+### 4. `api.py` — Config Dosyası Her İstekte Diskten Okunuyor — KAPALI (2026-09-20)
 
 **Dosya:** `src/dcabot/server/api.py` (~satır 558)
 
@@ -92,6 +94,8 @@ def _load_config(profile_id: str = "paper") -> dict[str, Any]:
 **Açıklama:** Her `/api/preview` isteğinde `config/paper.json` diskten okunuyor. Config dosyası değişmediği sürece bu gereksiz I/O.
 
 **Öneri:** Config dosyasını modül yükleme zamanında bir kez oku ve cache'le. Dosya değişikliği için manuel refresh mekanizması ekle.
+
+**Doğrulama sonucu:** Güncel `_load_config()` (`api.py:899-905`) `_PAPER_CONFIG_CACHE` modül-seviyesi tuple'ında `(mtime_ns, config)` tutuyor; dosya `mtime` değişmediği sürece diskten yeniden okumuyor, değiştiğinde otomatik yenileniyor. Bulgu kapanmıştır; ek kod değişikliği gerekmiyor.
 
 ---
 
@@ -146,7 +150,7 @@ if config is not None:
 
 ## 🟢 DÜŞÜK SEVİYE / KOD KALİTESİ
 
-### 8. `api.py` — CORS Sadece Vite Dev Portu
+### 8. `api.py` — CORS Sadece Vite Dev Portu — KAPALI (2026-09-20)
 
 **Dosya:** `src/dcabot/server/api.py` (~satır 623)
 
@@ -160,6 +164,8 @@ app.add_middleware(
 ```
 
 **Açıklama:** Production build farklı portla serve edilirse CORS başarısız olur. 5173 yerine configurable origin veya wildcard kullanılmalı.
+
+**Doğrulama sonucu:** `_cors_origins()` (`api.py:94-100`) artık `DCABOT_CORS_ORIGINS` ortam değişkenini okuyor; boş veya `*` içeren değer güvenli yerel varsayılana (`localhost:5173`/`127.0.0.1:5173`) düşüyor, wildcard asla doğrudan uygulanmıyor. Bulgu kapanmıştır; ek kod değişikliği gerekmiyor.
 
 ---
 
@@ -207,10 +213,10 @@ Tek component'te 30'dan fazla `useState` hook'u var. Bu, component'in çok karma
 ## 🎯 Öncelikli Düzeltme Önerileri
 
 1. _quality_response(): KAPALI; iki durum da JSONResponse + Cache-Control: no-store.
-2. **`decision()`** → Ölü kodu kaldır veya docstring'de açıkla
-3. **`_load_config()`** → Config dosyasını cache'le
-4. **CORS** → Configurable origin ekle
-5. **`App.tsx`** → State management'ı yeniden düzenle
+2. **`decision()`** → KISMEN: historical orkestrasyonu deal restart'ı üst katmanda çözdü (bkz. madde 1), `engine.py`'deki kod hâlâ ölü; canlı yürütme yolu kapsam dışı.
+3. **`_load_config()`** → KAPALI; mtime tabanlı cache uygulandı.
+4. **CORS** → KAPALI; `DCABOT_CORS_ORIGINS` ile configurable, wildcard güvenli varsayılana düşüyor.
+5. **`App.tsx`** → KISMEN: `useReducer` ile dataset/simulation/saved-runs grupları taşındı, kalan `useState` sayısı azaldı ama tam konsolidasyon yapılmadı.
 
 ---
 

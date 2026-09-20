@@ -28,4 +28,4 @@ Bu backend fazında kullanıcı arayüzüne profile selector bağlanmadı; sessi
 
 ## Sonraki tek iş
 
-Anonim UI/UX araştırma kapısı: `docs/P1.06.f.2_Historical_Profile_Secimi_UI_UX_Arastirma_Promptu.md`. Rapor gelmeden profile selector, otomatik profile geçişi veya yeni warning yerleşimi uygulanmayacak.
+Anonim UI/UX araştırma kapısı: `docs/archive/arastirma-promptlari/P1.06.f.2_Historical_Profile_Secimi_UI_UX_Arastirma_Promptu.md` (2026-09-20'de arşivlendi; içerik/hash değişmedi). Rapor gelmeden profile selector, otomatik profile geçişi veya yeni warning yerleşimi uygulanmayacak.

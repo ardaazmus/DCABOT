@@ -5,7 +5,7 @@
 - Alt faz durumu: `COMPLETE_WITH_LIMITATION / RESEARCH_AUDITED`
 - İleri Futures Grid implementation kararı: `DEFERRED / NO-GO`
 - Ana faz: `P1.13.g IN_PROGRESS / IMPLEMENTATION_PENDING`
-- Rapor: `docs/P1.13_FUTURES_GRID_LIFECYCLE_PRIMARY_SOURCE_AUDIT.md`
+- Rapor: `docs/archive/arastirma-promptlari/P1.13_FUTURES_GRID_LIFECYCLE_PRIMARY_SOURCE_AUDIT.md` (2026-09-20'de arşivlendi; içerik/hash değişmedi)
 - Rapor SHA-256: `1CDAA5BD6ADDF73C731E1DEBC1138AAE0F02550A616CC889BDED8A3011F01939`
 - Production readiness: `NO`
 

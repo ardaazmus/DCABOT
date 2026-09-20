@@ -19,9 +19,9 @@ oluşturduğu anlamına gelmez.
 
 | Kaynak | SHA-256 | Kapsam |
 |---|---|---|
-| `docs/P1.12_P1.13_3COMMAS_PIONEX_ARASTIRMA_RAPORU.md` | `1B81AD4FF8DB0AC0D1FDEAE1CF2143F436D591A92BFB28562616F06919D4B0A4` | Reverse/Infinity ürün karşılaştırması ve lifecycle kabul sınırları |
-| `docs/P1.12_P1.13_URUN_KURALLARI_ARASTIRMA_RAPORU.md` | `FB3D51B83F9B4D4F5CECE11AF760AA3C78D3CC7ECA471B6B1D4B06E740ECE2EE` | Ürün kuralları ve `DEFERRED / NO-GO` kararı |
-| `docs/P1.13_FUTURES_GRID_LIFECYCLE_PRIMARY_SOURCE_AUDIT.md` | `1CDAA5BD6ADDF73C731E1DEBC1138AAE0F02550A616CC889BDED8A3011F01939` | Primary-source lifecycle oracle sınırları |
+| `docs/archive/arastirma-promptlari/P1.12_P1.13_3COMMAS_PIONEX_ARASTIRMA_RAPORU.md` | `1B81AD4FF8DB0AC0D1FDEAE1CF2143F436D591A92BFB28562616F06919D4B0A4` | Reverse/Infinity ürün karşılaştırması ve lifecycle kabul sınırları |
+| `docs/archive/arastirma-promptlari/P1.12_P1.13_URUN_KURALLARI_ARASTIRMA_RAPORU.md` | `FB3D51B83F9B4D4F5CECE11AF760AA3C78D3CC7ECA471B6B1D4B06E740ECE2EE` | Ürün kuralları ve `DEFERRED / NO-GO` kararı |
+| `docs/archive/arastirma-promptlari/P1.13_FUTURES_GRID_LIFECYCLE_PRIMARY_SOURCE_AUDIT.md` | `1CDAA5BD6ADDF73C731E1DEBC1138AAE0F02550A616CC889BDED8A3011F01939` | Primary-source lifecycle oracle sınırları |
 | Kullanıcı tarafından sağlanan `futures_grid_lifecycle_primary_sources_research.md` | `807333B14D07CCAFC7376480E9BF97D55B79ECD8E5001AB6FC02B85BCD97AEF0` | Resmî kaynak taraması; exact lifecycle eksikliği |
 
 Kritik rapor kayıtları: ürün kuralları raporunda Reverse/Infinity için

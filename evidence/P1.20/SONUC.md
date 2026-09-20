@@ -107,6 +107,8 @@ Bu alanlar frontend tarafından yeniden hesaplanmadı. Theme/focus çalışması
 
 ## Görsel kanıtlar
 
+Not (2026-09-20): aşağıdaki `.cluster/` bağlantıları artık geçersiz; klasör Arda onayıyla temizlendi. Tarihsel kayıt olarak bırakıldı, tekrar üretilebilir kanıt değildir.
+
 - [1280px tamamlanmış demo](../../.cluster/P1.20-demo/demo-1280-completed.png)
 - [1280px Saved Runs listesi](../../.cluster/P1.20-demo/demo-1280-saved-runs.png)
 - [1280px salt-okunur kayıt ayrıntısı](../../.cluster/P1.20-demo/demo-1280-saved-detail.png)

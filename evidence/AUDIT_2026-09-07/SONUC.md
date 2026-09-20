@@ -49,7 +49,7 @@ Test: `tests/api/test_historical_simulation.py::test_simulate_request_validation
 
 TP/slippage semantiği, gap policy, offline demo sizing ve FastAPI/Starlette gövde-yanıt sınırları tek anonim promptta toplandı:
 
-`docs/2026-09-07_Kanitli_Audit_Dis_Arastirma_Promptu.md`
+`docs/archive/arastirma-promptlari/2026-09-07_Kanitli_Audit_Dis_Arastirma_Promptu.md` (2026-09-20'de arşivlendi; içerik/hash değişmedi)
 
 Bu rapor gelmeden:
 

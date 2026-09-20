@@ -767,7 +767,7 @@ destekliyor. Exact range transition, replacement identity, pending/reserve
 lifecycle, late-fill authority ve deterministic replay oracle birlikte
 doğrulanmadı. Alt faz `COMPLETE_WITH_LIMITATION / RESEARCH_AUDITED`, ileri
 implementation `DEFERRED / NO-GO`; rapor
-`docs/P1.13_FUTURES_GRID_LIFECYCLE_PRIMARY_SOURCE_AUDIT.md`, kanıt
+`docs/archive/arastirma-promptlari/P1.13_FUTURES_GRID_LIFECYCLE_PRIMARY_SOURCE_AUDIT.md`, kanıt
 `evidence/P1.13.g.d/SONUC.md`.
 
 P1.13.g.c’nin `BLOCKED_CONTRACT_REQUIRED` ve `order_authority=NONE` sınırı
