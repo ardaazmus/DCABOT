@@ -161,7 +161,8 @@ async def main() -> None:
                 ):
                     print("Deal tamamlandi: pozisyon kapandi.")
                     break
-                print(f"Su anda aksiyon yok. Pozisyon: {position_qty}. Mark: {session.state.mark}")
+                mark_text = exact_text(session.state.mark) if session.state.mark is not None else "?"
+                print(f"Su anda aksiyon yok. Pozisyon: {exact_text(position_qty)}. Mark: {mark_text}")
                 answer = input("Fiyati/dolumlari kontrol et [k], cik [q]: ").strip().lower()
                 if answer == "q":
                     break
