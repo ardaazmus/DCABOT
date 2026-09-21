@@ -11,10 +11,20 @@ is enforced here, in order, before a signed request is ever built:
    showing the operator the exact order and getting an explicit yes.
 4. Idempotent identity + durable-before-send: every attempt goes through
    `AttemptStore.prepare() -> persist() -> mark_sending()` before signing.
-5. Single in-flight mutation: refuses to prepare a new attempt while any
-   attempt is still between PREPARED and a venue answer.
-6. Cancellation goes through the identical discipline (its own function
-   below, not a shortcut).
+5. Single in-flight/unresolved mutation: refuses to prepare a new attempt
+   while any attempt is still between PREPARED and a venue answer, OR while
+   any attempt is UNKNOWN/RECONCILING (`_require_no_blocking_attempts`) — a
+   transport failure that leaves an attempt's real outcome undetermined must
+   block further mutation exactly like an in-flight one, not just fail to
+   count as "in-flight" (closed 2026-09-21 after independent review, finding
+   F2: it previously only checked PREPARED/PERSISTED/SENDING). UNRESOLVED
+   does not block further mutation -- REST catch-up already ran and could
+   not confirm placement; see `_require_no_blocking_attempts` docstring.
+6. Cancellation goes through the identical discipline: its own durable
+   `AttemptStore` identity (`prepare()`/`persist()`/`mark_sending()`), not
+   just the kill-switch + confirmation checks (closed 2026-09-21 after
+   independent review, finding F1: cancel previously bypassed the store
+   entirely).
 7. The transport layer's base URL stays hard-coded to Testnet.
 """
 
@@ -64,6 +74,42 @@ class GatedOrderResult:
     placed: PlacedTestnetOrder
 
 
+@dataclass(frozen=True, slots=True)
+class GatedCancelResult:
+    attempt: OrderAttempt
+    cancelled: CancelledTestnetOrder
+
+
+def _require_no_blocking_attempts(store: AttemptStore) -> None:
+    """Rule 5, read broadly: refuse a new mutation while any attempt's real
+    venue outcome is still genuinely undetermined -- not just while one is
+    physically in-flight (PREPARED/PERSISTED/SENDING), but also while one
+    sits UNKNOWN or RECONCILING (`list_resolvable_attempts()`). An UNKNOWN
+    attempt is exactly the "we don't know if it went through" case AGENTS.md
+    rule 4 forbids blindly retrying past, so it must block here too, not
+    just fail to count as in-flight.
+
+    UNRESOLVED is deliberately NOT included: it only exists once a real REST
+    lookup already ran and still could not confirm the order (`can_transition`
+    gives it no further outgoing edge -- see `reconcile_attempt`). Blocking
+    forever on it would regress the already-proven Faz 3.6 REAL_TESTNET
+    evidence (a genuinely never-sent attempt resolves to UNRESOLVED and the
+    next order proceeds unblocked) for no safety gain: REST catch-up already
+    did everything automation can do here, and further blocking would only
+    be undone by an operator anyway.
+    """
+
+    if store.count_in_flight_attempts() > 0:
+        raise TestnetOrderExecutionError(
+            "GATE_MUTATION_IN_FLIGHT", "Zaten devam eden bir mutation var; eşzamanlı emir gönderilmez."
+        )
+    if store.list_resolvable_attempts():
+        raise TestnetOrderExecutionError(
+            "GATE_MUTATION_UNRESOLVED",
+            "Çözülmemiş (UNKNOWN/RECONCILING) bir attempt var; önce recover_stuck_attempts ile çözülmeli.",
+        )
+
+
 async def place_gated_testnet_limit_order(
     *,
     store: AttemptStore,
@@ -96,10 +142,7 @@ async def place_gated_testnet_limit_order(
         raise TestnetOrderExecutionError(
             "GATE_KILL_SWITCH_OFF", "DCABOT_TRADING_ENABLED 'true' değil."
         )
-    if store.count_in_flight_attempts() > 0:
-        raise TestnetOrderExecutionError(
-            "GATE_MUTATION_IN_FLIGHT", "Zaten devam eden bir mutation var; eşzamanlı emir gönderilmez."
-        )
+    _require_no_blocking_attempts(store)
     try:
         candidate = validate_order_candidate(filter_profile, quantity=quantity, price=price)
     except InstrumentFilterError as exc:
@@ -181,16 +224,25 @@ async def place_gated_testnet_limit_order(
 
 async def cancel_gated_testnet_order(
     *,
+    store: AttemptStore,
+    run_id: str,
+    attempt_id: str,
     symbol: str,
     order_id: int,
+    capability_snapshot_hash: str,
     confirmed: bool,
     credential_id: str,
     provider: CredentialProvider,
     clock: Clock,
+    now_us: int,
     websocket_factory: WebSocketFactory | None = None,
     request_id_factory=None,
-) -> CancelledTestnetOrder:
-    """Cancel exactly one order, gated by the same confirmation + kill-switch discipline."""
+) -> GatedCancelResult:
+    """Cancel exactly one order, under the identical discipline as placement
+    (rules 1-5, docs/KARARLAR.md 2026-09-21, "Faz 3.4" rule 6): a cancel is a
+    mutation like any other, so it gets its own durable, idempotent
+    AttemptStore identity before any signed request is built, not just the
+    kill-switch and confirmation checks."""
 
     if confirmed is not True:
         raise TestnetOrderExecutionError(
@@ -201,17 +253,54 @@ async def cancel_gated_testnet_order(
         raise TestnetOrderExecutionError(
             "GATE_KILL_SWITCH_OFF", "DCABOT_TRADING_ENABLED 'true' değil."
         )
+    _require_no_blocking_attempts(store)
+    attempt = OrderAttempt(
+        attempt_id=attempt_id,
+        run_id=run_id,
+        venue="BINANCE_SPOT_TESTNET",
+        operation=AttemptOperation.CANCEL_ORDER,
+        symbol=symbol,
+        client_order_id=None,
+        request_fingerprint_sha256=request_fingerprint({"symbol": symbol, "order_id": order_id}),
+        capability_snapshot_hash=capability_snapshot_hash,
+        filter_snapshot_hash=request_fingerprint({"operation": "CANCEL_ORDER"}),
+        state=AttemptState.PREPARED,
+        created_at_us=now_us,
+        last_transition_at_us=now_us,
+    )
+    outcome = store.prepare(attempt)
+    if outcome == "DUPLICATE":
+        raise TestnetOrderExecutionError(
+            "GATE_ATTEMPT_ALREADY_PREPARED",
+            "Bu attempt_id zaten hazırlanmış; aynı cancel'i iki kez göndermeyin.",
+        )
+    store.persist(attempt_id, now_us=now_us)
+    store.mark_sending(attempt_id, now_us=now_us)
     kwargs = {} if websocket_factory is None else {"websocket_factory": websocket_factory}
     if request_id_factory is not None:
         kwargs["request_id_factory"] = request_id_factory
     try:
-        return await cancel_binance_testnet_order(
+        cancelled = await cancel_binance_testnet_order(
             credential_id, symbol, order_id=order_id, provider=provider, clock=clock, **kwargs
         )
-    except BinanceTestnetOrderExecutionError as exc:
+    except OrderRejectedByVenue as exc:
+        store.mark_rejected(
+            attempt_id,
+            now_us=now_us,
+            reason="VENUE_REJECTED",
+            venue_error_code=exc.venue_error_code,
+        )
         raise TestnetOrderExecutionError(
-            "GATE_CANCEL_FAILED", "Cancel isteği tamamlanamadı."
+            "GATE_CANCEL_REJECTED", "Cancel venue tarafından reddedildi."
         ) from exc
+    except BinanceTestnetOrderExecutionError as exc:
+        store.mark_unknown(attempt_id, now_us=now_us, reason="TRANSPORT_FAILED")
+        raise TestnetOrderExecutionError(
+            "GATE_CANCEL_SEND_FAILED",
+            "Cancel gönderimi başarısız; attempt UNKNOWN'a düştü, REST catch-up ile çözülmeli.",
+        ) from exc
+    acknowledged = store.mark_acknowledged(attempt_id, now_us=now_us, venue_order_id=cancelled.order_id)
+    return GatedCancelResult(acknowledged, cancelled)
 
 
 async def recover_stuck_attempts(
@@ -224,26 +313,36 @@ async def recover_stuck_attempts(
     websocket_factory: WebSocketFactory | None = None,
     request_id_factory=None,
 ) -> tuple[OrderAttempt, ...]:
-    """Faz 3.6: resolve whatever a prior process death left non-terminal.
+    """Faz 3.6/3.4-F2: resolve whatever is left non-terminal, whether from a
+    prior process death or a plain transport failure in an earlier run.
 
     Must be called once at the start of a session, before
-    `place_gated_testnet_limit_order` is attempted — otherwise a stuck
-    attempt from a crash (PREPARED, PERSISTED, or SENDING; see
-    `AttemptStore.recover_after_restart` and the `can_transition` extension,
-    docs/KARARLAR.md 2026-09-21) keeps `count_in_flight_attempts() > 0`
-    forever and every future order is refused by rule 5.
+    `place_gated_testnet_limit_order`/`cancel_gated_testnet_order` is
+    attempted — otherwise a stuck attempt (PREPARED, PERSISTED, or SENDING
+    from a crash; see `AttemptStore.recover_after_restart` and the
+    `can_transition` extension, docs/KARARLAR.md 2026-09-21) keeps
+    `count_in_flight_attempts() > 0` forever and every future mutation is
+    refused by rule 5.
 
-    Each recovered attempt is resolved via the same real, read-only signed
-    lookup Faz 3.2's REST catch-up uses: ACKNOWLEDGED if the venue actually
-    has it (so a crash right after a real fill is never duplicated), or it
-    stays UNRESOLVED (permanent, requires an operator to look, never
-    silently retried) if the venue genuinely never saw it.
+    Resolves every attempt `list_resolvable_attempts()` returns — this is a
+    superset of what `recover_after_restart` just quarantined: it also picks
+    up an UNKNOWN attempt left over from a genuine transport failure inside
+    a still-running process (mark_unknown, not a crash), which the gate
+    itself now refuses to mutate past via `_require_no_blocking_attempts`
+    until it is resolved here or left UNRESOLVED for an operator to look at.
+
+    Each attempt is resolved via the same real, read-only signed lookup Faz
+    3.2's REST catch-up uses: ACKNOWLEDGED if the venue actually has it (so a
+    crash right after a real fill is never duplicated), or it stays
+    UNRESOLVED (permanent, requires an operator to look, never silently
+    retried) if the venue genuinely never saw it.
     """
 
     coordinator = ReconciliationCoordinator(store)
-    recovered = coordinator.startup(now_us=now_us)
+    coordinator.startup(now_us=now_us)
+    resolvable = store.list_resolvable_attempts()
     resolved: list[OrderAttempt] = []
-    for attempt in recovered:
+    for attempt in resolvable:
         lookup = await lookup_attempt_via_testnet(
             attempt,
             credential_id=credential_id,

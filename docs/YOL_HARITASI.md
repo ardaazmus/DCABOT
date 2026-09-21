@@ -3,10 +3,10 @@
 Sıra bağlayıcıdır: P1 yerel demo → P2 Binance testnet → P3 gerçek Binance (sınırlı canary) → P4 diğer borsalar. Bir sonraki faza geçmek için önceki fazın kapanış ölçütü sağlanır. Eski dilim günlükleri: `docs/archive/history/`.
 
 ## Şimdi
-- **Faz 2 (P1 kapanışı) tamamen kapandı — `p1-demo-complete` etiketlendi.** Sıradaki iş TASK.md'dedir (Faz 3 kapsam kararı Arda'yı bekliyor).
+- **Faz 3 (P2 testnet) tamamen kapandı — `p2-testnet-complete` etiketlendi.** Sıradaki iş TASK.md'dedir (Faz 4 kapsam kararı Arda'yı bekliyor).
 
 ## Sonra
-Faz 3 (gerçek testnet) → Faz 4 (canary).
+Faz 4 (canary).
 
 ## Dondurulmuş (P1'i bekletmez; kod var, arayüze bağlanmadan yeni sözleşme yazılmaz)
 Futures Grid, Reverse/Infinity Grid, two-leg/hedge, rebalancing, signal bot, çoklu bot/pair, LLM açıklayıcı asistan.
@@ -38,7 +38,7 @@ Her dilim `evidence_scope=REAL_TESTNET` üretmiyorsa iş sayılmaz. Ayrıntılı
 6. **3.6 Dolum + restart kurtarma (tamam, REAL_TESTNET):** `AttemptStore.recover_after_restart` artık `PREPARED`/`PERSISTED`/`SENDING` hepsini kurtarıyor (bulundu: `can_transition` ilk ikisine çıkış vermiyordu — sonsuz kilitlenme riski, düzeltildi). `application/testnet_order_execution.py::recover_stuck_attempts` her oturum başında kalan attempt'leri gerçek sorguyla çözer. Elle Ctrl+C zamanlaması pratik olmadığı için `tools/run_single_testnet_order.py --simulate-crash-at {prepared,persisted,sending}` eklendi (gerçek `AttemptStore` geçişleri + `os._exit`). Kanıt: `PERSISTED`'de bırakılan attempt bir sonraki çalıştırmada `UNRESOLVED`'e çözüldü, yeni emir bloke olmadan geçti. Ayrıntı: docs/KARARLAR.md.
 7. **3.7 DCA botu testnet'te uçtan uca (tamam, kısmi REAL_TESTNET — BASE bacağı canlı, SAFETY/EXIT offline):** base + safety + TP. Yeni icat değil — çekirdek `engine.py`'nin `State/apply/decision`'ı (Faz 2'nin de kullandığı aynı mekanizma) gerçek testnet mutation'larına bağlandı. `application/testnet_dca_session.py`: `place_next_action` (INTENT + gated gönder), `sync_order_fills` (yeni `fetch_binance_testnet_my_trades` ile exact dolum verisi, execution_id dedup, tam dolunca `ORDER_FINAL`). Bulundu: `engine.py` fee'nin her zaman quote-asset olmasını istiyor ama gerçek BUY dolumları (BNB indirimsiz) genelde base-asset ücret keser — aynı fill'in kendi fiyatıyla exact dönüştürülüyor, desteklenmeyen asset'te fail-closed. Offline test: tam BASE→SAFETY:1→EXIT döngüsü. Araç: `tools/run_testnet_dca_deal.py`. Bilinen sınır: deal state yalnız process belleğinde, restart'ta devam ettirilemez (attempt-seviyesi kurtarma hâlâ çalışır, ayrıntı docs/KARARLAR.md).
 
-Arda'nın yapacakları: testnet API anahtarı üretip yerelde kaydetmek (`tools/configure_testnet_credential.py`; repoya girmez), 3.4 kararı, 3.5+ için yerelde çalıştırmak. Kapanış: 3.7 PASS + bağımsız review → `git tag p2-testnet-complete`.
+Kapanış (tamam, 2026-09-21): 3.1-3.7 tüm dilimler PASS (3.1/3.5/3.6 tam REAL_TESTNET, 3.2/3.7 kısmi) → bağımsız review (farklı ajan, salt-okunur, `d2dd43f^..60ca267` diff) `APPROVED_WITH_FINDINGS` — 2 gerçek bulgu (F1: cancel AttemptStore disiplininden geçmiyordu; F2: UNKNOWN attempt yeni mutation'ı bloklamıyordu) aynı gün düzeltildi ve 9 yeni testle doğrulandı (bkz. docs/KARARLAR.md) → `git tag p2-testnet-complete` atıldı.
 
 ## Faz 4 — P3: gerçek Binance, sınırlı canary (taslak; P2 bitince ayrıntılanır)
 Arda'nın açık onayı olmadan mainnet emri yok. Küçük sabit tutar üst sınırı, kill-switch, günlük kayıp limiti. Canary süresi ve başarı ölçütü (işlem sayısı, sıfır duplicate, çözülmemiş UNKNOWN yok) baştan yazılır. Paketleme ve tek-worker sınırı bu fazda ele alınır. P4 (diğer borsalar) P3 sonrası planlanır.

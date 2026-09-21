@@ -1,9 +1,9 @@
-# Aktif iş — Faz 3'ün tüm kod dilimleri bitti; sıradaki adım Faz 3 kapanışı
+# Aktif iş — Faz 3 kapandı; Faz 4 kapsam kararı bekleniyor
 
-Faz 3.1-3.7 tamamlandı (bkz. STATE.md, docs/KARARLAR.md). Şu anda Claude'un elinde açık kod görevi yok.
+Faz 3 (P2 testnet) tamamen kapandı: tüm dilimler PASS, bağımsız review `APPROVED_WITH_FINDINGS`, 2 gerçek bulgu (cancel'in AttemptStore disiplininden geçmemesi; UNKNOWN attempt'in yeni mutation'ı bloklamaması) aynı gün düzeltildi, `git tag p2-testnet-complete` atıldı. Ayrıntı: STATE.md, docs/KARARLAR.md.
 
-## Sıradaki: Faz 3 kapanışı (docs/YOL_HARITASI.md: "3.7 PASS + bağımsız review → git tag p2-testnet-complete")
-P1 kapanışında yapılan işin aynısı: Codex/muse'e dosya-sınırlı, salt-okunur bir bağımsız inceleme brief'i (bu turdaki tüm Faz 3 diff'i — mutation gate, tek dosyada mutation, restart kurtarma, DCA orkestrasyonu — özellikle güvenlik/fail-closed açısından) yazılabilir, sonra `git tag p2-testnet-complete`.
+## Sıradaki: Faz 4 (P3 — gerçek Binance, sınırlı canary) kapsam kararı
+docs/YOL_HARITASI.md'nin Faz 4 taslağı: küçük sabit tutar üst sınırı, kill-switch, günlük kayıp limiti, canary süresi ve başarı ölçütü (işlem sayısı, sıfır duplicate, çözülmemiş UNKNOWN yok) tanımı, paketleme/tek-worker sınırı. Bu bir güvenlik çizgisi kararı — Arda'nın açık onayı gerekir (AGENTS.md, değişmez).
 
 ## Arda'nın isteğe bağlı yapabileceği
 Testnet hesabındaki 0.0004 BTC açık pozisyonu kapatmak istersen (zararsız, sahte para, zorunlu değil):
@@ -16,4 +16,4 @@ $env:PYTHONPATH='src'; $env:DCABOT_TRADING_ENABLED='true'; uv run --frozen pytho
 - STATE.md/TASK.md yalnız Claude günceller.
 
 ## Kabul
-- Arda Faz 3 kapanışını (bağımsız review + tag) onayladığında Claude başlatır.
+- Arda Faz 4 kapsamını (mainnet, tutar limiti, kill-switch, canary süresi) onayladığında Claude başlatır.

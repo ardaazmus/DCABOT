@@ -220,15 +220,21 @@ async def main() -> None:
         print(f"Sorgu sonucu: {lookup.kind.value}")
 
         if _confirm("Bu emri simdi iptal etmek istiyor musun?"):
-            cancelled = await cancel_gated_testnet_order(
+            cancel_attempt_id = f"single-order-cancel-{int(time.time())}"
+            cancel_result = await cancel_gated_testnet_order(
+                store=store,
+                run_id="single-testnet-order",
+                attempt_id=cancel_attempt_id,
                 symbol=args.symbol,
                 order_id=result.placed.order_id,
+                capability_snapshot_hash=account.response_sha256,
                 confirmed=True,
                 credential_id=args.credential_id,
                 provider=provider,
                 clock=clock,
+                now_us=int(time.time() * 1_000_000),
             )
-            print(f"Iptal edildi. status={cancelled.status}")
+            print(f"Iptal edildi. status={cancel_result.cancelled.status}")
         else:
             print("Iptal edilmedi; emir testnet'te acik kalabilir. Elle takip et.")
 

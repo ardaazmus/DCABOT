@@ -339,6 +339,61 @@ class GatedPlacementTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(resolved.venue_error_code, -1013)
                 self.assertNotEqual(resolved.state, AttemptState.UNKNOWN)
 
+    async def test_a_fresh_unknown_attempt_blocks_the_next_placement_immediately(self):
+        # Finding F2 (independent review, 2026-09-21): previously an UNKNOWN
+        # attempt from a transport failure did not count as "in flight", so
+        # an operator retrying right after GATE_SEND_FAILED (without running
+        # recover_stuck_attempts first) could send a second real order while
+        # the first's outcome was still unconfirmed. Proves the fix blocks it.
+        os.environ[TRADING_ENABLED_ENV_VAR] = "true"
+        failing_socket = FakeSocket(OSError("network unreachable"))
+        with TemporaryDirectory() as directory:
+            with AttemptStore(Path(directory) / "attempts.sqlite") as store:
+                with self.assertRaisesRegex(TestnetOrderExecutionError, "GATE_SEND_FAILED"):
+                    await place_gated_testnet_limit_order(
+                        store=store,
+                        run_id="run-1",
+                        attempt_id="attempt-1",
+                        client_order_id="attempt-1",
+                        symbol="BTCUSDT",
+                        side="BUY",
+                        quantity="0.5",
+                        price="90",
+                        filter_profile=_profile(),
+                        max_entry_notional=number("1000"),
+                        capability_snapshot_hash="a" * 64,
+                        confirmed=True,
+                        credential_id="testnet-readonly",
+                        provider=_provider(),
+                        clock=FixedClock(),
+                        now_us=1_700_000_000_000_000,
+                        websocket_factory=lambda _url, **_kwargs: failing_socket,
+                    )
+                self.assertEqual(store.get("attempt-1").state, AttemptState.UNKNOWN)
+
+                with self.assertRaisesRegex(TestnetOrderExecutionError, "GATE_MUTATION_UNRESOLVED"):
+                    await place_gated_testnet_limit_order(
+                        store=store,
+                        run_id="run-1",
+                        attempt_id="attempt-2",
+                        client_order_id="attempt-2",
+                        symbol="BTCUSDT",
+                        side="BUY",
+                        quantity="0.5",
+                        price="90",
+                        filter_profile=_profile(),
+                        max_entry_notional=number("1000"),
+                        capability_snapshot_hash="a" * 64,
+                        confirmed=True,
+                        credential_id="testnet-readonly",
+                        provider=_provider(),
+                        clock=FixedClock(),
+                        now_us=1_700_000_000_000_001,
+                    )
+                # No second attempt was ever prepared -- refused before the store was touched.
+                with self.assertRaises(Exception):
+                    store.get("attempt-2")
+
 
 class GatedCancelTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -347,16 +402,125 @@ class GatedCancelTests(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         os.environ.pop(TRADING_ENABLED_ENV_VAR, None)
 
-    async def test_unconfirmed_cancel_is_refused(self):
-        with self.assertRaisesRegex(TestnetOrderExecutionError, "GATE_CONFIRMATION_REQUIRED"):
-            await cancel_gated_testnet_order(
-                symbol="BTCUSDT",
-                order_id=999,
-                confirmed=False,
-                credential_id="testnet-readonly",
-                provider=_provider(),
-                clock=FixedClock(),
+    async def test_unconfirmed_cancel_never_reaches_the_store_or_network(self):
+        with TemporaryDirectory() as directory:
+            with AttemptStore(Path(directory) / "attempts.sqlite") as store:
+                with self.assertRaisesRegex(TestnetOrderExecutionError, "GATE_CONFIRMATION_REQUIRED"):
+                    await cancel_gated_testnet_order(
+                        store=store,
+                        run_id="run-1",
+                        attempt_id="cancel-1",
+                        symbol="BTCUSDT",
+                        order_id=999,
+                        capability_snapshot_hash="a" * 64,
+                        confirmed=False,
+                        credential_id="testnet-readonly",
+                        provider=_provider(),
+                        clock=FixedClock(),
+                        now_us=1_700_000_000_000_000,
+                    )
+                self.assertEqual(store.count(), 0)
+
+    async def test_kill_switch_off_blocks_cancel_after_confirmation(self):
+        with TemporaryDirectory() as directory:
+            with AttemptStore(Path(directory) / "attempts.sqlite") as store:
+                with self.assertRaisesRegex(TestnetOrderExecutionError, "GATE_KILL_SWITCH_OFF"):
+                    await cancel_gated_testnet_order(
+                        store=store,
+                        run_id="run-1",
+                        attempt_id="cancel-1",
+                        symbol="BTCUSDT",
+                        order_id=999,
+                        capability_snapshot_hash="a" * 64,
+                        confirmed=True,
+                        credential_id="testnet-readonly",
+                        provider=_provider(),
+                        clock=FixedClock(),
+                        now_us=1_700_000_000_000_000,
+                    )
+                self.assertEqual(store.count(), 0)
+
+    async def test_successful_cancel_is_durable_before_send_and_acknowledged(self):
+        os.environ[TRADING_ENABLED_ENV_VAR] = "true"
+        socket = FakeSocket(
+            json.dumps(
+                {
+                    "id": "cancel-request-1",
+                    "status": 200,
+                    "result": {
+                        "symbol": "BTCUSDT",
+                        "orderId": 999,
+                        "clientOrderId": "attempt-1",
+                        "status": "CANCELED",
+                    },
+                }
             )
+        )
+        with TemporaryDirectory() as directory:
+            with AttemptStore(Path(directory) / "attempts.sqlite") as store:
+                result = await cancel_gated_testnet_order(
+                    store=store,
+                    run_id="run-1",
+                    attempt_id="cancel-1",
+                    symbol="BTCUSDT",
+                    order_id=999,
+                    capability_snapshot_hash="a" * 64,
+                    confirmed=True,
+                    credential_id="testnet-readonly",
+                    provider=_provider(),
+                    clock=FixedClock(),
+                    now_us=1_700_000_000_000_000,
+                    websocket_factory=lambda _url, **_kwargs: socket,
+                    request_id_factory=lambda: "cancel-request-1",
+                )
+
+                self.assertEqual(result.attempt.state, AttemptState.ACKNOWLEDGED)
+                self.assertEqual(result.attempt.operation, AttemptOperation.CANCEL_ORDER)
+                self.assertEqual(result.cancelled.status, "CANCELED")
+                self.assertEqual(store.get("cancel-1").state, AttemptState.ACKNOWLEDGED)
+
+    async def test_cancel_is_refused_while_another_mutation_is_in_flight(self):
+        os.environ[TRADING_ENABLED_ENV_VAR] = "true"
+        with TemporaryDirectory() as directory:
+            with AttemptStore(Path(directory) / "attempts.sqlite") as store:
+                store.prepare(_stuck_attempt(AttemptState.PREPARED))
+
+                with self.assertRaisesRegex(TestnetOrderExecutionError, "GATE_MUTATION_IN_FLIGHT"):
+                    await cancel_gated_testnet_order(
+                        store=store,
+                        run_id="run-1",
+                        attempt_id="cancel-1",
+                        symbol="BTCUSDT",
+                        order_id=999,
+                        capability_snapshot_hash="a" * 64,
+                        confirmed=True,
+                        credential_id="testnet-readonly",
+                        provider=_provider(),
+                        clock=FixedClock(),
+                        now_us=1_700_000_000_000_001,
+                    )
+
+    async def test_cancel_transport_failure_drops_attempt_to_unknown(self):
+        os.environ[TRADING_ENABLED_ENV_VAR] = "true"
+        socket = FakeSocket(OSError("network unreachable"))
+        with TemporaryDirectory() as directory:
+            with AttemptStore(Path(directory) / "attempts.sqlite") as store:
+                with self.assertRaisesRegex(TestnetOrderExecutionError, "GATE_CANCEL_SEND_FAILED"):
+                    await cancel_gated_testnet_order(
+                        store=store,
+                        run_id="run-1",
+                        attempt_id="cancel-1",
+                        symbol="BTCUSDT",
+                        order_id=999,
+                        capability_snapshot_hash="a" * 64,
+                        confirmed=True,
+                        credential_id="testnet-readonly",
+                        provider=_provider(),
+                        clock=FixedClock(),
+                        now_us=1_700_000_000_000_000,
+                        websocket_factory=lambda _url, **_kwargs: socket,
+                    )
+                self.assertEqual(store.get("cancel-1").state, AttemptState.UNKNOWN)
 
 
 class RecoverStuckAttemptsTests(unittest.IsolatedAsyncioTestCase):
@@ -420,6 +584,28 @@ class RecoverStuckAttemptsTests(unittest.IsolatedAsyncioTestCase):
                 resolved = await self._recover(store, socket)
 
                 self.assertEqual(resolved[0].state, AttemptState.ACKNOWLEDGED)
+
+    async def test_recover_resolves_a_preexisting_unknown_attempt_not_just_crash_quarantined_ones(self):
+        # Finding F2 (independent review, 2026-09-21): recover_stuck_attempts
+        # previously only resolved what recover_after_restart just quarantined
+        # (a genuine process crash). An UNKNOWN attempt from a plain transport
+        # failure in an earlier, non-crashed run was never picked up. Proves
+        # list_resolvable_attempts() closes that gap.
+        with TemporaryDirectory() as directory:
+            with AttemptStore(Path(directory) / "attempts.sqlite") as store:
+                attempt = _stuck_attempt(AttemptState.PREPARED)
+                store.prepare(attempt)
+                store.persist(attempt.attempt_id, now_us=1_700_000_000_000_000)
+                store.mark_sending(attempt.attempt_id, now_us=1_700_000_000_000_000)
+                store.mark_unknown(attempt.attempt_id, now_us=1_700_000_000_000_000, reason="TRANSPORT_FAILED")
+                self.assertEqual(store.get(attempt.attempt_id).state, AttemptState.UNKNOWN)
+
+                socket = FakeSocket(_status_found_response())
+                resolved = await self._recover(store, socket)
+
+                self.assertEqual(len(resolved), 1)
+                self.assertEqual(resolved[0].state, AttemptState.ACKNOWLEDGED)
+                self.assertEqual(len(store.list_resolvable_attempts()), 0)
 
     async def test_recovery_unblocks_a_new_order_after_it_resolves(self):
         with TemporaryDirectory() as directory:
