@@ -50,7 +50,7 @@ from dcabot.data_adapters.binance_testnet_account import fetch_binance_testnet_a
 from dcabot.data_adapters.binance_testnet_order_execution import trading_kill_switch_enabled
 from dcabot.data_adapters.binance_testnet_public import fetch_binance_testnet_exchange_info
 from dcabot.application.windows_credential_provider import WindowsCredentialManagerProvider
-from dcabot.domain.numbers import number
+from dcabot.domain.numbers import exact_text, number
 from dcabot.persistence.attempt_store import AttemptStore
 
 
@@ -171,8 +171,7 @@ async def main() -> None:
                 continue
 
             role, qty = action
-            price_for_role = session.state.mark  # display only; exact price computed inside place_next_action
-            print(f"Sirada: {role} {qty} {args.symbol}")
+            print(f"Sirada: {role} {exact_text(qty)} {args.symbol}")
             if not _confirm(f"Bu {role} emrini GERCEKTEN gondermek istiyor musun?"):
                 print("Bu adim atlandi (onaylanmadi).")
                 answer = input("Fiyati/dolumlari kontrol et [k], cik [q]: ").strip().lower()
