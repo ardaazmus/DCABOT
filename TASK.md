@@ -1,12 +1,17 @@
-# Aktif iş — Faz 5-10 yol haritasına bağlandı; sıradaki adım Arda'nın seçimi
+# Aktif iş — Faz 5-10 kaynaklı bağlandı; sıradaki adım Arda'nın seçimi
 
-Faz 3 (P2 testnet) kapalı (`p2-testnet-complete`). Bu oturumda tam bir gap-analizi yapıldı: 20 F-kodu (7 dondurulmuş aile + 13 kalan madde) derinlemesine incelendi, docs/YOL_HARITASI.md'ye Faz 5-10 olarak bağlandı (olgunluk sırasıyla). Ayrıca F22'nin stale `PLAN` kaydı düzeltildi. Bu yalnız araştırma+belgeleme — hiçbir kod değişmedi. Ayrıntı: STATE.md, docs/KARARLAR.md 2026-09-21 ("Faz 5-8 açılış", "Faz 9-10 açılış").
+Faz 3 (P2 testnet) kapalı (`p2-testnet-complete`). Bu oturumda: (1) 20 F-kodu (7 dondurulmuş aile + 13 kalan madde) derinlemesine incelendi, docs/YOL_HARITASI.md'ye Faz 5-10 olarak bağlandı. (2) F22'nin stale `PLAN` kaydı düzeltildi. (3) `docs/P1_KRITIK_ARASTIRMA_FINAL/` dış araştırma paketi (2026-09-09, 48 kaynak) her Faz'a eşlenip kaynak olarak gösterildi — bazı maddelerin dış araştırma kutusu artık KAPALI. Bu yalnız araştırma+belgeleme — hiçbir kod değişmedi. Ayrıntı: STATE.md, docs/KARARLAR.md 2026-09-21 (üç girdi).
 
-## Sıradaki: dört paralel seçenek, hepsi Arda'nın kapsam onayını bekliyor
-1. **Faz 4 (P3 — gerçek Binance, sınırlı canary):** mainnet emri, tutar limiti, kill-switch, canary ölçütü. Güvenlik çizgisi — Arda onayı zorunlu.
-2. **Faz 5 (Futures Grid + Reverse/Infinity):** en olgun dondurulmuş aile. İlk adım: venue liquidation/funding oracle sorunu için araştırma kutusu.
-3. **Faz 9 (P1 kapanış borcu):** F27 (paper trading, en olgun — yalnız transport gate kapalı) ile başlamak en mantıklı.
-4. **Faz 10 (yeni aileler):** F20 (strateji şablonu, en olgun — snapshot/onay kapısı zaten var) ile başlamak en mantıklı.
+## Sıradaki: en az sürtünmeli üç seçenek (dış araştırma kutusu zaten kapalı)
+1. **Faz 7 (rebalancing + signal bot):** sıfır blocker, doğrudan yerel implementasyon+test ile başlanabilir.
+2. **Faz 9/F27 (paper trading):** sıfır blocker, kalan iş yalnız gerçek REST/WS transport + activation gate.
+3. **Faz 10/F20 (strateji şablonu):** sıfır blocker, snapshot/onay kapısı zaten var.
+
+## Daha zor seçenekler (yerel araştırma kutusu hâlâ açık, veya güvenlik çizgisi)
+4. **Faz 4 (P3 canary):** mainnet emri — Arda onayı zorunlu, güvenlik çizgisi.
+5. **Faz 5 (Futures Grid):** venue liquidation profili seçimi + local Position/Margin owner kanıtı gerekiyor (LCR-12).
+6. **Faz 6 (two-leg/hedge):** persistence/recovery ownership kanıtı gerekiyor (LCR-09).
+7. **Faz 9/F31 (shared-account bulk actions):** concurrency/transaction boundary kanıtı gerekiyor.
 
 Hepsi birbirini bloklamaz, paralel ilerleyebilir.
 
@@ -21,4 +26,4 @@ $env:PYTHONPATH='src'; $env:DCABOT_TRADING_ENABLED='true'; uv run --frozen pytho
 - STATE.md/TASK.md yalnız Claude günceller.
 
 ## Kabul
-- Arda Faz 4/5/9/10'dan hangisiyle (veya hangileriyle paralel) başlanacağını seçtiğinde Claude o dilimi başlatır.
+- Arda yukarıdaki 7 seçenekten hangisiyle (veya hangileriyle paralel) başlanacağını seçtiğinde Claude o dilimi başlatır.
