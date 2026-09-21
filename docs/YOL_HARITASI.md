@@ -3,7 +3,8 @@
 İki bağımsız eksen var. (1) **Venue ekseni** (bağlayıcı sıra): P1 yerel demo → P2 Binance testnet → P3 gerçek Binance (sınırlı canary) → P4 diğer borsalar. (2) **Özellik ailesi ekseni** (Faz 5-8, 2026-09-21'de dondurmadan çıkarıldı): her aile kendi sözleşme olgunluğuna göre venue eksenine PARALEL ilerler — mainnet'i (P3/P4) beklemez, ama kendi kanıt kapısını (aşağıda) geçmeden implementasyona geçmez. Bir sonraki faza geçmek için önceki fazın kapanış ölçütü sağlanır. Eski dilim günlükleri: `docs/archive/history/`.
 
 ## Şimdi
-- **P4 hariç TÜM FAZLAR kapalı** (Faz 1+3+4+5+6+7+8+9+10+11, F11.1+F27+F20). Kalan: bağımsız inceleme + Arda kararları (canary değerleri, dış LLM, NVDA/JAWS/HCM).
+- **P4 hariç TÜM FAZLAR kapalı** (Faz 1+3+4+5+6+7+8+9+10+11, F11.1+F27+F20). Kalan: Arda kararları (canary değerleri, dış LLM, NVDA/JAWS/HCM).
+- **Yeni açılan, onay bekleyen (2026-09-21):** Faz 12 (UX/terminoloji/i18n), Faz 13 (TradingView sinyal), Faz 14 (ileri backtest) — detay aşağıda.
 - **En az sürtünmeli** (dış kutu kapalı): **Faz 7**, **Faz 9/F27**, **Faz 10/F20**.
 
 ## Sonra
@@ -24,24 +25,8 @@ Ana dosyalar: `application/user_stream_reconnect_worker.py`, `rest_catch_up.py`,
 ## Faz 4 — P3: gerçek Binance, sınırlı canary (altyapı tamam, kapı kapalı)
 Arda'nın açık onayı olmadan mainnet emri yok. Teslim: tek-worker OS kilidi, saf canary politikası (cap/kayıp/pencere/sıfır-duplicate/sıfır-UNKNOWN), dosya kill-switch, kilitli canlı kapı, `tools/run_api.py` paketleme, DRAFT `config/canary.json`. Emir gönderilmedi. Açık: canary sayısal değerleri + onay formatı (Arda). P4 (diğer borsalar) P3 sonrası planlanır.
 
-## Faz 5-10 — dondurulmuş + yeni istenen aileler (2026-09-21, Arda: "tüm kapalı olanları aç" → gap-analizi → "tüm kodu tara")
-Sıra: derin kod incelemesine dayalı olgunluk. Her madde implementasyona geçmeden önce kendi `DEFERRED/NO-GO`/`PLAN`/`BLOCKED` sözleşme boşluğunu kapatan bir araştırma kutusu gerektirir (AGENTS.md, ≤1 oturum) — **kanıtsız implementasyona geçilmez**. Dış kaynak: `docs/P1_KRITIK_ARASTIRMA_FINAL/` (2026-09-09, 48 kaynak) her maddeye eşlendi. Tam eşleme + claim ID'leri: docs/KARARLAR.md 2026-09-21.
-
-1. **Faz 5 — Futures Grid + Reverse/Infinity (F14, F12/F13):** en olgun kod (1257+17+7 dosya, 57+ test). PnL/funding/mark formülleri `VERIFIED`; **liquidation `BLOCKED`** (CLM-112-06, venue-profili donmadan kapanmaz), Reverse/Infinity `NOT_VERIFIED`. Araştırma kutusu AÇIK (LCR-12); ayrı Futures mutation katmanı gerekir.
-2. **Faz 6 — two-leg/hedge (F18/F34):** identity+fill-projection tamam, hedge/netting `VERIFIED`. **Persistence/recovery `LOCAL_CODE_REQUIRED`** (CLM-115-05, LCR-09) — araştırma kutusu AÇIK.
-3. **Faz 7 — rebalancing (F17) + signal bot (F19):** tüm claim'ler `VERIFIED/CONDITIONAL+ACCEPT`, sıfır blocker. **Araştırma kutusu KAPALI** — doğrudan yerel implementasyon+test.
-4. **Faz 8 — çoklu bot/pair (F05) + LLM dış-parça (F32):** F05 dış kaynakta yok, en ham. F32'nin "LLM read-only" ilkesi `CONDITIONAL+ACCEPT`.
-
-## Faz 9 — P1 kapanış borcu (2026-09-21)
-1. **F27 paper trading:** en olgun, CLM-G05 `VERIFIED`, sıfır blocker. **Araştırma kutusu KAPALI** — kalan iş yalnız gerçek REST/WS transport.
-2. **F31 shared-account bulk actions:** concurrency/transaction boundary `LOCAL_CODE_REQUIRED+DEFER` (CLM-111-02) — AÇIK.
-3. **F09 trailing breakeven:** trigger/execution+ratchet `VERIFIED`; cancel-replace geç-fill `LOCAL_CODE_REQUIRED` (CLM-110-04) — KISMEN AÇIK.
-4. **F30 erişilebilirlik:** WCAG kriterleri `VERIFIED`. NVDA/JAWS/HCM ve light theme tamamen yeni yerel iş; Windows offline install `LOCAL_CODE_REQUIRED`.
-
-## Faz 10 — yeni istenen aileler (2026-09-21)
-1. **F20 strateji şablonu:** Faz 7 ile aynı kaynak/sonuç — blocker yok, **araştırma kutusu KAPALI**.
-2. **F36 audit/backup**, **F40 timeline replay** (domain-replay altyapısı var, kullanıcı timeline'ı yok), **F35 çoklu settlement** (USDT'ye kilitli tasarım kararı) — yerel tasarım kararı gerekiyor.
-3. **F16, F28, F29, F33, F39:** sıfır kod, en ham, hepsi `PLAN`.
+## Faz 5-10 — dondurulmuş + yeni aileler (2026-09-21; KAPALI — claim ID eşlemesi: docs/KARARLAR.md 2026-09-21)
+F5 futures-grid (liquidation `BLOCKED` LCR-12) · F6 two-leg (persistence/recovery LCR-09 AÇIK) · F7 rebalancing+signal (`VERIFIED`) · F8 çoklu-bot+LLM (`CONDITIONAL`) · F9 (F27 `VERIFIED`; F31/F09 kısmen AÇIK; F30 NVDA/JAWS yerel iş) · F10 (F20 blocker yok; F36/F40/F35 tasarım kararı gerekir; F16/F28/F29/F33/F39 `PLAN`).
 
 ## Belge düzeltmeleri (2026-09-21)
 F22 (kayıtlı koşu/kıyas/log-chart) matriste stale `PLAN` kaydediliydi; gerçekte Faz 2.3/2.4 ile teslim edilmiş — `docs/OZELLIK_MATRISI.md` düzeltildi, yalnız CSV/JSON export `PLAN` kaldı.
@@ -59,3 +44,15 @@ Kaynak: iki bağımsız anonim araştırma raporu (docs/UIUX_ARASTIRMA_FINAL/01_
 8. **Tema:** 3 katmanlı semantic design token mimarisi (primitive→semantic-role→component), `data-theme` + `prefers-color-scheme`; component asla ham hex kullanmaz. **Mevcut `styles.css` şu an bunu karşılamıyor** — yalnız 6 düz `--ui-*` token var, açık tema/`[data-theme]` bağlamı hiç yok; bu Faz 11'in somut ilk kod adımı.
 9. **Bilinçli dışarıda bırakılan:** yüksek-kontrast/ekran-okuyucu erişilebilirliği (Faz 9/F30'da ayrı izleniyor; rapor yalnız yapısal ARIA desenlerini kullandı, kontrast/NVDA/JAWS puanlamasını değil).
 Teslim: 5-bölüm dağıtım + form ailesi/disclosure + bot sihirbazı + bot tablosu/context + 5-kanal bildirim + pencere-render/lazy/transition (F11.2–F11.7, gate F11 PASS).
+
+## Faz 12 — Birleşik bot deneyimi + terminoloji/i18n (2026-09-21, ayrıntılı plan hazır, onay bekliyor)
+"Botlar & Stratejiler" 16 aracı tek sayfada diziyor + gerçek grafik yok + terminoloji sektörden (3Commas/Pionex/Bitsgap) kopuk. 6 alt-dilim: 12.1 chart altyapısı (lightweight-charts) → 12.5 tek-XML i18n (TR/EN, kod adları değişmeden takma-ad) → 12.2 BotWizard+Bot stüdyosu birleşimi (sektör terminolojisiyle) → 12.3 Grid Bot gerçek akışı (küme B'yi bağlar) → 12.4 sinyal/webhook görünümü (Faz 13 ile) → 12.6 küme C/F temizliği. Kapsam+terminoloji tablosu+i18n mimarisi: `docs/ARASTIRMA_UI_TERMINOLOJI_I18N_FAZ12.md`. **Implementasyona geçilmedi.**
+
+## Faz 13 — TradingView sinyal entegrasyonu (2026-09-21, araştırma tamam, onay bekliyor)
+`signal_intake.py`'de HMAC doğrulama + replay-window zaten yazılı/test edilmiş ama hiçbir endpoint'e bağlı değil. Kapsam ve kaynaklar: `docs/ARASTIRMA_ILERI_BACKTEST_SINYAL_KALITE.md` §1, §6.
+
+## Faz 14 — İleri backtest: overfitting direnci + ölçekleme (2026-09-21, araştırma tamam, onay bekliyor)
+`chronological_split.py`/`horizon_overlap.py`/`trial_registry.py`/`oos_lineage.py` CPCV/PBO/DSR'nin temel taşları ama embargo/kombinatoryal-path/skor katmanı yok; backtest tek-thread. Float/Fraction kararı KAPALI (float64, izole `analytics/` modülünde — §4). Kapsam ve kaynaklar: `docs/ARASTIRMA_ILERI_BACKTEST_SINYAL_KALITE.md` §2-4, §6.
+
+## Ölü/bağlanmamış kod envanteri (2026-09-21, tek seferlik tarama)
+158 modülden 70'i `api.py`/`tools/*.py`'den hiç import edilmiyor. Çoğu (62) bilinçli/belgeli araştırma kodu (Futures DCA 24, Futures Grid yürütme 9, venue mutabakat 26, overfitting-lineage 2 — Faz 5/9/14 DEFERRED'leriyle örtüşüyor). **Kritik:** `canary_policy.py`/`live_gate.py` hiç çağrılmıyor — "kilitli canlı kapı" ifadesi test-only netleştirilmeli. `bootstrap.py`/`domain/math.py`/`persistence/store.py` temizlik adayı. Tam liste: `docs/ARASTIRMA_UI_TERMINOLOJI_I18N_FAZ12.md` §1.

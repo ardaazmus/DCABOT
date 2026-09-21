@@ -12,7 +12,15 @@ E2E smoke PASS, gate F11 PASS, kanıt evidence/F11/SONUC.md).
   onay artefaktı formatı ne olsun? (`config/canary.json` DRAFT)
 - Dış LLM asistanı açılsın mı? (credential + ürün kararı)
 - NVDA/JAWS/HCM insan kapısı ne zaman?
-- Bağımsız inceleme (review=NOT_RUN) kim/ne zaman?
+- Faz 12 ayrıntılı planı yazıldı (docs/ARASTIRMA_UI_TERMINOLOJI_I18N_FAZ12.md);
+  Arda onayı bekleniyor — implementasyona geçilmedi.
+- Faz 13/14 onayı bekleniyor (kapsam+kaynak: docs/ARASTIRMA_ILERI_BACKTEST_SINYAL_KALITE.md).
+  İstatistik katmanı float/Fraction kararı KAPALI (float64, izole `analytics/`
+  modülünde, §4).
+- 70 modül (küme A-F, docs/ARASTIRMA_UI_TERMINOLOJI_I18N_FAZ12.md §1) hiçbir
+  API/CLI ucuna bağlı değil — çoğu bilinçli/belgeli (Faz 5/9 DEFERRED'leriyle
+  örtüşüyor), ama canary_policy.py/live_gate.py'nin "kilitli kapı" ifadesi
+  dokümantasyon-gerçeklik uyumsuzluğu taşıyor, netleştirilmeli.
 
 ## Değişmez sınırlar (sürüyor)
 - Credential, secret, gerçek emir, mutation ve mainnet: açık onay olmadan asla.
