@@ -273,6 +273,13 @@ def target(s: State, c: Config) -> Q | None:
 
 
 def decision(s: State, c: Config) -> tuple[str, Q] | None:
+    """Propose the next action for a single-deal State.
+
+    The BASE branch fires only on a fresh State (no orders yet); after a
+    deal completes the same State never reopens risk -- multi-deal
+    orchestration must start a new State (CORE01 single-deal invariant).
+    """
+
     if s.mark is None or s.unsettled:
         return None
     if s.position.qty:

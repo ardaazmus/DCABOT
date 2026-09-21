@@ -2,6 +2,8 @@
 
 import json
 import os
+import re
+import time
 from copy import deepcopy
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -14,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from starlette.middleware.body_limit import RequestBodyLimitMiddleware
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
@@ -53,6 +55,104 @@ from dcabot.application.historical_run_contract import (
     HistoricalRunContractError,
     build_historical_run_capture,
 )
+from dcabot.application.paper_feed_binding import (
+    apply_observations,
+    new_market_state,
+)
+from dcabot.application.paper_orders import (
+    cancel_paper_order,
+    fill_paper_order,
+    place_paper_order,
+)
+from dcabot.application.paper_trading_gate import PaperSession, activate_paper_session
+from dcabot.application.futures_grid_levels import (
+    FuturesGridProfile,
+    project_futures_grid_levels,
+)
+from dcabot.application.linear_futures_math import LinearFuturesPosition, project_funding
+from dcabot.application.trailing_ratchet import (
+    TrailingLongPercentageState,
+    TrailingLongState,
+    TrailingShortPercentageState,
+    TrailingShortState,
+    arm_long_percentage_trailing,
+    arm_long_trailing,
+    arm_short_percentage_trailing,
+    arm_short_trailing,
+    observe_long_percentage_trailing,
+    observe_long_trailing,
+    observe_short_percentage_trailing,
+    observe_short_trailing,
+)
+from dcabot.application.trailing_exit_binding import bind_trailing_exit_candidate
+from dcabot.application.futures_dca_plan import project_futures_dca_plan
+from dcabot.application.futures_dca_fill_projection import (
+    FuturesDcaFill,
+    project_futures_dca_fills,
+)
+from dcabot.application.futures_dca_breakeven_contract import (
+    FuturesDcaFeeAwareProfile,
+    assess_futures_dca_breakeven,
+)
+from dcabot.application.rebalance_execution import (
+    bind_execution_orders,
+    disclose_execution,
+)
+from dcabot.application.rebalance_projection import build_rebalance_projection
+from dcabot.application.rebalance_triggers import (
+    evaluate_threshold_trigger,
+    evaluate_time_trigger,
+)
+from dcabot.application.rebalance_valuation import RebalancePlan, build_rebalance_plan, value_holdings
+from dcabot.application.hedge_two_leg_contract import (
+    HedgePositionIdentity,
+    new_hedge_position_identity,
+)
+from dcabot.application.two_leg_fill_projection import (
+    LegFill,
+    TwoLegFillProjection,
+)
+from dcabot.persistence.two_leg_journal import TwoLegJournal
+from dcabot.application.bot_registry import BotProfile, BotRegistry, new_bot_profile
+from dcabot.application.dashboard import build_dashboard
+from dcabot.application.settlement_profile import (
+    SUPPORTED_SETTLEMENT_ASSETS,
+    require_settlement_asset,
+)
+from dcabot.application.recurring_schedule import project_recurring_schedule
+from dcabot.application.draft_level import validate_draft_level
+from dcabot.application.event_log import EventLog
+from dcabot.application.risk_explanation import explain_risk
+from dcabot.application.single_worker import SingleWorkerGuard
+from dcabot.application.run_export import export_run_csv, export_run_json
+from dcabot.application.store_backup import (
+    StoreBackupError,
+    backup_sqlite_file,
+    list_backup_manifests,
+    verify_backup,
+)
+from dcabot.application.config_revision import new_config_revision
+from dcabot.application.deal_lifecycle import DealLifecycle, new_deal_lifecycle
+from dcabot.application.lifecycle_event_transition import apply_lifecycle_event
+from dcabot.application.lifecycle_event_contract import LifecycleEvent, new_lifecycle_event
+from dcabot.persistence.lifecycle_store import LifecycleStore, LifecycleStoreError
+from dcabot.application.signal_candidate_binding import bind_signal_candidate
+from dcabot.application.signal_event_contract import new_signal_event
+from dcabot.application.signal_intake import hash_signal_payload
+from dcabot.application.signal_readiness import assess_signal_readiness
+from dcabot.application.strategy_template import new_strategy_template
+from dcabot.application.template_materialization import (
+    TemplateFileStore,
+    diff_templates,
+    materialize_binding,
+)
+from dcabot.application.template_profile_binding import bind_template_to_profile
+from dcabot.data_adapters.binance_public import BinanceTimeUnit
+from dcabot.data_adapters.binance_public_transport import (
+    BinancePublicTransportError,
+    fetch_binance_public_trades,
+)
+from dcabot.data_adapters.public_feed import ObservationOutcome, PublicObservation
 from dcabot.application.service import preview
 from dcabot.data_adapters.catalog import (
     BINANCE_BTCUSDT_1H_2025_01_01_DATASET,
@@ -107,6 +207,7 @@ def _cors_origins() -> list[str]:
         return list(DEFAULT_CORS_ORIGINS)
     return origins
 PREVIEW_FIELDS = {"anchor", "safety_qty", "safety_count", "deviation", "revision"}
+REBALANCE_VALUATION_FIELDS = {"valuation_asset", "holdings", "prices"}
 SMALL_JSON_BODY_LIMIT_BYTES = 4 * 1024
 SMALL_JSON_BODY_LIMITS = {
     "/api/dataset-selection": SMALL_JSON_BODY_LIMIT_BYTES,
@@ -117,6 +218,45 @@ SMALL_JSON_BODY_LIMITS = {
     "/api/dataset-downloads": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/dataset-downloads/{job_id}/cancel": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/preview": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/rebalance/valuation": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/paper/sessions": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/paper/sessions/{session_id}/orders": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/paper/sessions/{session_id}/fills": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/paper/sessions/{session_id}/market-refresh": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/templates/import": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/templates/{template_id}/bind": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/templates/diff": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/rebalance/plan": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/rebalance/disclose": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/signals/hash": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/signals/assess": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/signals/candidates": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/futures/grid/levels": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/futures/position/pnl": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/futures/trailing/arm": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/futures/trailing/observe": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/futures/funding": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/two-leg/sessions": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/two-leg/sessions/{session_id}/fills": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/two-leg/sessions/{session_id}/recovery": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/two-leg/sessions/{session_id}/timeout": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/two-leg/sessions/{session_id}/replay": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/bots": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/bots/{bot_id}/lists": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/bots/{bot_id}/sessions": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/bots/{bot_id}/check": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/deals": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/deals/bulk": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/deals/{deal_id}/events": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/deals/{deal_id}/replay": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/exits/trailing": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/exits/trailing/percent-arm": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/exits/trailing/percent-observe": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/exits/breakeven": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/admin/backup": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/admin/backup/verify": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/recurring/schedule": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/risk/explain": SMALL_JSON_BODY_LIMIT_BYTES,
 }
 FIELD_LABELS = {
     "anchor": "Anchor fiyatı",
@@ -161,12 +301,20 @@ BinanceTestnetSymbol = Annotated[
 ]
 
 
+ROUTE_BODY_LIMITS = {
+    **SMALL_JSON_BODY_LIMITS,
+    # Upload route: own 20 MB budget enforced before the handler reads;
+    # a lying or missing Content-Length must not cause an unbounded read.
+    "/api/data-quality": MAX_INPUT_BYTES,
+}
+
+
 class BoundedAPIRoute(APIRoute):
     """Attach native Starlette body limits to the explicitly bounded JSON routes."""
 
     def __init__(self, path: str, endpoint: Any, **kwargs: Any) -> None:
         super().__init__(path, endpoint, **kwargs)
-        max_body_size = SMALL_JSON_BODY_LIMITS.get(path)
+        max_body_size = ROUTE_BODY_LIMITS.get(path)
         if max_body_size is not None:
             self.app = ProblemDetailsBodyLimitMiddleware(self.app, max_body_size=max_body_size)
 
@@ -468,6 +616,23 @@ class HistoricalRunValidationResponse(BaseModel):
     dataset: HistoricalRunValidationDatasetResponse
     config: HistoricalRunValidationConfigResponse | HistoricalFixedSliceValidationConfigResponse
     profile: HistoricalProfileResponse | HistoricalFixedSliceProfileResponse
+
+
+class DraftLevelRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True)
+
+    artifact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    draft_price: str
+
+
+class DraftLevelResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    verdict: Literal["ACCEPTED", "REJECTED"]
+    draft_price: str
+    reason: str
+    dataset_id: str
+    artifact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
 class HistoricalSimulationRequest(BaseModel):
@@ -888,6 +1053,15 @@ class HistoricalRunDetailResponse(BaseModel):
     evaluation_lineage: dict[str, object] | None = None
 
 
+class HistoricalRunExportResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    format: Literal["json", "csv"]
+    filename: str
+    content: str
+    note: str
+
+
 DownloadJobWireStatus = Literal["QUEUED", "RUNNING", "RETRYING", "SUCCEEDED", "FAILED", "CANCELLED"]
 
 
@@ -1107,8 +1281,1771 @@ def _calculate_preview(payload: dict[str, object]) -> dict[str, object]:
     return result
 
 
+def _validate_rebalance_valuation_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    unknown = set(payload) - REBALANCE_VALUATION_FIELDS
+    missing = REBALANCE_VALUATION_FIELDS - set(payload)
+    fields: dict[str, str] = {}
+    if unknown:
+        fields["body"] = "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))
+    if missing:
+        fields["body"] = (
+            fields.get("body", "")
+            + (" " if fields.get("body") else "")
+            + "Eksik alanlar: "
+            + ", ".join(sorted(missing))
+        )
+    if "valuation_asset" in payload and not isinstance(payload["valuation_asset"], str):
+        fields["valuation_asset"] = "Valuation asset string olmalıdır."
+    for name, lo, hi in (("holdings", 1, 64), ("prices", 0, 64)):
+        if name not in payload:
+            continue
+        rows = payload[name]
+        if not isinstance(rows, list) or not lo <= len(rows) <= hi:
+            fields[name] = f"{name} {lo} ile {hi} arasında satır listesi olmalıdır."
+            continue
+        for row in rows:
+            if not isinstance(row, list) or len(row) != 2 or not all(isinstance(v, str) for v in row):
+                fields[name] = f"{name} satırları iki string listesi olmalıdır."
+                break
+    if fields:
+        return None, fields
+    return payload, {}
+
+
+def _calculate_rebalance_valuation(payload: dict[str, object]) -> dict[str, object]:
+    result = value_holdings(
+        valuation_asset=payload["valuation_asset"],  # type: ignore[arg-type]
+        holdings=tuple((row[0], row[1]) for row in payload["holdings"]),  # type: ignore[union-attr]
+        prices=tuple((row[0], row[1]) for row in payload["prices"]),  # type: ignore[union-attr]
+    )
+    return {
+        "valuation_asset": result.valuation_asset,
+        "total_equity": result.total_equity,
+        "positions": [
+            {"asset": p.asset, "qty": p.qty, "price": p.price, "value": p.value}
+            for p in result.positions
+        ],
+    }
+
+
+PAPER_ACTIVATION_FIELDS = {"confirmed", "symbols", "max_staleness_us", "starting_cash"}
+PAPER_ORDER_FIELDS = {"symbol", "side", "order_type", "qty", "limit_price", "client_order_id"}
+PAPER_FILL_FIELDS = {"client_order_id", "event_id", "fill_qty"}
+PAPER_FILL_REQUIRED = {"client_order_id", "event_id"}
+MAX_PAPER_SESSIONS = 16
+MAX_CACHED_PRINTS_PER_SYMBOL = 50
+PAPER_REFRESH_LIMIT = 5
+
+
+def _new_paper_store() -> dict[str, object]:
+    return {"sessions": {}, "binding": new_market_state(), "prints": {}}
+
+
+PAPER_STORE = _new_paper_store()
+PAPER_LOCK = Lock()
+TEMPLATE_IMPORT_FIELDS = {"template_id", "schema_version", "payload", "declared_capabilities"}
+TEMPLATE_BIND_FIELDS = {"profile_id", "allowed_capabilities", "approval"}
+TEMPLATE_DIFF_FIELDS = {"first_id", "second_id"}
+TEMPLATE_STORE = TemplateFileStore(ROOT / "data" / "templates")
+TEMPLATE_LOCK = Lock()
+TWO_LEG_LOCK = Lock()
+BOT_REGISTRY = BotRegistry()
+BOT_LOCK = Lock()
+DEALS_DIR = ROOT / "data" / "deals"
+BACKUPS_DIR = ROOT / "data" / "backups"
+BACKUP_LOCK = Lock()
+EVENT_LOG = EventLog()
+EVENT_LOCK = Lock()
+DEAL_LOCK = Lock()
+_DEAL_EVENTS = frozenset({"START", "PAUSE", "RESUME", "COMPLETE", "ABORT", "FAIL"})
+_TWO_LEG_SESSION_RE = re.compile(r"[A-Za-z0-9_.:-]{1,100}\Z", re.ASCII)
+_TWO_LEG_JOURNAL: TwoLegJournal | None = None
+
+
+def _get_two_leg_journal() -> TwoLegJournal:
+    global _TWO_LEG_JOURNAL
+    if _TWO_LEG_JOURNAL is None:
+        _TWO_LEG_JOURNAL = TwoLegJournal(ROOT / "data" / "two_leg_journal.db")
+    return _TWO_LEG_JOURNAL
+
+
+def _validate_paper_activation_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    unknown = set(payload) - PAPER_ACTIVATION_FIELDS
+    missing = PAPER_ACTIVATION_FIELDS - set(payload)
+    fields: dict[str, str] = {}
+    if unknown:
+        fields["body"] = "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))
+    if missing:
+        fields["body"] = (fields.get("body", "") + (" " if fields.get("body") else "")
+                           + "Eksik alanlar: " + ", ".join(sorted(missing)))
+    if "confirmed" in payload and (type(payload["confirmed"]) is not bool or not payload["confirmed"]):
+        fields["confirmed"] = "Paper session açık onay gerektirir."
+    if "symbols" in payload and (
+        not isinstance(payload["symbols"], list)
+        or not 1 <= len(payload["symbols"]) <= 16
+        or not all(isinstance(s, str) for s in payload["symbols"])
+    ):
+        fields["symbols"] = "Symbols 1 ile 16 arasında string listesi olmalıdır."
+    if "max_staleness_us" in payload and (
+        type(payload["max_staleness_us"]) is not int or payload["max_staleness_us"] < 0
+    ):
+        fields["max_staleness_us"] = "Staleness negatif olmayan tam sayı olmalıdır."
+    if "starting_cash" in payload and not isinstance(payload["starting_cash"], str):
+        fields["starting_cash"] = "Başlangıç nakdi string olmalıdır."
+    if fields:
+        return None, fields
+    return payload, {}
+
+
+def _validate_paper_order_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    unknown = set(payload) - PAPER_ORDER_FIELDS
+    missing = PAPER_ORDER_FIELDS - set(payload)
+    fields: dict[str, str] = {}
+    if unknown:
+        fields["body"] = "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))
+    if missing:
+        fields["body"] = (fields.get("body", "") + (" " if fields.get("body") else "")
+                           + "Eksik alanlar: " + ", ".join(sorted(missing)))
+    for name in ("symbol", "side", "order_type", "qty", "client_order_id"):
+        if name in payload and not isinstance(payload[name], str):
+            fields[name] = f"{name} string olmalıdır."
+    if "limit_price" in payload and payload["limit_price"] is not None and not isinstance(payload["limit_price"], str):
+        fields["limit_price"] = "limit_price string veya null olmalıdır."
+    if fields:
+        return None, fields
+    return payload, {}
+
+
+def _validate_paper_fill_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    unknown = set(payload) - PAPER_FILL_FIELDS
+    missing = PAPER_FILL_REQUIRED - set(payload)
+    fields: dict[str, str] = {}
+    if unknown:
+        fields["body"] = "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))
+    if missing:
+        fields["body"] = (fields.get("body", "") + (" " if fields.get("body") else "")
+                           + "Eksik alanlar: " + ", ".join(sorted(missing)))
+    for name in ("client_order_id", "event_id", "fill_qty"):
+        if name in payload and not isinstance(payload[name], str):
+            fields[name] = f"{name} string olmalıdır."
+    if fields:
+        return None, fields
+    return payload, {}
+
+
+def _paper_session_or_raise(store: dict[str, object], session_id: str) -> PaperSession:
+    sessions = store["sessions"]
+    assert isinstance(sessions, dict)
+    session = sessions.get(session_id)
+    if not isinstance(session, PaperSession):
+        raise ValueError("PAPER_SESSION_UNKNOWN: Paper session bulunamadı.")
+    return session
+
+
+def _paper_snapshot(session: PaperSession, store: dict[str, object]) -> dict[str, object]:
+    binding = store["binding"]
+    assert hasattr(binding, "marks")
+    return {
+        "session_id": session.session_id,
+        "status": session.status,
+        "cash": session.cash,
+        "positions": [{"symbol": p.symbol, "qty": p.qty} for p in session.positions],
+        "orders": [
+            {
+                "client_order_id": o.client_order_id, "symbol": o.symbol,
+                "side": o.side, "order_type": o.order_type, "qty": o.qty,
+                "limit_price": o.limit_price, "filled_qty": o.filled_qty,
+                "status": o.status,
+            }
+            for o in session.orders
+        ],
+        "fills": [
+            {
+                "fill_id": f.fill_id, "client_order_id": f.client_order_id,
+                "event_id": f.event_id, "symbol": f.symbol, "side": f.side,
+                "price": f.price, "qty": f.qty, "notional": f.notional,
+            }
+            for f in session.fills
+        ],
+        "marks": [
+            {"symbol": m.symbol, "price": m.price, "event_id": m.event_id}
+            for m in binding.marks
+        ],
+    }
+
+
+def _paper_activate(store: dict[str, object], validated: dict[str, object], now_us: int) -> dict[str, object]:
+    sessions = store["sessions"]
+    assert isinstance(sessions, dict)
+    if len(sessions) >= MAX_PAPER_SESSIONS:
+        raise ValueError("PAPER_SESSION_CAPACITY: Paper session sınırı dolu.")
+    session = activate_paper_session(
+        confirmed=True,
+        session_time_us=now_us,
+        symbols=tuple(validated["symbols"]),  # type: ignore[arg-type]
+        max_staleness_us=validated["max_staleness_us"],  # type: ignore[arg-type]
+        starting_cash=validated["starting_cash"],  # type: ignore[arg-type]
+        credential_present=False,
+    )
+    sessions[session.session_id] = session
+    return _paper_snapshot(session, store)
+
+
+def _paper_place(store: dict[str, object], session_id: str, validated: dict[str, object], now_us: int) -> dict[str, object]:
+    session = _paper_session_or_raise(store, session_id)
+    updated, order, outcome = place_paper_order(
+        session=session,
+        symbol=validated["symbol"],  # type: ignore[arg-type]
+        side=validated["side"],  # type: ignore[arg-type]
+        order_type=validated["order_type"],  # type: ignore[arg-type]
+        qty=validated["qty"],  # type: ignore[arg-type]
+        limit_price=validated["limit_price"],  # type: ignore[arg-type]
+        client_order_id=validated["client_order_id"],  # type: ignore[arg-type]
+        order_time_us=now_us,
+    )
+    sessions = store["sessions"]
+    assert isinstance(sessions, dict)
+    sessions[session_id] = updated
+    return {"outcome": outcome, "snapshot": _paper_snapshot(updated, store)}
+
+
+def _paper_fill(store: dict[str, object], session_id: str, validated: dict[str, object], now_us: int) -> dict[str, object]:
+    session = _paper_session_or_raise(store, session_id)
+    prints = store["prints"]
+    assert isinstance(prints, dict)
+    observation = None
+    for cached in prints.values():
+        for item in cached:
+            if item.event_id == validated["event_id"]:
+                observation = item
+                break
+        if observation is not None:
+            break
+    if observation is None:
+        raise ValueError("PAPER_EVENT_UNKNOWN: Event server önbelleğinde yok.")
+    fill_qty = validated.get("fill_qty")
+    if fill_qty is None:
+        target = next(
+            (o for o in session.orders if o.client_order_id == validated["client_order_id"]),
+            None,
+        )
+        if target is None:
+            raise ValueError("PAPER_ORDER_UNKNOWN: Emir bu sessionda yok.")
+        fill_qty = exact_text(number(target.qty) - number(target.filled_qty))
+    updated, fill, outcome = fill_paper_order(
+        session=session,
+        client_order_id=validated["client_order_id"],  # type: ignore[arg-type]
+        observation=observation,
+        fill_qty=fill_qty,  # type: ignore[arg-type]
+        fill_time_us=now_us,
+    )
+    sessions = store["sessions"]
+    assert isinstance(sessions, dict)
+    sessions[session_id] = updated
+    return {
+        "outcome": outcome,
+        "fill": {"fill_id": fill.fill_id, "price": fill.price, "notional": fill.notional},
+        "snapshot": _paper_snapshot(updated, store),
+    }
+
+
+def _paper_refresh(store: dict[str, object], session_id: str, *, fetch, now_us: int, time_unit) -> dict[str, object]:
+    session = _paper_session_or_raise(store, session_id)
+    prints = store["prints"]
+    assert isinstance(prints, dict)
+    fresh: list[PublicObservation] = []
+    for symbol in session.symbols:
+        for item in fetch(symbol):
+            if not isinstance(item, PublicObservation) or item.symbol != symbol:
+                raise ValueError("PAPER_REFRESH_OBSERVATION_INVALID: Piyasa gözlemi geçersiz.")
+            fresh.append(item)
+    binding, _ = apply_observations(
+        store["binding"],  # type: ignore[arg-type]
+        tuple(fresh),
+        now_times_us=tuple(now_us for _ in fresh),
+        max_staleness_us=session.max_staleness_us,
+    )
+    store["binding"] = binding
+    for item in fresh:
+        cached = list(prints.get(item.symbol, ()))
+        if all(p.event_id != item.event_id for p in cached):
+            cached.append(item)
+        prints[item.symbol] = tuple(cached[-MAX_CACHED_PRINTS_PER_SYMBOL:])
+    return {
+        "prints": [
+            {
+                "event_id": item.event_id, "symbol": item.symbol,
+                "price": item.price, "qty": item.quantity,
+                "event_time_us": item.event_time_us,
+            }
+            for item in fresh
+        ],
+        "snapshot": _paper_snapshot(session, store),
+    }
+
+
+def _template_field_errors(payload: object, allowed: set[str]) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    unknown = set(payload) - allowed
+    missing = allowed - set(payload)
+    fields: dict[str, str] = {}
+    if unknown:
+        fields["body"] = "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))
+    if missing:
+        fields["body"] = (fields.get("body", "") + (" " if fields.get("body") else "")
+                           + "Eksik alanlar: " + ", ".join(sorted(missing)))
+    return payload, fields
+
+
+def _validate_template_import_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    payload, fields = _template_field_errors(payload, TEMPLATE_IMPORT_FIELDS)
+    if payload is None or fields:
+        return None, fields
+    assert isinstance(payload, dict)
+    if not isinstance(payload["template_id"], str):
+        fields["template_id"] = "template_id string olmalıdır."
+    if payload["schema_version"] != "strategy-template-v1":
+        fields["schema_version"] = "Yalnız strategy-template-v1 kabul edilir."
+    if not isinstance(payload["payload"], dict):
+        fields["payload"] = "payload JSON nesnesi olmalıdır."
+    if (
+        not isinstance(payload["declared_capabilities"], list)
+        or not all(isinstance(c, str) for c in payload["declared_capabilities"])
+    ):
+        fields["declared_capabilities"] = "declared_capabilities string listesi olmalıdır."
+    if fields:
+        return None, fields
+    return payload, {}
+
+
+def _validate_template_bind_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    payload, fields = _template_field_errors(payload, TEMPLATE_BIND_FIELDS)
+    if payload is None or fields:
+        return None, fields
+    assert isinstance(payload, dict)
+    if not isinstance(payload["profile_id"], str):
+        fields["profile_id"] = "profile_id string olmalıdır."
+    if (
+        not isinstance(payload["allowed_capabilities"], list)
+        or not all(isinstance(c, str) for c in payload["allowed_capabilities"])
+    ):
+        fields["allowed_capabilities"] = "allowed_capabilities string listesi olmalıdır."
+    if not isinstance(payload["approval"], str):
+        fields["approval"] = "approval string olmalıdır."
+    if fields:
+        return None, fields
+    return payload, {}
+
+
+def _validate_template_diff_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    payload, fields = _template_field_errors(payload, TEMPLATE_DIFF_FIELDS)
+    if payload is None or fields:
+        return None, fields
+    assert isinstance(payload, dict)
+    for name in ("first_id", "second_id"):
+        if not isinstance(payload[name], str):
+            fields[name] = f"{name} string olmalıdır."
+    if fields:
+        return None, fields
+    return payload, {}
+
+
+def _template_import(store: TemplateFileStore, validated: dict[str, object]) -> dict[str, object]:
+    template = new_strategy_template(
+        template_id=validated["template_id"],  # type: ignore[arg-type]
+        schema_version=validated["schema_version"],  # type: ignore[arg-type]
+        payload=validated["payload"],  # type: ignore[arg-type]
+        declared_capabilities=tuple(validated["declared_capabilities"]),  # type: ignore[arg-type]
+    )
+    store.save(template)
+    return {
+        "template_id": template.template_id,
+        "payload_sha256": template.payload_sha256,
+        "declared_capabilities": list(template.declared_capabilities),
+    }
+
+
+def _template_bind(store: TemplateFileStore, template_id: str, validated: dict[str, object], now_us: int) -> dict[str, object]:
+    template = store.load(template_id)
+    binding = bind_template_to_profile(
+        template=template,
+        profile_id=validated["profile_id"],  # type: ignore[arg-type]
+        allowed_capabilities=tuple(validated["allowed_capabilities"]),  # type: ignore[arg-type]
+        approval=validated["approval"],  # type: ignore[arg-type]
+        binding_time_us=now_us,
+    )
+    materialized = materialize_binding(binding, ROOT)
+    return {
+        "binding": {
+            "binding_id": binding.binding_id,
+            "status": binding.status,
+            "template_id": binding.template_id,
+            "profile_id": binding.profile_id,
+            "params": [[k, v] for k, v in binding.params],
+        },
+        "materialized": {
+            "config": materialized.config,
+            "config_hash": materialized.config_hash,
+        },
+    }
+
+
+def _template_diff(store: TemplateFileStore, validated: dict[str, object]) -> list[dict[str, object]]:
+    first = store.load(validated["first_id"])  # type: ignore[arg-type]
+    second = store.load(validated["second_id"])  # type: ignore[arg-type]
+    return [
+        {"key": key, "before": before, "after": after}
+        for key, before, after in diff_templates(first, second)
+    ]
+
+
+def _template_meta(store: TemplateFileStore, template_id: str) -> dict[str, object]:
+    template = store.load(template_id)
+    return {
+        "template_id": template.template_id,
+        "payload_sha256": template.payload_sha256,
+        "declared_capabilities": list(template.declared_capabilities),
+    }
+
+
+REBALANCE_PLAN_FIELDS = {"trigger", "projection"}
+REBALANCE_DISCLOSE_FIELDS = {"plan", "projection", "prices", "fee_rate", "qty_step", "min_notional", "cash_reserve"}
+SIGNAL_HASH_FIELDS = {"payload"}
+SIGNAL_ASSESS_FIELDS = {"signal", "closed_bar_time_us", "warmup_bars_observed", "required_warmup_bars", "max_staleness_us"}
+SIGNAL_CANDIDATE_FIELDS = SIGNAL_ASSESS_FIELDS | {"action", "symbol", "action_map", "qty", "ttl_us"}
+
+
+def _allocation_rows(value: object) -> list[list[str]] | None:
+    if not isinstance(value, list):
+        return None
+    rows: list[list[str]] = []
+    for row in value:
+        if not isinstance(row, list) or len(row) != 3 or not all(isinstance(v, str) for v in row):
+            return None
+        rows.append([row[0], row[1], row[2]])
+    return rows
+
+
+def _pair_rows(value: object) -> list[list[str]] | None:
+    if not isinstance(value, list):
+        return None
+    rows: list[list[str]] = []
+    for row in value:
+        if not isinstance(row, list) or len(row) != 2 or not all(isinstance(v, str) for v in row):
+            return None
+        rows.append([row[0], row[1]])
+    return rows
+
+
+def _validate_rebalance_plan_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, REBALANCE_PLAN_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    trigger = body["trigger"]
+    if not isinstance(trigger, dict) or trigger.get("policy") not in ("threshold", "time"):
+        fields["trigger"] = "trigger policy threshold veya time olmalıdır."
+    elif trigger["policy"] == "threshold":
+        for name in ("current_weight", "target_weight", "threshold"):
+            if not isinstance(trigger.get(name), str):
+                fields["trigger"] = f"trigger.{name} string olmalıdır."
+    else:
+        for name in ("last_rebalance_us", "now_us", "interval_us"):
+            if type(trigger.get(name)) is not int:
+                fields["trigger"] = f"trigger.{name} integer olmalıdır."
+    projection = body["projection"]
+    if (
+        not isinstance(projection, dict)
+        or not isinstance(projection.get("valuation_asset"), str)
+        or not isinstance(projection.get("total_equity"), str)
+        or _allocation_rows(projection.get("allocations")) is None
+    ):
+        fields["projection"] = "projection valuation_asset/total_equity/allocations gerektirir."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _rebalance_plan(validated: dict[str, object], now_us: int) -> dict[str, object]:
+    trigger = validated["trigger"]
+    assert isinstance(trigger, dict)
+    if trigger["policy"] == "threshold":
+        decision = evaluate_threshold_trigger(
+            current_weight=trigger["current_weight"],  # type: ignore[arg-type]
+            target_weight=trigger["target_weight"],  # type: ignore[arg-type]
+            threshold=trigger["threshold"],  # type: ignore[arg-type]
+        )
+    else:
+        decision = evaluate_time_trigger(
+            last_rebalance_time_us=trigger["last_rebalance_us"],  # type: ignore[arg-type]
+            observation_time_us=trigger["now_us"],  # type: ignore[arg-type]
+            interval_us=trigger["interval_us"],  # type: ignore[arg-type]
+        )
+    projection_body = validated["projection"]
+    assert isinstance(projection_body, dict)
+    projection = build_rebalance_projection(
+        valuation_asset=projection_body["valuation_asset"],  # type: ignore[arg-type]
+        total_equity=projection_body["total_equity"],  # type: ignore[arg-type]
+        allocations=tuple((r[0], r[1], r[2]) for r in projection_body["allocations"]),  # type: ignore[union-attr]
+    )
+    plan = build_rebalance_plan(trigger=decision, projection=projection, plan_time_us=now_us)
+    return {
+        "plan_id": plan.plan_id,
+        "status": plan.status,
+        "plan_time_us": plan.plan_time_us,
+        "valuation_asset": plan.valuation_asset,
+        "total_equity": plan.total_equity,
+        "gross_buy": plan.gross_buy,
+        "gross_sell": plan.gross_sell,
+        "trigger_policy": plan.trigger_policy,
+    }
+
+
+def _validate_rebalance_disclose_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, REBALANCE_DISCLOSE_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    plan = body["plan"]
+    if (
+        not isinstance(plan, dict)
+        or not isinstance(plan.get("plan_id"), str)
+        or plan.get("status") != "DRAFT"
+        or type(plan.get("plan_time_us")) is not int
+        or not isinstance(plan.get("valuation_asset"), str)
+        or not isinstance(plan.get("total_equity"), str)
+        or not isinstance(plan.get("gross_buy"), str)
+        or not isinstance(plan.get("gross_sell"), str)
+        or not isinstance(plan.get("trigger_policy"), str)
+    ):
+        fields["plan"] = "plan kaydı eksik veya geçersiz."
+    projection = body["projection"]
+    if (
+        not isinstance(projection, dict)
+        or not isinstance(projection.get("valuation_asset"), str)
+        or not isinstance(projection.get("total_equity"), str)
+        or _allocation_rows(projection.get("allocations")) is None
+    ):
+        fields["projection"] = "projection valuation_asset/total_equity/allocations gerektirir."
+    if _pair_rows(body.get("prices")) is None:
+        fields["prices"] = "prices ikili string listesi olmalıdır."
+    for name in ("fee_rate", "qty_step", "min_notional", "cash_reserve"):
+        if not isinstance(body.get(name), str):
+            fields[name] = f"{name} string olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _rebalance_disclose(validated: dict[str, object], now_us: int) -> dict[str, object]:
+    plan_body = validated["plan"]
+    assert isinstance(plan_body, dict)
+    plan = RebalancePlan(
+        plan_id=plan_body["plan_id"],  # type: ignore[arg-type]
+        schema_version="rebalance-plan-v1",
+        status="DRAFT",
+        plan_time_us=plan_body["plan_time_us"],  # type: ignore[arg-type]
+        valuation_asset=plan_body["valuation_asset"],  # type: ignore[arg-type]
+        total_equity=plan_body["total_equity"],  # type: ignore[arg-type]
+        gross_buy=plan_body["gross_buy"],  # type: ignore[arg-type]
+        gross_sell=plan_body["gross_sell"],  # type: ignore[arg-type]
+        trigger_policy=plan_body["trigger_policy"],  # type: ignore[arg-type]
+    )
+    projection_body = validated["projection"]
+    assert isinstance(projection_body, dict)
+    projection = build_rebalance_projection(
+        valuation_asset=projection_body["valuation_asset"],  # type: ignore[arg-type]
+        total_equity=projection_body["total_equity"],  # type: ignore[arg-type]
+        allocations=tuple((r[0], r[1], r[2]) for r in projection_body["allocations"]),  # type: ignore[union-attr]
+    )
+    disclosure = disclose_execution(
+        plan=plan,
+        projection=projection,
+        prices=tuple((r[0], r[1]) for r in validated["prices"]),  # type: ignore[union-attr]
+        fee_rate=validated["fee_rate"],  # type: ignore[arg-type]
+        qty_step=validated["qty_step"],  # type: ignore[arg-type]
+        min_notional=validated["min_notional"],  # type: ignore[arg-type]
+        cash_reserve=validated["cash_reserve"],  # type: ignore[arg-type]
+    )
+    candidates = (
+        bind_execution_orders(disclosure, order_time_us=now_us)
+        if disclosure.status == "READY"
+        else ()
+    )
+    return {
+        "disclosure": {
+            "plan_id": disclosure.plan_id,
+            "status": disclosure.status,
+            "total_buy_gross": disclosure.total_buy_gross,
+            "total_fee": disclosure.total_fee,
+            "lines": [
+                {
+                    "asset": line.asset, "side": line.side,
+                    "gross_delta": line.gross_delta, "fee": line.fee,
+                    "net_delta": line.net_delta, "qty": line.qty,
+                    "quantized_qty": line.quantized_qty,
+                    "remainder_qty": line.remainder_qty,
+                    "notional": line.notional, "status": line.status,
+                }
+                for line in disclosure.lines
+            ],
+        },
+        "candidates": [
+            {
+                "candidate_id": c.candidate_id, "plan_id": c.plan_id,
+                "asset": c.asset, "side": c.side, "qty": c.qty,
+                "status": c.status,
+            }
+            for c in candidates
+        ],
+    }
+
+
+def _signal_event_or_errors(body: dict[str, object], fields: dict[str, str]):
+    signal = body.get("signal")
+    if (
+        not isinstance(signal, dict)
+        or not isinstance(signal.get("signal_id"), str)
+        or not isinstance(signal.get("source"), str)
+        or type(signal.get("event_time_us")) is not int
+        or not isinstance(signal.get("schema_version"), str)
+        or not isinstance(signal.get("payload_hash"), str)
+    ):
+        fields["signal"] = "signal kimlik/zaman/hash alanları gerektirir."
+        return None
+    return signal
+
+
+def _validate_signal_hash_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, SIGNAL_HASH_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if not isinstance(body["payload"], dict):
+        return None, {"payload": "payload JSON nesnesi olmalıdır."}
+    return body, {}
+
+
+def _signal_hash(validated: dict[str, object]) -> dict[str, object]:
+    return {"payload_hash": hash_signal_payload(validated["payload"])}  # type: ignore[arg-type]
+
+
+def _validate_signal_assess_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, SIGNAL_ASSESS_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    _signal_event_or_errors(body, fields)
+    for name in ("closed_bar_time_us", "warmup_bars_observed", "required_warmup_bars", "max_staleness_us"):
+        if type(body.get(name)) is not int:
+            fields[name] = f"{name} integer olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _signal_assess(validated: dict[str, object]) -> dict[str, object]:
+    signal = new_signal_event(
+        signal_id=validated["signal"]["signal_id"],  # type: ignore[index]
+        source=validated["signal"]["source"],  # type: ignore[index]
+        event_time_us=validated["signal"]["event_time_us"],  # type: ignore[index]
+        schema_version=validated["signal"]["schema_version"],  # type: ignore[index]
+        payload_hash=validated["signal"]["payload_hash"],  # type: ignore[index]
+    )
+    result = assess_signal_readiness(
+        signal,
+        closed_bar_time_us=validated["closed_bar_time_us"],  # type: ignore[arg-type]
+        warmup_bars_observed=validated["warmup_bars_observed"],  # type: ignore[arg-type]
+        required_warmup_bars=validated["required_warmup_bars"],  # type: ignore[arg-type]
+        max_staleness_us=validated["max_staleness_us"],  # type: ignore[arg-type]
+    )
+    return {
+        "signal_id": result.signal_id,
+        "status": result.status,
+        "event_time_us": result.event_time_us,
+        "closed_bar_time_us": result.closed_bar_time_us,
+    }
+
+
+def _validate_signal_candidate_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, SIGNAL_CANDIDATE_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    _signal_event_or_errors(body, fields)
+    for name in ("closed_bar_time_us", "warmup_bars_observed", "required_warmup_bars", "max_staleness_us", "ttl_us"):
+        if type(body.get(name)) is not int:
+            fields[name] = f"{name} integer olmalıdır."
+    for name in ("action", "symbol", "qty"):
+        if not isinstance(body.get(name), str):
+            fields[name] = f"{name} string olmalıdır."
+    if _pair_rows(body.get("action_map")) is None:
+        fields["action_map"] = "action_map ikili string listesi olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _signal_bind_candidate(validated: dict[str, object], now_us: int) -> dict[str, object]:
+    signal = new_signal_event(
+        signal_id=validated["signal"]["signal_id"],  # type: ignore[index]
+        source=validated["signal"]["source"],  # type: ignore[index]
+        event_time_us=validated["signal"]["event_time_us"],  # type: ignore[index]
+        schema_version=validated["signal"]["schema_version"],  # type: ignore[index]
+        payload_hash=validated["signal"]["payload_hash"],  # type: ignore[index]
+    )
+    readiness = assess_signal_readiness(
+        signal,
+        closed_bar_time_us=validated["closed_bar_time_us"],  # type: ignore[arg-type]
+        warmup_bars_observed=validated["warmup_bars_observed"],  # type: ignore[arg-type]
+        required_warmup_bars=validated["required_warmup_bars"],  # type: ignore[arg-type]
+        max_staleness_us=validated["max_staleness_us"],  # type: ignore[arg-type]
+    )
+    candidate = bind_signal_candidate(
+        signal=signal,
+        readiness=readiness,
+        action=validated["action"],  # type: ignore[arg-type]
+        symbol=validated["symbol"],  # type: ignore[arg-type]
+        action_map=tuple((r[0], r[1]) for r in validated["action_map"]),  # type: ignore[union-attr]
+        qty=validated["qty"],  # type: ignore[arg-type]
+        ttl_us=validated["ttl_us"],  # type: ignore[arg-type]
+        binding_time_us=now_us,
+    )
+    return {
+        "candidate_id": candidate.candidate_id,
+        "status": candidate.status,
+        "signal_id": candidate.signal_id,
+        "symbol": candidate.symbol,
+        "side": candidate.side,
+        "qty": candidate.qty,
+        "expires_us": candidate.expires_us,
+    }
+
+
+FUTURES_GRID_LEVELS_FIELDS = {"direction", "level_mode", "lower_price", "upper_price", "interval_count", "price_tick", "tick_origin"}
+FUTURES_POSITION_PNL_FIELDS = {"side", "quantity", "contract_size", "entry_price", "mark_price", "settlement_asset"}
+
+
+def _validate_futures_grid_levels_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, FUTURES_GRID_LEVELS_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if body["direction"] not in ("LONG", "SHORT", "NEUTRAL"):
+        fields["direction"] = "direction LONG, SHORT veya NEUTRAL olmalıdır."
+    if body["level_mode"] not in ("ARITHMETIC", "GEOMETRIC"):
+        fields["level_mode"] = "level_mode ARITHMETIC veya GEOMETRIC olmalıdır."
+    for name in ("lower_price", "upper_price", "price_tick", "tick_origin"):
+        if not isinstance(body.get(name), str):
+            fields[name] = f"{name} string olmalıdır."
+    if type(body.get("interval_count")) is not int:
+        fields["interval_count"] = "interval_count integer olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _futures_grid_levels(validated: dict[str, object]) -> dict[str, object]:
+    profile = FuturesGridProfile()
+    result = project_futures_grid_levels(
+        profile=profile,
+        direction=validated["direction"],  # type: ignore[arg-type]
+        initial_position_policy="FLAT",
+        level_mode=validated["level_mode"],  # type: ignore[arg-type]
+        lower_price=validated["lower_price"],  # type: ignore[arg-type]
+        upper_price=validated["upper_price"],  # type: ignore[arg-type]
+        interval_count=validated["interval_count"],  # type: ignore[arg-type]
+        price_tick=validated["price_tick"],  # type: ignore[arg-type]
+        tick_origin=validated["tick_origin"],  # type: ignore[arg-type]
+    )
+    return {
+        "direction": result.direction,
+        "level_mode": result.level_mode,
+        "lower_price": result.lower_price,
+        "upper_price": result.upper_price,
+        "interval_count": result.interval_count,
+        "levels": list(result.levels),
+        "arithmetic_step": result.arithmetic_step,
+        "ratio_numerator": result.ratio_numerator,
+        "ratio_denominator": result.ratio_denominator,
+        "profile": {
+            "venue": profile.venue,
+            "product_family": profile.product_family,
+            "settlement_asset": profile.settlement_asset,
+            "contract_type": profile.contract_type,
+            "position_mode": profile.position_mode,
+            "margin_mode": profile.margin_mode,
+            "leverage": profile.leverage,
+        },
+    }
+
+
+def _validate_futures_position_pnl_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, FUTURES_POSITION_PNL_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if body["side"] not in ("LONG", "SHORT"):
+        fields["side"] = "side LONG veya SHORT olmalıdır."
+    for name in ("quantity", "contract_size", "entry_price", "mark_price", "settlement_asset"):
+        if not isinstance(body.get(name), str):
+            fields[name] = f"{name} string olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _futures_position_pnl(validated: dict[str, object]) -> dict[str, object]:
+    require_settlement_asset(validated["settlement_asset"])
+    position = LinearFuturesPosition(
+        side=validated["side"],  # type: ignore[arg-type]
+        quantity=validated["quantity"],  # type: ignore[arg-type]
+        contract_size=validated["contract_size"],  # type: ignore[arg-type]
+        entry_price=validated["entry_price"],  # type: ignore[arg-type]
+        mark_price=validated["mark_price"],  # type: ignore[arg-type]
+        settlement_asset=validated["settlement_asset"],  # type: ignore[arg-type]
+    )
+    return {
+        "side": position.side,
+        "effective_quantity": position.effective_quantity,
+        "position_value": position.position_value,
+        "unrealized_pnl": position.unrealized_pnl,
+        "settlement_asset": position.settlement_asset,
+    }
+
+
+FUTURES_TRAILING_ARM_FIELDS = {"side", "activation_price", "distance"}
+FUTURES_TRAILING_OBSERVE_FIELDS = {"side", "state", "price"}
+FUTURES_FUNDING_FIELDS = {"position", "funding_rate", "effective_time_us"}
+
+
+def _validate_futures_trailing_arm_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, FUTURES_TRAILING_ARM_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if body["side"] not in ("LONG", "SHORT"):
+        fields["side"] = "side LONG veya SHORT olmalıdır."
+    for name in ("activation_price", "distance"):
+        if not isinstance(body.get(name), str):
+            fields[name] = f"{name} string olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _futures_trailing_arm(validated: dict[str, object]) -> dict[str, object]:
+    if validated["side"] == "LONG":
+        state = arm_long_trailing(
+            activation_price=validated["activation_price"],  # type: ignore[arg-type]
+            distance=validated["distance"],  # type: ignore[arg-type]
+        )
+        return {
+            "status": state.status, "activation_price": state.activation_price,
+            "distance": state.distance, "high_water": state.high_water,
+            "stop_price": state.stop_price,
+        }
+    state = arm_short_trailing(
+        activation_price=validated["activation_price"],  # type: ignore[arg-type]
+        distance=validated["distance"],  # type: ignore[arg-type]
+    )
+    return {
+        "status": state.status, "activation_price": state.activation_price,
+        "distance": state.distance, "low_water": state.low_water,
+        "stop_price": state.stop_price,
+    }
+
+
+def _validate_futures_trailing_observe_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, FUTURES_TRAILING_OBSERVE_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if body["side"] not in ("LONG", "SHORT"):
+        fields["side"] = "side LONG veya SHORT olmalıdır."
+    state = body.get("state")
+    water = "high_water" if body.get("side") == "LONG" else "low_water"
+    if (
+        not isinstance(state, dict)
+        or state.get("status") not in ("INACTIVE", "ACTIVE", "TRIGGERED")
+        or not isinstance(state.get("activation_price"), str)
+        or not isinstance(state.get("distance"), str)
+        or (state.get(water) is not None and not isinstance(state.get(water), str))
+        or (state.get("stop_price") is not None and not isinstance(state.get("stop_price"), str))
+    ):
+        fields["state"] = "trailing state eksik veya geçersiz."
+    if not isinstance(body.get("price"), str):
+        fields["price"] = "price string olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _futures_trailing_observe(validated: dict[str, object]) -> dict[str, object]:
+    state_body = validated["state"]
+    assert isinstance(state_body, dict)
+    if validated["side"] == "LONG":
+        state = TrailingLongState(
+            status=state_body["status"],  # type: ignore[arg-type]
+            activation_price=state_body["activation_price"],  # type: ignore[arg-type]
+            distance=state_body["distance"],  # type: ignore[arg-type]
+            high_water=state_body.get("high_water"),  # type: ignore[arg-type]
+            stop_price=state_body.get("stop_price"),  # type: ignore[arg-type]
+        )
+        result = observe_long_trailing(state, price=validated["price"])  # type: ignore[arg-type]
+        return {
+            "status": result.status, "activation_price": result.activation_price,
+            "distance": result.distance, "high_water": result.high_water,
+            "stop_price": result.stop_price,
+        }
+    state = TrailingShortState(
+        status=state_body["status"],  # type: ignore[arg-type]
+        activation_price=state_body["activation_price"],  # type: ignore[arg-type]
+        distance=state_body["distance"],  # type: ignore[arg-type]
+        low_water=state_body.get("low_water"),  # type: ignore[arg-type]
+        stop_price=state_body.get("stop_price"),  # type: ignore[arg-type]
+    )
+    result = observe_short_trailing(state, price=validated["price"])  # type: ignore[arg-type]
+    return {
+        "status": result.status, "activation_price": result.activation_price,
+        "distance": result.distance, "low_water": result.low_water,
+        "stop_price": result.stop_price,
+    }
+
+
+def _validate_futures_funding_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, FUTURES_FUNDING_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    position = body.get("position")
+    if (
+        not isinstance(position, dict)
+        or position.get("side") not in ("LONG", "SHORT")
+        or not all(isinstance(position.get(n), str) for n in ("quantity", "contract_size", "entry_price", "mark_price", "settlement_asset"))
+    ):
+        fields["position"] = "position kaydı eksik veya geçersiz."
+    if not isinstance(body.get("funding_rate"), str):
+        fields["funding_rate"] = "funding_rate string olmalıdır."
+    if type(body.get("effective_time_us")) is not int:
+        fields["effective_time_us"] = "effective_time_us integer olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _futures_funding(validated: dict[str, object]) -> dict[str, object]:
+    position_body = validated["position"]
+    assert isinstance(position_body, dict)
+    require_settlement_asset(position_body["settlement_asset"])
+    position = LinearFuturesPosition(
+        side=position_body["side"],  # type: ignore[arg-type]
+        quantity=position_body["quantity"],  # type: ignore[arg-type]
+        contract_size=position_body["contract_size"],  # type: ignore[arg-type]
+        entry_price=position_body["entry_price"],  # type: ignore[arg-type]
+        mark_price=position_body["mark_price"],  # type: ignore[arg-type]
+        settlement_asset=position_body["settlement_asset"],  # type: ignore[arg-type]
+    )
+    result = project_funding(
+        position,
+        validated["funding_rate"],  # type: ignore[arg-type]
+        effective_time_us=validated["effective_time_us"],  # type: ignore[arg-type]
+    )
+    return {
+        "amount": result.amount,
+        "core_expense": result.core_expense,
+        "settlement_asset": result.settlement_asset,
+        "effective_time_us": result.effective_time_us,
+    }
+
+
+TWO_LEG_SESSION_FIELDS = {"session_id"}
+TWO_LEG_FILL_FIELDS = {
+    "fill_id", "leg_id", "account_id", "venue_profile", "product_id",
+    "symbol", "hedge_side", "quantity", "fill_status", "event_time_us",
+}
+
+
+def _validate_two_leg_session_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, TWO_LEG_SESSION_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    session_id = body.get("session_id")
+    if type(session_id) is not str or _TWO_LEG_SESSION_RE.fullmatch(session_id) is None:
+        fields["session_id"] = "session_id geçersiz kimlik olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _validate_two_leg_fill_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, TWO_LEG_FILL_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    for name in ("fill_id", "account_id", "venue_profile", "product_id", "symbol"):
+        value = body.get(name)
+        if type(value) is not str or _TWO_LEG_SESSION_RE.fullmatch(value) is None:
+            fields[name] = f"{name} geçersiz kimlik olmalıdır."
+    if body.get("leg_id") not in ("A", "B"):
+        fields["leg_id"] = "leg_id A veya B olmalıdır."
+    if body.get("hedge_side") not in ("LONG", "SHORT"):
+        fields["hedge_side"] = "hedge_side LONG veya SHORT olmalıdır."
+    if not isinstance(body.get("quantity"), str):
+        fields["quantity"] = "quantity string olmalıdır."
+    if body.get("fill_status") not in ("PARTIAL", "FULL"):
+        fields["fill_status"] = "fill_status PARTIAL veya FULL olmalıdır."
+    if type(body.get("event_time_us")) is not int:
+        fields["event_time_us"] = "event_time_us integer olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _two_leg_projection_data(projection: TwoLegFillProjection) -> dict[str, object]:
+    return {
+        "state": projection.state,
+        "leg_a_identity": _two_leg_identity_data(projection.leg_a_identity),
+        "leg_b_identity": _two_leg_identity_data(projection.leg_b_identity),
+        "leg_a_quantity": projection.leg_a_quantity,
+        "leg_b_quantity": projection.leg_b_quantity,
+        "leg_a_status": projection.leg_a_status,
+        "leg_b_status": projection.leg_b_status,
+        "fills": [
+            {
+                "fill_id": fill.fill_id,
+                "leg_id": fill.leg_id,
+                "quantity": fill.quantity,
+                "fill_status": fill.fill_status,
+                "event_time_us": fill.event_time_us,
+            }
+            for fill in projection.fills
+        ],
+    }
+
+
+def _two_leg_identity_data(identity: HedgePositionIdentity | None) -> dict[str, object] | None:
+    if identity is None:
+        return None
+    return {
+        "account_id": identity.account_id,
+        "venue_profile": identity.venue_profile,
+        "product_id": identity.product_id,
+        "symbol": identity.symbol,
+        "position_mode": identity.position_mode,
+        "hedge_side": identity.hedge_side,
+    }
+
+
+def _two_leg_start(journal: TwoLegJournal, validated: dict[str, object]) -> dict[str, object]:
+    session_id = validated["session_id"]
+    assert isinstance(session_id, str)
+    result = journal.start(session_id)
+    return {
+        "session_id": session_id,
+        "result": result,
+        "projection": _two_leg_projection_data(journal.replay(session_id)),
+    }
+
+
+def _two_leg_accept_fill(
+    journal: TwoLegJournal, session_id: str, validated: dict[str, object]
+) -> dict[str, object]:
+    fill = LegFill(
+        fill_id=validated["fill_id"],  # type: ignore[arg-type]
+        leg_id=validated["leg_id"],  # type: ignore[arg-type]
+        position=new_hedge_position_identity(
+            account_id=validated["account_id"],  # type: ignore[arg-type]
+            venue_profile=validated["venue_profile"],  # type: ignore[arg-type]
+            product_id=validated["product_id"],  # type: ignore[arg-type]
+            symbol=validated["symbol"],  # type: ignore[arg-type]
+            position_mode="HEDGE",
+            hedge_side=validated["hedge_side"],  # type: ignore[arg-type]
+        ),
+        quantity=validated["quantity"],  # type: ignore[arg-type]
+        fill_status=validated["fill_status"],  # type: ignore[arg-type]
+        event_time_us=validated["event_time_us"],  # type: ignore[arg-type]
+    )
+    result = journal.accept_fill(session_id, fill)
+    return {
+        "session_id": session_id,
+        "result": result,
+        "projection": _two_leg_projection_data(journal.replay(session_id)),
+    }
+
+
+def _two_leg_mark(
+    journal: TwoLegJournal, session_id: str, terminal: str
+) -> dict[str, object]:
+    if terminal == "RECOVERY_REQUIRED":
+        projection = journal.mark_recovery(session_id)
+    elif terminal == "TIMEOUT":
+        projection = journal.mark_timeout(session_id)
+    else:
+        raise ValueError(f"Bilinmeyen terminal işareti: {terminal}")
+    return {
+        "session_id": session_id,
+        "result": "MARKED",
+        "projection": _two_leg_projection_data(projection),
+    }
+
+
+def _two_leg_replay(journal: TwoLegJournal, session_id: str) -> dict[str, object]:
+    return {
+        "session_id": session_id,
+        "projection": _two_leg_projection_data(journal.replay(session_id)),
+    }
+
+
+BOT_REGISTER_REQUIRED = {"bot_id", "name", "pairs"}
+BOT_REGISTER_OPTIONAL = {"blacklist", "favorites", "virtual_quote_budget"}
+BOT_LISTS_FIELDS = {"blacklist", "favorites"}
+BOT_BIND_FIELDS = {"session_id", "symbol"}
+BOT_CHECK_FIELDS = {"symbol"}
+
+
+def _validate_bot_register_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    allowed = BOT_REGISTER_REQUIRED | BOT_REGISTER_OPTIONAL
+    unknown = set(payload) - allowed
+    missing = BOT_REGISTER_REQUIRED - set(payload)
+    fields: dict[str, str] = {}
+    if unknown:
+        fields["body"] = "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))
+    if missing:
+        fields["body"] = (fields.get("body", "") + (" " if fields.get("body") else "")
+                           + "Eksik alanlar: " + ", ".join(sorted(missing)))
+    for name in ("bot_id", "name"):
+        if name in payload and not isinstance(payload[name], str):
+            fields[name] = f"{name} string olmalıdır."
+    if "pairs" in payload and (
+        not isinstance(payload["pairs"], list)
+        or not all(isinstance(s, str) for s in payload["pairs"])
+    ):
+        fields["pairs"] = "pairs string listesi olmalıdır."
+    for name in ("blacklist", "favorites"):
+        if name in payload and (
+            not isinstance(payload[name], list)
+            or not all(isinstance(s, str) for s in payload[name])
+        ):
+            fields[name] = f"{name} string listesi olmalıdır."
+    if "virtual_quote_budget" in payload and not isinstance(payload["virtual_quote_budget"], str):
+        fields["virtual_quote_budget"] = "virtual_quote_budget string olmalıdır."
+    if fields:
+        return None, fields
+    return payload, {}
+
+
+def _validate_bot_lists_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, BOT_LISTS_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    for name in ("blacklist", "favorites"):
+        if not isinstance(body.get(name), list) or not all(
+            isinstance(s, str) for s in body[name]  # type: ignore[union-attr]
+        ):
+            fields[name] = f"{name} string listesi olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _validate_bot_bind_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, BOT_BIND_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    for name in ("session_id", "symbol"):
+        if not isinstance(body.get(name), str):
+            fields[name] = f"{name} string olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _validate_bot_check_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, BOT_CHECK_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if not isinstance(body.get("symbol"), str):
+        fields["symbol"] = "symbol string olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _bot_profile_data(profile: BotProfile) -> dict[str, object]:
+    return {
+        "bot_id": profile.bot_id,
+        "name": profile.name,
+        "pairs": list(profile.pairs),
+        "blacklist": list(profile.blacklist),
+        "favorites": list(profile.favorites),
+        "virtual_quote_budget": profile.virtual_quote_budget,
+    }
+
+
+def _bot_register(registry: BotRegistry, validated: dict[str, object]) -> dict[str, object]:
+    profile = new_bot_profile(
+        bot_id=validated["bot_id"],  # type: ignore[arg-type]
+        name=validated["name"],  # type: ignore[arg-type]
+        pairs=validated["pairs"],  # type: ignore[arg-type]
+        blacklist=validated.get("blacklist", ()),  # type: ignore[arg-type]
+        favorites=validated.get("favorites", ()),  # type: ignore[arg-type]
+        virtual_quote_budget=validated.get("virtual_quote_budget", "0"),  # type: ignore[arg-type]
+    )
+    result = registry.register(profile)
+    return {"bot_id": profile.bot_id, "result": result, "profile": _bot_profile_data(profile)}
+
+
+def _bot_list(registry: BotRegistry) -> dict[str, object]:
+    return {"bot_ids": list(registry.list_ids())}
+
+
+def _bot_get(registry: BotRegistry, bot_id: str) -> dict[str, object]:
+    return {
+        "bot_id": bot_id,
+        "profile": _bot_profile_data(registry.get(bot_id)),
+        "sessions": registry.sessions_of(bot_id),
+    }
+
+
+def _bot_update_lists(
+    registry: BotRegistry, bot_id: str, validated: dict[str, object]
+) -> dict[str, object]:
+    updated = registry.update_lists(
+        bot_id,
+        blacklist=validated["blacklist"],  # type: ignore[arg-type]
+        favorites=validated["favorites"],  # type: ignore[arg-type]
+    )
+    return {"bot_id": bot_id, "result": "UPDATED", "profile": _bot_profile_data(updated)}
+
+
+def _bot_bind_session(
+    registry: BotRegistry, bot_id: str, validated: dict[str, object]
+) -> dict[str, object]:
+    session_id = validated["session_id"]
+    symbol = validated["symbol"]
+    assert isinstance(session_id, str) and isinstance(symbol, str)
+    result = registry.bind_session(bot_id, session_id, symbol)
+    return {"bot_id": bot_id, "session_id": session_id, "result": result, "owner": bot_id}
+
+
+def _bot_check_pair(
+    registry: BotRegistry, bot_id: str, validated: dict[str, object]
+) -> dict[str, object]:
+    symbol = validated["symbol"]
+    assert isinstance(symbol, str)
+    verdict, reason = registry.check_pair(bot_id, symbol)
+    return {"bot_id": bot_id, "symbol": symbol, "verdict": verdict, "reason": reason}
+
+
+DEAL_CREATE_REQUIRED = {"deal_id", "config_revision_id"}
+DEAL_CREATE_OPTIONAL = {"config_snapshot"}
+DEAL_EVENT_REQUIRED = {"event_id", "config_revision_id", "event", "event_sequence"}
+DEAL_EVENT_OPTIONAL = {"config_snapshot"}
+DEAL_BULK_ACTION_REQUIRED = DEAL_EVENT_REQUIRED | {"deal_id"}
+DEAL_BULK_ACTION_OPTIONAL = DEAL_EVENT_OPTIONAL
+
+
+def _validate_deal_create_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    allowed = DEAL_CREATE_REQUIRED | DEAL_CREATE_OPTIONAL
+    unknown = set(payload) - allowed
+    missing = DEAL_CREATE_REQUIRED - set(payload)
+    fields: dict[str, str] = {}
+    if unknown:
+        fields["body"] = "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))
+    if missing:
+        fields["body"] = (fields.get("body", "") + (" " if fields.get("body") else "")
+                           + "Eksik alanlar: " + ", ".join(sorted(missing)))
+    for name in ("deal_id", "config_revision_id"):
+        if name in payload and not isinstance(payload[name], str):
+            fields[name] = f"{name} string olmalıdır."
+    if "config_snapshot" in payload and not isinstance(payload["config_snapshot"], dict):
+        fields["config_snapshot"] = "config_snapshot nesne olmalıdır."
+    if fields:
+        return None, fields
+    return payload, {}
+
+
+def _validate_deal_event_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    allowed = DEAL_EVENT_REQUIRED | DEAL_EVENT_OPTIONAL
+    unknown = set(payload) - allowed
+    missing = DEAL_EVENT_REQUIRED - set(payload)
+    fields: dict[str, str] = {}
+    if unknown:
+        fields["body"] = "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))
+    if missing:
+        fields["body"] = (fields.get("body", "") + (" " if fields.get("body") else "")
+                           + "Eksik alanlar: " + ", ".join(sorted(missing)))
+    _check_deal_event_fields(payload, fields)
+    if fields:
+        return None, fields
+    return payload, {}
+
+
+def _validate_deal_bulk_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict) or set(payload) != {"actions"}:
+        return None, {"body": "Gövde yalnız actions listesi taşımalıdır."}
+    actions = payload["actions"]
+    if not isinstance(actions, list) or not 1 <= len(actions) <= 32:
+        return None, {"actions": "actions 1-32 arası liste olmalıdır."}
+    allowed = DEAL_BULK_ACTION_REQUIRED | DEAL_BULK_ACTION_OPTIONAL
+    fields: dict[str, str] = {}
+    for index, action in enumerate(actions):
+        if not isinstance(action, dict):
+            fields[f"actions[{index}]"] = "Aksiyon nesne olmalıdır."
+            continue
+        unknown = set(action) - allowed
+        missing = DEAL_BULK_ACTION_REQUIRED - set(action)
+        if unknown or missing:
+            fields[f"actions[{index}]"] = "Aksiyon alanları eksik veya fazla."
+            continue
+        if not isinstance(action.get("deal_id"), str):
+            fields[f"actions[{index}].deal_id"] = "deal_id string olmalıdır."
+        sub: dict[str, str] = {}
+        _check_deal_event_fields(action, sub)
+        for key, message in sub.items():
+            fields[f"actions[{index}].{key}"] = message
+    if fields:
+        return None, fields
+    return payload, {}
+
+
+def _check_deal_event_fields(body: dict[str, object], fields: dict[str, str]) -> None:
+    for name in ("event_id", "config_revision_id"):
+        if name in body and not isinstance(body[name], str):
+            fields[name] = f"{name} string olmalıdır."
+    if "config_snapshot" in body and not isinstance(body["config_snapshot"], dict):
+        fields["config_snapshot"] = "config_snapshot nesne olmalıdır."
+    if "event" in body and body["event"] not in _DEAL_EVENTS:
+        fields["event"] = "event geçersiz lifecycle olayı."
+    if "event_sequence" in body and type(body["event_sequence"]) is not int:
+        fields["event_sequence"] = "event_sequence integer olmalıdır."
+
+
+def _deal_snapshot(validated: dict[str, object]) -> dict[str, object]:
+    snapshot = validated.get("config_snapshot")
+    if snapshot is None:
+        return _load_config()
+    assert isinstance(snapshot, dict)
+    return snapshot
+
+
+def _deal_path(deals_dir: Path, deal_id: str) -> Path:
+    if _TWO_LEG_SESSION_RE.fullmatch(deal_id) is None or ":" in deal_id:
+        raise LifecycleStoreError("DEAL_ID_INVALID", "Deal kimliği dosya-güvenli değil.")
+    return deals_dir / f"{deal_id}.sqlite3"
+
+
+def _deal_lifecycle_data(lifecycle: DealLifecycle | None) -> dict[str, object] | None:
+    if lifecycle is None:
+        return None
+    return {
+        "deal_id": lifecycle.deal_id,
+        "config_revision_id": lifecycle.config_revision_id,
+        "status": lifecycle.status,
+        "event_sequence": lifecycle.event_sequence,
+    }
+
+
+def _deal_event_data(event: LifecycleEvent) -> dict[str, object]:
+    return {
+        "event_id": event.event_id,
+        "deal_id": event.deal_id,
+        "config_revision_id": event.config_revision_id,
+        "event": event.event,
+        "event_sequence": event.event_sequence,
+    }
+
+
+def _deal_create(deals_dir: Path, validated: dict[str, object]) -> dict[str, object]:
+    deal_id = validated["deal_id"]
+    revision_id = validated["config_revision_id"]
+    assert isinstance(deal_id, str) and isinstance(revision_id, str)
+    new_config_revision(revision_id, _deal_snapshot(validated))
+    path = _deal_path(deals_dir, deal_id)
+    if path.exists():
+        return {"deal_id": deal_id, "result": "DUPLICATE"}
+    deals_dir.mkdir(parents=True, exist_ok=True)
+    with LifecycleStore.create(path):
+        pass
+    return {"deal_id": deal_id, "result": "CREATED"}
+
+
+def _deal_append_event(
+    deals_dir: Path, deal_id: str, validated: dict[str, object]
+) -> dict[str, object]:
+    path = _deal_path(deals_dir, deal_id)
+    if not path.exists():
+        raise LifecycleStoreError("DEAL_UNKNOWN", "Deal kayıtlı değil.")
+    revision_id = validated["config_revision_id"]
+    assert isinstance(revision_id, str)
+    revision = new_config_revision(revision_id, _deal_snapshot(validated))
+    event = new_lifecycle_event(
+        validated["event_id"],  # type: ignore[arg-type]
+        deal_id,
+        revision_id,
+        validated["event"],  # type: ignore[arg-type]
+        validated["event_sequence"],  # type: ignore[arg-type]
+    )
+    with LifecycleStore.open(path) as store:
+        result = store.append(event, config_revision=revision)
+        replay = store.load()
+    return {
+        "deal_id": deal_id,
+        "result": result,
+        "lifecycle": _deal_lifecycle_data(replay.lifecycle),
+    }
+
+
+def _deal_replay(deals_dir: Path, deal_id: str) -> dict[str, object]:
+    path = _deal_path(deals_dir, deal_id)
+    if not path.exists():
+        raise LifecycleStoreError("DEAL_UNKNOWN", "Deal kayıtlı değil.")
+    with LifecycleStore.open(path) as store:
+        replay = store.load()
+    return {
+        "deal_id": deal_id,
+        "lifecycle": _deal_lifecycle_data(replay.lifecycle),
+        "history": [_deal_event_data(event) for event in replay.history],
+    }
+
+
+def _deal_bulk(deals_dir: Path, validated: dict[str, object]) -> dict[str, object]:
+    actions = validated["actions"]
+    assert isinstance(actions, list)
+    results: list[dict[str, object]] = []
+    for action in actions:
+        assert isinstance(action, dict)
+        deal_id = action["deal_id"]
+        assert isinstance(deal_id, str)
+        try:
+            outcome = _deal_append_event(deals_dir, deal_id, action)
+            results.append({
+                "deal_id": deal_id,
+                "event_id": action["event_id"],
+                "result": outcome["result"],
+            })
+        except ValueError as exc:
+            results.append({
+                "deal_id": deal_id,
+                "event_id": action["event_id"],
+                "error": str(exc),
+            })
+    return {"results": results}
+
+
+EXITS_BIND_FIELDS = {
+    "side", "kind", "state", "open_qty", "accepted_exit_fills",
+    "committed_exit_qty", "requested_qty",
+}
+EXITS_PERCENT_ARM_FIELDS = {"side", "activation_price", "rate"}
+EXITS_PERCENT_OBSERVE_FIELDS = {"side", "state", "price"}
+EXITS_BREAKEVEN_REQUIRED = {"plan", "fills"}
+EXITS_BREAKEVEN_OPTIONAL = {"fee_profile"}
+EXITS_PLAN_FIELDS = {
+    "side", "anchor_price", "base_amount", "base_sizing", "safety_amount",
+    "safety_sizing", "safety_count", "deviation", "step_multiplier",
+    "volume_multiplier", "price_tick", "quantity_step",
+}
+EXITS_FILL_FIELDS = {"execution_id", "level_index", "quantity", "price"}
+EXITS_FEE_FIELDS = {
+    "settlement_asset", "fee_asset", "entry_fee_rate", "exit_fee_rate",
+    "funding_cashflow", "profile_revision",
+}
+
+
+def _validate_exits_trailing_bind_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, EXITS_BIND_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if body.get("side") not in ("LONG", "SHORT"):
+        fields["side"] = "side LONG veya SHORT olmalıdır."
+    if body.get("kind") not in ("FIXED", "PERCENT"):
+        fields["kind"] = "kind FIXED veya PERCENT olmalıdır."
+    _check_exits_state(body.get("side"), body.get("kind"), body.get("state"), fields)
+    for name in ("open_qty", "requested_qty"):
+        if not isinstance(body.get(name), str):
+            fields[name] = f"{name} string olmalıdır."
+    for name in ("accepted_exit_fills", "committed_exit_qty"):
+        if not isinstance(body.get(name), list) or not all(
+            isinstance(s, str) for s in body[name]  # type: ignore[union-attr]
+        ):
+            fields[name] = f"{name} string listesi olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _check_exits_state(side: object, kind: object, state: object, fields: dict[str, str]) -> None:
+    water = "high_water" if side == "LONG" else "low_water"
+    offset = "distance" if kind == "FIXED" else "rate"
+    if (
+        not isinstance(state, dict)
+        or state.get("status") not in ("INACTIVE", "ACTIVE", "TRIGGERED")
+        or not isinstance(state.get("activation_price"), str)
+        or not isinstance(state.get(offset), str)
+        or (state.get(water) is not None and not isinstance(state.get(water), str))
+        or (state.get("stop_price") is not None and not isinstance(state.get("stop_price"), str))
+    ):
+        fields["state"] = "trailing state eksik veya geçersiz."
+
+
+def _exits_state_from_body(side: str, kind: str, state_body: dict[str, object]):
+    water_key = "high_water" if side == "LONG" else "low_water"
+    if kind == "FIXED":
+        cls = TrailingLongState if side == "LONG" else TrailingShortState
+        return cls(
+            status=state_body["status"],  # type: ignore[arg-type]
+            activation_price=state_body["activation_price"],  # type: ignore[arg-type]
+            distance=state_body["distance"],  # type: ignore[arg-type]
+            **{water_key: state_body.get(water_key)},  # type: ignore[arg-type]
+            stop_price=state_body.get("stop_price"),  # type: ignore[arg-type]
+        )
+    cls = TrailingLongPercentageState if side == "LONG" else TrailingShortPercentageState
+    return cls(
+        status=state_body["status"],  # type: ignore[arg-type]
+        activation_price=state_body["activation_price"],  # type: ignore[arg-type]
+        rate=state_body["rate"],  # type: ignore[arg-type]
+        **{water_key: state_body.get(water_key)},  # type: ignore[arg-type]
+        stop_price=state_body.get("stop_price"),  # type: ignore[arg-type]
+    )
+
+
+def _exits_state_data(side: str, kind: str, state) -> dict[str, object]:
+    water_key = "high_water" if side == "LONG" else "low_water"
+    data: dict[str, object] = {
+        "status": state.status,
+        "activation_price": state.activation_price,
+        water_key: getattr(state, water_key),
+        "stop_price": state.stop_price,
+    }
+    data["distance" if kind == "FIXED" else "rate"] = (
+        state.distance if kind == "FIXED" else state.rate
+    )
+    return data
+
+
+def _exits_trailing_bind(validated: dict[str, object]) -> dict[str, object]:
+    side = validated["side"]
+    kind = validated["kind"]
+    state_body = validated["state"]
+    assert isinstance(side, str) and isinstance(kind, str)
+    assert isinstance(state_body, dict)
+    trailing = _exits_state_from_body(side, kind, state_body)
+    accepted = validated["accepted_exit_fills"]
+    committed = validated["committed_exit_qty"]
+    assert isinstance(accepted, list) and isinstance(committed, list)
+    binding = bind_trailing_exit_candidate(
+        trailing=trailing,
+        open_qty=validated["open_qty"],  # type: ignore[arg-type]
+        accepted_exit_fills=tuple(accepted),
+        committed_exit_qty=tuple(committed),
+        requested_qty=validated["requested_qty"],  # type: ignore[arg-type]
+    )
+    return {
+        "trigger_price": binding.trigger_price,
+        "requested_qty": binding.requested_qty,
+        "remaining_capacity": binding.remaining_capacity,
+        "order_authority": binding.order_authority,
+    }
+
+
+def _validate_exits_percent_arm_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, EXITS_PERCENT_ARM_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if body.get("side") not in ("LONG", "SHORT"):
+        fields["side"] = "side LONG veya SHORT olmalıdır."
+    for name in ("activation_price", "rate"):
+        if not isinstance(body.get(name), str):
+            fields[name] = f"{name} string olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _exits_percent_arm(validated: dict[str, object]) -> dict[str, object]:
+    side = validated["side"]
+    assert isinstance(side, str)
+    if side == "LONG":
+        state = arm_long_percentage_trailing(
+            activation_price=validated["activation_price"],  # type: ignore[arg-type]
+            rate=validated["rate"],  # type: ignore[arg-type]
+        )
+    else:
+        state = arm_short_percentage_trailing(
+            activation_price=validated["activation_price"],  # type: ignore[arg-type]
+            rate=validated["rate"],  # type: ignore[arg-type]
+        )
+    return _exits_state_data(side, "PERCENT", state)
+
+
+def _validate_exits_percent_observe_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, EXITS_PERCENT_OBSERVE_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if body.get("side") not in ("LONG", "SHORT"):
+        fields["side"] = "side LONG veya SHORT olmalıdır."
+    _check_exits_state(body.get("side"), "PERCENT", body.get("state"), fields)
+    if not isinstance(body.get("price"), str):
+        fields["price"] = "price string olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _exits_percent_observe(validated: dict[str, object]) -> dict[str, object]:
+    side = validated["side"]
+    state_body = validated["state"]
+    assert isinstance(side, str) and isinstance(state_body, dict)
+    state = _exits_state_from_body(side, "PERCENT", state_body)
+    if side == "LONG":
+        result = observe_long_percentage_trailing(state, price=validated["price"])  # type: ignore[arg-type]
+    else:
+        result = observe_short_percentage_trailing(state, price=validated["price"])  # type: ignore[arg-type]
+    return _exits_state_data(side, "PERCENT", result)
+
+
+def _validate_exits_breakeven_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    allowed = EXITS_BREAKEVEN_REQUIRED | EXITS_BREAKEVEN_OPTIONAL
+    unknown = set(payload) - allowed
+    missing = EXITS_BREAKEVEN_REQUIRED - set(payload)
+    fields: dict[str, str] = {}
+    if unknown or missing:
+        fields["body"] = "Gövde plan+fills (+fee_profile) taşımalıdır."
+        return None, fields
+    plan = payload["plan"]
+    if not isinstance(plan, dict) or set(plan) != EXITS_PLAN_FIELDS:
+        fields["plan"] = "plan alanları eksik veya fazla."
+    elif type(plan.get("safety_count")) is not int or not all(
+        isinstance(plan.get(name), str) for name in EXITS_PLAN_FIELDS - {"side", "safety_count"}
+    ) or plan.get("side") not in ("LONG", "SHORT"):
+        fields["plan"] = "plan alan türleri geçersiz."
+    fills = payload["fills"]
+    if not isinstance(fills, list) or not fills:
+        fields["fills"] = "fills boş olmayan liste olmalıdır."
+    else:
+        for index, fill in enumerate(fills):
+            if not isinstance(fill, dict) or set(fill) != EXITS_FILL_FIELDS:
+                fields[f"fills[{index}]"] = "fill alanları eksik veya fazla."
+            elif (
+                not isinstance(fill.get("execution_id"), str)
+                or type(fill.get("level_index")) is not int
+                or not isinstance(fill.get("quantity"), str)
+                or not isinstance(fill.get("price"), str)
+            ):
+                fields[f"fills[{index}]"] = "fill alan türleri geçersiz."
+    profile = payload.get("fee_profile")
+    if profile is not None and (
+        not isinstance(profile, dict)
+        or set(profile) != EXITS_FEE_FIELDS
+        or not all(isinstance(profile.get(name), str) for name in EXITS_FEE_FIELDS)
+    ):
+        fields["fee_profile"] = "fee_profile alanları eksik veya geçersiz."
+    if fields:
+        return None, fields
+    return payload, {}
+
+
+def _exits_breakeven(validated: dict[str, object]) -> dict[str, object]:
+    plan_body = validated["plan"]
+    fills_body = validated["fills"]
+    assert isinstance(plan_body, dict) and isinstance(fills_body, list)
+    plan = project_futures_dca_plan(
+        side=plan_body["side"],  # type: ignore[arg-type]
+        anchor_price=plan_body["anchor_price"],  # type: ignore[arg-type]
+        base_amount=plan_body["base_amount"],  # type: ignore[arg-type]
+        base_sizing=plan_body["base_sizing"],  # type: ignore[arg-type]
+        safety_amount=plan_body["safety_amount"],  # type: ignore[arg-type]
+        safety_sizing=plan_body["safety_sizing"],  # type: ignore[arg-type]
+        safety_count=plan_body["safety_count"],  # type: ignore[arg-type]
+        deviation=plan_body["deviation"],  # type: ignore[arg-type]
+        step_multiplier=plan_body["step_multiplier"],  # type: ignore[arg-type]
+        volume_multiplier=plan_body["volume_multiplier"],  # type: ignore[arg-type]
+        price_tick=plan_body["price_tick"],  # type: ignore[arg-type]
+        quantity_step=plan_body["quantity_step"],  # type: ignore[arg-type]
+    )
+    fills = tuple(
+        FuturesDcaFill(
+            fill["execution_id"],  # type: ignore[arg-type]
+            fill["level_index"],  # type: ignore[arg-type]
+            fill["quantity"],  # type: ignore[arg-type]
+            fill["price"],  # type: ignore[arg-type]
+        )
+        for fill in fills_body
+    )
+    projection = project_futures_dca_fills(plan, fills)
+    profile_body = validated.get("fee_profile")
+    profile = None
+    if profile_body is not None:
+        assert isinstance(profile_body, dict)
+        require_settlement_asset(profile_body["settlement_asset"])
+        profile = FuturesDcaFeeAwareProfile(
+            settlement_asset=profile_body["settlement_asset"],  # type: ignore[arg-type]
+            fee_asset=profile_body["fee_asset"],  # type: ignore[arg-type]
+            entry_fee_rate=profile_body["entry_fee_rate"],  # type: ignore[arg-type]
+            exit_fee_rate=profile_body["exit_fee_rate"],  # type: ignore[arg-type]
+            funding_cashflow=profile_body["funding_cashflow"],  # type: ignore[arg-type]
+            profile_revision=profile_body["profile_revision"],  # type: ignore[arg-type]
+        )
+    result = assess_futures_dca_breakeven(projection, fee_profile=profile)
+    return {
+        "status": str(result.status),
+        "gross_breakeven_price": result.gross_breakeven_price,
+        "fee_aware_breakeven_price": result.fee_aware_breakeven_price,
+        "reason": result.reason,
+        "profile_revision": result.profile_revision,
+        "order_authority": result.order_authority,
+    }
+
+
 app = FastAPI(title="DCABOT Offline API", version="0.1.0")
 app.router.route_class = BoundedAPIRoute
+
+WORKER_LOCK_PATH = ROOT / "data" / ".api-single-worker.lock"
+_worker_guard: SingleWorkerGuard | None = None
+
+
+def enforce_single_worker(lock_path: Path = WORKER_LOCK_PATH) -> SingleWorkerGuard:
+    return SingleWorkerGuard(lock_path).acquire()
+
+
+@app.on_event("startup")
+def _acquire_worker_lock() -> None:
+    global _worker_guard
+    _worker_guard = enforce_single_worker()
+
+
+@app.on_event("shutdown")
+def _release_worker_lock() -> None:
+    global _worker_guard
+    if _worker_guard is not None:
+        _worker_guard.release()
+        _worker_guard = None
 
 
 @app.get("/api/historical-profiles", response_model=list[HistoricalProfileResponse | HistoricalFixedSliceProfileResponse])
@@ -1336,6 +3273,13 @@ def _testnet_account_problem(code: str) -> JSONResponse:
             "Credential deposu kullanılamıyor",
             "Windows Credential Manager yalnız Windows'ta kullanılabilir.",
         )
+    if code == "TESTNET_OPEN_ORDERS_SYMBOL_INVALID":
+        return _problem(
+            400,
+            code,
+            "Symbol parametresi geçersiz",
+            "Açık emir sorgusundaki symbol değeri geçersiz.",
+        )
     return _problem(
         503,
         code,
@@ -1493,6 +3437,64 @@ def get_dataset_chart_data(dataset_id: str, response: Response):
             for bar in bars
         ],
     )
+
+
+def _draft_level_data(loaded, artifact_sha256: str, draft_price: str) -> dict[str, object]:
+    if artifact_sha256 != loaded.metadata.artifact_sha256:
+        raise ValueError(
+            "DRAFT_ARTIFACT_MISMATCH: Taslak, yüklü dataset revisionına ait değil."
+        )
+    lows = [number(bar.low) for bar in loaded.bars]
+    highs = [number(bar.high) for bar in loaded.bars]
+    if not lows:
+        raise ValueError("DRAFT_RANGE_INVALID: Dataset bar içermiyor.")
+    verdict = validate_draft_level(
+        low=exact_text(min(lows)),
+        high=exact_text(max(highs)),
+        draft_price=draft_price,
+    )
+    return {
+        **verdict,
+        "dataset_id": loaded.metadata.dataset_id,
+        "artifact_sha256": loaded.metadata.artifact_sha256,
+    }
+
+
+@app.post("/api/datasets/{dataset_id}/draft-level", response_model=DraftLevelResponse)
+async def create_draft_level(dataset_id: str, request: Request, response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return _problem(
+            400,
+            "DRAFT_BODY_INVALID",
+            "Taslak gövdesi okunamadı",
+            "JSON gövdesi ayrıştırılamadı.",
+        )
+    try:
+        body = DraftLevelRequest(**payload)
+    except ValidationError:
+        return _problem(
+            422,
+            "DRAFT_BODY_INVALID",
+            "Taslak gövdesi geçersiz",
+            "artifact_sha256 ve draft_price gerekli.",
+        )
+    result = _dataset_preflight(dataset_id)
+    if isinstance(result, JSONResponse):
+        return result
+    loaded, _preflight = result
+    try:
+        data = _draft_level_data(loaded, body.artifact_sha256, body.draft_price)
+    except ValueError as exc:
+        return _problem(
+            422,
+            "DRAFT_LEVEL_INVALID",
+            "Taslak seviye geçersiz",
+            str(exc),
+        )
+    return DraftLevelResponse(**data)
 
 
 @app.get("/api/datasets/{dataset_id}/run-plan", response_model=DatasetRunPlanResponse)
@@ -2396,6 +4398,91 @@ def get_historical_run(run_id: str, response: Response):
     return result
 
 
+def _historical_run_export_data(detail: dict[str, object], format: str) -> dict[str, object]:
+    if format == "json":
+        content = export_run_json(detail)
+        note = "Tam kayıt; canonical JSON."
+    elif format == "csv":
+        content = export_run_csv(detail)
+        note = "Özet satır; tam kayıt JSON formatındadır."
+    else:
+        raise ValueError(f"Desteklenmeyen export formatı: {format}")
+    run_id = detail["run_id"]
+    assert isinstance(run_id, str)
+    return {
+        "format": format,
+        "filename": f"historical-run-{run_id}.{format}",
+        "content": content,
+        "note": note,
+    }
+
+
+@app.get("/api/historical-runs/{run_id}/export", response_model=HistoricalRunExportResponse)
+def export_historical_run(run_id: str, response: Response, format: str = "json"):
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        parsed_run_id = UUID(run_id)
+    except (AttributeError, ValueError):
+        return _problem(
+            422,
+            "RUN_ID_INVALID",
+            "Historical run kimliği geçersiz",
+            "Run kimliği desteklenen UUID biçiminde değil.",
+        )
+    if str(parsed_run_id) != run_id:
+        return _problem(
+            422,
+            "RUN_ID_INVALID",
+            "Historical run kimliği geçersiz",
+            "Run kimliği canonical UUID biçiminde değil.",
+        )
+    if format not in ("json", "csv"):
+        return _problem(
+            422,
+            "EXPORT_FORMAT_INVALID",
+            "Export formatı geçersiz",
+            "Desteklenen formatlar: json, csv.",
+        )
+    if not HISTORICAL_RUNS_PATH.exists():
+        return _problem(
+            404,
+            "RUN_NOT_FOUND",
+            "Historical run bulunamadı",
+            "İstenen historical run local store içinde yok.",
+        )
+    try:
+        with HistoricalRunStore(HISTORICAL_RUNS_PATH) as store:
+            detail = store.get(run_id)
+    except HistoricalRunStoreError as exc:
+        return _historical_run_store_read_problem(exc)
+    data = _historical_run_export_data(
+        {
+            "run_id": detail.run_id,
+            "created_at": detail.created_at,
+            "storage_state": detail.storage_state,
+            "execution_status": detail.execution_status,
+            "dataset": detail.dataset,
+            "input_snapshot": detail.input_snapshot,
+            "config": detail.config,
+            "instrument_risk": detail.instrument_risk,
+            "execution": detail.execution,
+            "result_snapshot": detail.result_snapshot,
+            "result_sha256": detail.result_sha256,
+            "record_sha256": detail.record_sha256,
+            "evaluation_lineage": detail.evaluation_lineage,
+        },
+        format,
+    )
+    if len(data["content"].encode("utf-8")) > MAX_HISTORICAL_RUN_DETAIL_RESPONSE_BYTES:  # type: ignore[union-attr]
+        return _problem(
+            422,
+            "RUN_EXPORT_TOO_LARGE",
+            "Export çok büyük",
+            "Export içeriği izin verilen response byte sınırını aşıyor.",
+        )
+    return HistoricalRunExportResponse(**data)
+
+
 @app.post("/api/historical-runs/{run_id}/reproduce", response_model=HistoricalRunReproduceResponse)
 def reproduce_historical_run(run_id: str, response: Response):
     """Re-run a stored historical simulation from its exact recorded config/dataset and compare hashes."""
@@ -2576,6 +4663,1060 @@ async def create_preview(request: Request):
             status_code=422,
             content=_error(str(exc), fields={"config": str(exc)}, revision=revision),
         )
+
+
+@app.post("/api/rebalance/valuation")
+async def create_rebalance_valuation(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_rebalance_valuation_payload(payload)
+    if fields:
+        return JSONResponse(
+            status_code=422,
+            content=_error("İstek doğrulanamadı.", fields=fields),
+        )
+    try:
+        return {"data": _calculate_rebalance_valuation(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(
+            status_code=422,
+            content=_error(str(exc), fields={"valuation": str(exc)}),
+        )
+
+
+@app.post("/api/paper/sessions")
+async def create_paper_session(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_paper_activation_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with PAPER_LOCK:
+            data = _paper_activate(PAPER_STORE, validated, time.time_ns() // 1000)
+            with EVENT_LOCK:
+                _record_event(
+                    EVENT_LOG, "PAPER_ACTIVATED", str(data["session_id"]),
+                    f"Paper session açıldı (nakit {data['cash']}).",
+                    time.time_ns() // 1000,
+                )
+            return {"data": data}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"session": str(exc)}))
+
+
+@app.post("/api/paper/sessions/{session_id}/orders")
+async def place_paper_session_order(session_id: str, request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_paper_order_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with PAPER_LOCK:
+            return {"data": _paper_place(PAPER_STORE, session_id, validated, time.time_ns() // 1000)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"order": str(exc)}))
+
+
+@app.post("/api/paper/sessions/{session_id}/fills")
+async def fill_paper_session_order(session_id: str, request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_paper_fill_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with PAPER_LOCK:
+            data = _paper_fill(PAPER_STORE, session_id, validated, time.time_ns() // 1000)
+            with EVENT_LOCK:
+                _record_event(
+                    EVENT_LOG, "PAPER_FILLED", session_id,
+                    f"Paper fill işlendi ({validated['event_id']}).",
+                    time.time_ns() // 1000,
+                )
+            return {"data": data}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"fill": str(exc)}))
+
+
+@app.post("/api/paper/sessions/{session_id}/market-refresh")
+async def refresh_paper_session_market(session_id: str, request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    if payload != {}:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields={"body": "Gövde boş nesne olmalıdır."}))
+
+    def _fetch(symbol: str):
+        now_us = time.time_ns() // 1000
+        return fetch_binance_public_trades(
+            symbol,
+            limit=PAPER_REFRESH_LIMIT,
+            allowed_symbols=frozenset({symbol}),
+            receive_time_us=now_us,
+            processing_time_us=now_us,
+            time_unit=BinanceTimeUnit.MILLISECONDS,
+        )
+
+    try:
+        with PAPER_LOCK:
+            return {"data": _paper_refresh(PAPER_STORE, session_id, fetch=_fetch, now_us=time.time_ns() // 1000, time_unit=BinanceTimeUnit.MILLISECONDS)}
+    except BinancePublicTransportError as exc:
+        return JSONResponse(status_code=502, content=_error(str(exc), fields={"market": str(exc)}))
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"market": str(exc)}))
+
+
+@app.post("/api/templates/import")
+async def import_template(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_template_import_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with TEMPLATE_LOCK:
+            return {"data": _template_import(TEMPLATE_STORE, validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"template": str(exc)}))
+
+
+@app.get("/api/templates")
+async def list_templates():
+    try:
+        with TEMPLATE_LOCK:
+            items = [_template_meta(TEMPLATE_STORE, tid) for tid in TEMPLATE_STORE.list_ids()]
+        return {"data": items}
+    except (OSError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"template": str(exc)}))
+
+
+@app.get("/api/templates/{template_id}")
+async def get_template(template_id: str):
+    try:
+        with TEMPLATE_LOCK:
+            template = TEMPLATE_STORE.load(template_id)
+        return {"data": {
+            "template_id": template.template_id,
+            "payload_sha256": template.payload_sha256,
+            "declared_capabilities": list(template.declared_capabilities),
+            "payload": json.loads(template.payload_json),
+        }}
+    except (OSError, ValueError) as exc:
+        status = 404 if "TEMPLATE_NOT_FOUND" in str(exc) else 422
+        return JSONResponse(status_code=status, content=_error(str(exc), fields={"template": str(exc)}))
+
+
+@app.get("/api/templates/{template_id}/export")
+async def export_template(template_id: str):
+    try:
+        with TEMPLATE_LOCK:
+            raw = TEMPLATE_STORE.export_bytes(template_id)
+        return {"data": json.loads(raw.decode("utf-8"))}
+    except (OSError, ValueError) as exc:
+        status = 404 if "TEMPLATE_NOT_FOUND" in str(exc) else 422
+        return JSONResponse(status_code=status, content=_error(str(exc), fields={"template": str(exc)}))
+
+
+@app.post("/api/templates/{template_id}/bind")
+async def bind_template(template_id: str, request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_template_bind_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with TEMPLATE_LOCK:
+            return {"data": _template_bind(TEMPLATE_STORE, template_id, validated, time.time_ns() // 1000)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"binding": str(exc)}))
+
+
+@app.post("/api/templates/diff")
+async def diff_template_pair(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_template_diff_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with TEMPLATE_LOCK:
+            return {"data": _template_diff(TEMPLATE_STORE, validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"diff": str(exc)}))
+
+
+@app.post("/api/rebalance/plan")
+async def create_rebalance_plan(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_rebalance_plan_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _rebalance_plan(validated, time.time_ns() // 1000)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"plan": str(exc)}))
+
+
+@app.post("/api/rebalance/disclose")
+async def disclose_rebalance_plan(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_rebalance_disclose_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _rebalance_disclose(validated, time.time_ns() // 1000)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"disclosure": str(exc)}))
+
+
+@app.post("/api/signals/hash")
+async def hash_signal(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_signal_hash_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _signal_hash(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"hash": str(exc)}))
+
+
+@app.post("/api/signals/assess")
+async def assess_signal(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_signal_assess_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _signal_assess(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"readiness": str(exc)}))
+
+
+@app.post("/api/signals/candidates")
+async def bind_signal(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_signal_candidate_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _signal_bind_candidate(validated, time.time_ns() // 1000)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"candidate": str(exc)}))
+
+
+@app.post("/api/futures/grid/levels")
+async def project_grid_levels(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_futures_grid_levels_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _futures_grid_levels(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"grid": str(exc)}))
+
+
+@app.post("/api/futures/position/pnl")
+async def project_position_pnl(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_futures_position_pnl_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _futures_position_pnl(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"pnl": str(exc)}))
+
+
+@app.post("/api/futures/trailing/arm")
+async def arm_trailing(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_futures_trailing_arm_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _futures_trailing_arm(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"trailing": str(exc)}))
+
+
+@app.post("/api/futures/trailing/observe")
+async def observe_trailing(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_futures_trailing_observe_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _futures_trailing_observe(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"trailing": str(exc)}))
+
+
+@app.post("/api/futures/funding")
+async def project_funding_event(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_futures_funding_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _futures_funding(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"funding": str(exc)}))
+
+
+@app.post("/api/two-leg/sessions")
+async def start_two_leg_session(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_two_leg_session_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with TWO_LEG_LOCK:
+            return {"data": _two_leg_start(_get_two_leg_journal(), validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"session": str(exc)}))
+
+
+@app.post("/api/two-leg/sessions/{session_id}/fills")
+async def accept_two_leg_session_fill(session_id: str, request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_two_leg_fill_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with TWO_LEG_LOCK:
+            return {"data": _two_leg_accept_fill(_get_two_leg_journal(), session_id, validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"fill": str(exc)}))
+
+
+@app.post("/api/two-leg/sessions/{session_id}/recovery")
+async def mark_two_leg_session_recovery(session_id: str, request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    if payload != {}:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields={"body": "Gövde boş nesne olmalıdır."}))
+    try:
+        with TWO_LEG_LOCK:
+            return {"data": _two_leg_mark(_get_two_leg_journal(), session_id, "RECOVERY_REQUIRED")}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"recovery": str(exc)}))
+
+
+@app.post("/api/two-leg/sessions/{session_id}/timeout")
+async def mark_two_leg_session_timeout(session_id: str, request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    if payload != {}:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields={"body": "Gövde boş nesne olmalıdır."}))
+    try:
+        with TWO_LEG_LOCK:
+            return {"data": _two_leg_mark(_get_two_leg_journal(), session_id, "TIMEOUT")}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"timeout": str(exc)}))
+
+
+@app.post("/api/two-leg/sessions/{session_id}/replay")
+async def replay_two_leg_session(session_id: str, request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    if payload != {}:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields={"body": "Gövde boş nesne olmalıdır."}))
+    try:
+        with TWO_LEG_LOCK:
+            return {"data": _two_leg_replay(_get_two_leg_journal(), session_id)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"replay": str(exc)}))
+
+
+@app.post("/api/bots")
+async def register_bot(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_bot_register_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with BOT_LOCK:
+            data = _bot_register(BOT_REGISTRY, validated)
+            with EVENT_LOCK:
+                _record_event(
+                    EVENT_LOG, "BOT_REGISTERED", str(data["bot_id"]),
+                    f"Bot kaydedildi ({data['result']}).",
+                    time.time_ns() // 1000,
+                )
+            return {"data": data}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"bot": str(exc)}))
+
+
+@app.get("/api/bots")
+async def list_bots():
+    with BOT_LOCK:
+        return {"data": _bot_list(BOT_REGISTRY)}
+
+
+@app.get("/api/bots/{bot_id}")
+async def get_bot(bot_id: str):
+    try:
+        with BOT_LOCK:
+            return {"data": _bot_get(BOT_REGISTRY, bot_id)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"bot": str(exc)}))
+
+
+@app.post("/api/bots/{bot_id}/lists")
+async def update_bot_lists(bot_id: str, request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_bot_lists_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with BOT_LOCK:
+            return {"data": _bot_update_lists(BOT_REGISTRY, bot_id, validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"lists": str(exc)}))
+
+
+@app.post("/api/bots/{bot_id}/sessions")
+async def bind_bot_session(bot_id: str, request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_bot_bind_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with BOT_LOCK:
+            data = _bot_bind_session(BOT_REGISTRY, bot_id, validated)
+            with EVENT_LOCK:
+                _record_event(
+                    EVENT_LOG, "BOT_BOUND", str(data["session_id"]),
+                    f"Session {data['bot_id']} botuna bağlandı ({data['result']}).",
+                    time.time_ns() // 1000,
+                )
+            return {"data": data}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"session": str(exc)}))
+
+
+@app.post("/api/bots/{bot_id}/check")
+async def check_bot_pair(bot_id: str, request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_bot_check_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with BOT_LOCK:
+            return {"data": _bot_check_pair(BOT_REGISTRY, bot_id, validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"check": str(exc)}))
+
+
+@app.post("/api/deals")
+async def create_deal(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_deal_create_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with DEAL_LOCK:
+            data = _deal_create(DEALS_DIR, validated)
+            with EVENT_LOCK:
+                _record_event(
+                    EVENT_LOG, "DEAL_CREATED", str(data["deal_id"]),
+                    f"Deal açıldı ({data['result']}).",
+                    time.time_ns() // 1000,
+                )
+            return {"data": data}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"deal": str(exc)}))
+
+
+@app.post("/api/deals/bulk")
+async def bulk_deal_events(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_deal_bulk_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with DEAL_LOCK:
+            return {"data": _deal_bulk(DEALS_DIR, validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"bulk": str(exc)}))
+
+
+@app.post("/api/deals/{deal_id}/events")
+async def append_deal_event(deal_id: str, request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_deal_event_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with DEAL_LOCK:
+            data = _deal_append_event(DEALS_DIR, deal_id, validated)
+            with EVENT_LOCK:
+                _record_event(
+                    EVENT_LOG, "DEAL_EVENT", deal_id,
+                    f"Deal olayı {validated['event']} ({data['result']}).",
+                    time.time_ns() // 1000,
+                )
+            return {"data": data}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"event": str(exc)}))
+
+
+@app.post("/api/deals/{deal_id}/replay")
+async def replay_deal(deal_id: str, request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    if payload != {}:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields={"body": "Gövde boş nesne olmalıdır."}))
+    try:
+        with DEAL_LOCK:
+            return {"data": _deal_replay(DEALS_DIR, deal_id)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"replay": str(exc)}))
+
+
+@app.post("/api/exits/trailing")
+async def bind_trailing_exit(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_exits_trailing_bind_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _exits_trailing_bind(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"exit": str(exc)}))
+
+
+@app.post("/api/exits/trailing/percent-arm")
+async def arm_percent_trailing(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_exits_percent_arm_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _exits_percent_arm(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"trailing": str(exc)}))
+
+
+@app.post("/api/exits/trailing/percent-observe")
+async def observe_percent_trailing(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_exits_percent_observe_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _exits_percent_observe(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"trailing": str(exc)}))
+
+
+@app.post("/api/exits/breakeven")
+async def assess_breakeven(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_exits_breakeven_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _exits_breakeven(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"breakeven": str(exc)}))
+
+
+BACKUP_TAKE_FIELDS = {"store", "deal_id"}
+BACKUP_VERIFY_FIELDS = {"backup_file"}
+_BACKUP_FILE_RE = re.compile(r"[A-Za-z0-9_.-]{1,80}\.sqlite3\Z", re.ASCII)
+
+
+def _backup_store_paths() -> dict[str, Path]:
+    return {
+        "historical_runs": HISTORICAL_RUNS_PATH,
+        "two_leg_journal": ROOT / "data" / "two_leg_journal.db",
+    }
+
+
+def _validate_backup_take_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    unknown = set(payload) - BACKUP_TAKE_FIELDS
+    fields: dict[str, str] = {}
+    if unknown:
+        fields["body"] = "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))
+    if "store" not in payload:
+        fields["body"] = (fields.get("body", "") + " Eksik alanlar: store").strip()
+    store = payload.get("store")
+    if "store" in payload and (not isinstance(store, str) or not store):
+        fields["store"] = "store boş olmayan ad olmalıdır."
+    if payload.get("store") == "deal" and not isinstance(payload.get("deal_id"), str):
+        fields["deal_id"] = "deal backup deal_id gerektirir."
+    if fields:
+        return None, fields
+    return payload, {}
+
+
+def _validate_backup_verify_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, BACKUP_VERIFY_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    name = body.get("backup_file")
+    if not isinstance(name, str) or _BACKUP_FILE_RE.fullmatch(name) is None:
+        fields["backup_file"] = "backup_file geçersiz dosya adı."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _backup_take(
+    stores: dict[str, Path], dest_dir: Path, validated: dict[str, object], *, now_us: int
+) -> dict[str, object]:
+    store = validated["store"]
+    assert isinstance(store, str)
+    if store == "deal":
+        deal_id = validated.get("deal_id")
+        assert isinstance(deal_id, str)
+        source = _deal_path(DEALS_DIR, deal_id)
+        label = f"deal-{deal_id}"
+    else:
+        try:
+            source = stores[store]
+        except (KeyError, TypeError) as exc:
+            raise StoreBackupError("BACKUP_STORE_UNKNOWN", "Store kayıtlı değil.") from exc
+        label = store
+    manifest = backup_sqlite_file(source, dest_dir, store=label, now_us=now_us)
+    return {"manifest": manifest}
+
+
+def _backup_verify(dest_dir: Path, validated: dict[str, object]) -> dict[str, object]:
+    name = validated["backup_file"]
+    assert isinstance(name, str)
+    manifest_path = dest_dir / (name[: -len(".sqlite3")] + ".manifest.json")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise StoreBackupError(
+            "BACKUP_MANIFEST_MISSING", "Backup manifesti bulunamadı."
+        ) from exc
+    if not isinstance(manifest, dict):
+        raise StoreBackupError("BACKUP_MANIFEST_MISSING", "Backup manifesti geçersiz.")
+    result = verify_backup(dest_dir / name, manifest)
+    return {"backup_file": name, **result}
+
+
+def _backup_list(dest_dir: Path) -> dict[str, object]:
+    return {"backups": list_backup_manifests(dest_dir)}
+
+
+@app.post("/api/admin/backup")
+async def take_backup(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_backup_take_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with BACKUP_LOCK:
+            data = _backup_take(
+                _backup_store_paths(), BACKUPS_DIR, validated,
+                now_us=time.time_ns() // 1000,
+            )
+            manifest = data["manifest"]
+            assert isinstance(manifest, dict)
+            with EVENT_LOCK:
+                _record_event(
+                    EVENT_LOG, "BACKUP_TAKEN", str(manifest["backup_file"]),
+                    f"Backup alındı ({manifest['store']}, {manifest['bytes']} B).",
+                    time.time_ns() // 1000,
+                )
+            return {"data": data}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"backup": str(exc)}))
+
+
+@app.post("/api/admin/backup/verify")
+async def verify_backup_file(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_backup_verify_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with BACKUP_LOCK:
+            data = _backup_verify(BACKUPS_DIR, validated)
+            with EVENT_LOCK:
+                _record_event(
+                    EVENT_LOG, "BACKUP_VERIFIED", str(data["backup_file"]),
+                    f"Backup doğrulandı: {data['verdict']}.",
+                    time.time_ns() // 1000,
+                )
+            return {"data": data}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"verify": str(exc)}))
+
+
+@app.get("/api/admin/backups")
+async def list_backups():
+    with BACKUP_LOCK:
+        return {"data": _backup_list(BACKUPS_DIR)}
+
+
+def _dashboard_data(
+    paper_store: dict[str, object],
+    bot_registry: BotRegistry,
+    deals_dir: Path,
+    backups_dir: Path,
+) -> dict[str, object]:
+    sessions = paper_store.get("sessions", {})
+    assert isinstance(sessions, dict)
+    paper = [
+        {
+            "session_id": session.session_id,
+            "cash": session.cash,
+            "positions": [{"symbol": p.symbol, "qty": p.qty} for p in session.positions],
+            "orders": [{"status": o.status} for o in session.orders],
+        }
+        for session in sessions.values()
+    ]
+    bots = [
+        {"bot_id": bot_id, "sessions": bot_registry.sessions_of(bot_id)}
+        for bot_id in bot_registry.list_ids()
+    ]
+    deals: list[dict[str, object]] = []
+    if deals_dir.is_dir():
+        for path in sorted(deals_dir.glob("*.sqlite3"))[:32]:
+            deal_id = path.name[: -len(".sqlite3")]
+            try:
+                with LifecycleStore.open(path) as store:
+                    replay = store.load()
+            except ValueError:
+                deals.append({"deal_id": deal_id, "status": "UNREADABLE"})
+                continue
+            lifecycle = replay.lifecycle
+            deals.append({
+                "deal_id": deal_id,
+                "status": lifecycle.status if lifecycle is not None else "EMPTY",
+            })
+    backups = [
+        {"backup_file": manifest["backup_file"]}
+        for manifest in list_backup_manifests(backups_dir)
+    ]
+    return build_dashboard(paper=paper, bots=bots, deals=deals, backups=backups)
+
+
+@app.get("/api/dashboard")
+async def get_dashboard():
+    with PAPER_LOCK:
+        with BOT_LOCK:
+            with DEAL_LOCK:
+                with BACKUP_LOCK:
+                    return {"data": _dashboard_data(
+                        PAPER_STORE, BOT_REGISTRY, DEALS_DIR, BACKUPS_DIR
+                    )}
+
+
+def _deal_timeline(deals_dir: Path, deal_id: str, step: int) -> dict[str, object]:
+    if type(step) is not int or step < 0:
+        raise LifecycleStoreError("DEAL_STEP_INVALID", "Timeline adımı negatif olamaz.")
+    path = _deal_path(deals_dir, deal_id)
+    if not path.exists():
+        raise LifecycleStoreError("DEAL_UNKNOWN", "Deal kayıtlı değil.")
+    with LifecycleStore.open(path) as store:
+        replay = store.load()
+    history = list(replay.history)
+    if step > len(history):
+        raise LifecycleStoreError(
+            "DEAL_STEP_INVALID", "Timeline adımı geçmişi aşıyor."
+        )
+    lifecycle = new_deal_lifecycle(
+        deal_id,
+        history[0].config_revision_id if history else "unstarted",
+    )
+    prefix: tuple[LifecycleEvent, ...] = ()
+    for event in history[:step]:
+        lifecycle, prefix, _ = apply_lifecycle_event(lifecycle, prefix, event)
+    current = history[step - 1] if step > 0 else None
+    return {
+        "deal_id": deal_id,
+        "step": step,
+        "of": len(history),
+        "lifecycle": _deal_lifecycle_data(lifecycle),
+        "event": _deal_event_data(current) if current is not None else None,
+    }
+
+
+@app.get("/api/deals/{deal_id}/timeline")
+async def get_deal_timeline(deal_id: str, step: int = 0):
+    try:
+        with DEAL_LOCK:
+            return {"data": _deal_timeline(DEALS_DIR, deal_id, step)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"timeline": str(exc)}))
+
+
+RECURRING_SCHEDULE_FIELDS = {
+    "symbol", "quote_amount", "start_us", "interval_us", "count",
+}
+
+
+def _validate_recurring_schedule_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, RECURRING_SCHEDULE_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if not isinstance(body.get("symbol"), str):
+        fields["symbol"] = "symbol string olmalıdır."
+    if not isinstance(body.get("quote_amount"), str):
+        fields["quote_amount"] = "quote_amount string olmalıdır."
+    for name in ("start_us", "interval_us"):
+        if type(body.get(name)) is not int:
+            fields[name] = f"{name} integer olmalıdır."
+    count = body.get("count")
+    if type(count) is not int or not 1 <= count <= 365:
+        fields["count"] = "count 1-365 arası integer olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _recurring_schedule(validated: dict[str, object]) -> dict[str, object]:
+    return project_recurring_schedule(
+        symbol=validated["symbol"],  # type: ignore[arg-type]
+        quote_amount=validated["quote_amount"],  # type: ignore[arg-type]
+        start_us=validated["start_us"],  # type: ignore[arg-type]
+        interval_us=validated["interval_us"],  # type: ignore[arg-type]
+        count=validated["count"],  # type: ignore[arg-type]
+    )
+
+
+@app.post("/api/recurring/schedule")
+async def project_recurring(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_recurring_schedule_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _recurring_schedule(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"schedule": str(exc)}))
+
+
+def _record_event(log: EventLog, kind: str, ref: str, summary: str, time_us: int) -> None:
+    log.append(kind=kind, ref=ref, summary=summary, time_us=time_us)
+
+
+def _events_list(log: EventLog, limit: int) -> dict[str, object]:
+    return {"events": log.list(limit=limit)}
+
+
+@app.get("/api/events")
+async def list_events(limit: int = 50):
+    try:
+        with EVENT_LOCK:
+            return {"data": _events_list(EVENT_LOG, limit)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"events": str(exc)}))
+
+
+RISK_EXPLAIN_FIELDS = {"session_id", "bot_id", "symbol", "deal_id"}
+
+
+def _validate_risk_explain_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    unknown = set(payload) - RISK_EXPLAIN_FIELDS
+    fields: dict[str, str] = {}
+    if unknown:
+        fields["body"] = "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))
+    for name in RISK_EXPLAIN_FIELDS:
+        if name in payload and not isinstance(payload[name], str):
+            fields[name] = f"{name} string olmalıdır."
+    if "symbol" in payload and "bot_id" not in payload:
+        fields["bot_id"] = "symbol yalnız bot_id ile değerlendirilir."
+    if fields:
+        return None, fields
+    return payload, {}
+
+
+def _risk_explain(
+    paper_store: dict[str, object],
+    bot_registry: BotRegistry,
+    deals_dir: Path,
+    validated: dict[str, object],
+) -> dict[str, object]:
+    pair_verdict: tuple[str, str] | None = None
+    if isinstance(validated.get("bot_id"), str) and isinstance(validated.get("symbol"), str):
+        try:
+            verdict, reason = bot_registry.check_pair(
+                validated["bot_id"], validated["symbol"]  # type: ignore[arg-type]
+            )
+            pair_verdict = (verdict, reason)
+        except ValueError as exc:
+            pair_verdict = ("UNKNOWN", str(exc))
+    paper: dict[str, object] | None = None
+    paper_requested = isinstance(validated.get("session_id"), str)
+    if paper_requested:
+        sessions = paper_store.get("sessions", {})
+        assert isinstance(sessions, dict)
+        session = sessions.get(validated["session_id"])
+        if session is not None:
+            paper = {"session_id": session.session_id, "cash": session.cash}
+    deal: dict[str, object] | None = None
+    deal_requested = isinstance(validated.get("deal_id"), str)
+    if deal_requested:
+        deal_id = validated["deal_id"]
+        assert isinstance(deal_id, str)
+        try:
+            replayed = _deal_replay(deals_dir, deal_id)
+        except ValueError:
+            replayed = None
+        if replayed is not None:
+            lifecycle = replayed["lifecycle"]
+            assert isinstance(lifecycle, dict) or lifecycle is None
+            deal = {
+                "deal_id": deal_id,
+                "status": lifecycle["status"] if lifecycle else "EMPTY",
+            }
+    return explain_risk(
+        pair_verdict=pair_verdict,
+        paper=paper,
+        paper_requested=paper_requested,
+        deal=deal,
+        deal_requested=deal_requested,
+    )
+
+
+@app.post("/api/risk/explain")
+async def explain_trade_risk(request: Request):
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_risk_explain_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with PAPER_LOCK:
+            with BOT_LOCK:
+                with DEAL_LOCK:
+                    return {"data": _risk_explain(
+                        PAPER_STORE, BOT_REGISTRY, DEALS_DIR, validated
+                    )}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"risk": str(exc)}))
+
+
+@app.get("/api/settlement")
+async def get_settlement_policy():
+    return {
+        "data": {
+            "supported": list(SUPPORTED_SETTLEMENT_ASSETS),
+            "policy": "USDT_ONLY",
+            "note": "Çoklu settlement zamanlı kur ve envanter modeli ister (F35 DEFERRED).",
+        }
+    }
 
 
 @app.post("/api/data-quality")

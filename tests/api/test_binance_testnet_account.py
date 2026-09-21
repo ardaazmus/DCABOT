@@ -124,6 +124,19 @@ class BinanceTestnetAccountApiTests(unittest.TestCase):
         self.assertEqual(result.status_code, 409)
         self.assertEqual(json.loads(result.body)["code"], "TESTNET_CREDENTIAL_NOT_CONFIGURED")
 
+    def test_open_orders_invalid_symbol_is_a_client_error_not_an_outage(self):
+        def fail(_credential_id, *, provider, symbol=None):
+            raise api.BinanceTestnetAccountError(
+                "TESTNET_OPEN_ORDERS_SYMBOL_INVALID", "Açık emir symbol değeri geçersiz."
+            )
+
+        api.fetch_binance_testnet_open_orders = fail
+
+        result = api.get_binance_testnet_open_orders(Response(), symbol="not a symbol")
+
+        self.assertEqual(result.status_code, 400)
+        self.assertEqual(json.loads(result.body)["code"], "TESTNET_OPEN_ORDERS_SYMBOL_INVALID")
+
 
 if __name__ == "__main__":
     unittest.main()

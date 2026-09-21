@@ -96,6 +96,17 @@ class TwoLegFillProjectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "TWO_LEG_STATE_INCONSISTENT"):
             TwoLegFillProjection(state=TwoLegState.BOTH_ESTABLISHED)
 
+    def test_terminal_empty_projection_allowed_without_aggregates(self):
+        for state in (TwoLegState.RECOVERY_REQUIRED, TwoLegState.TIMEOUT):
+            projection = TwoLegFillProjection(state=state)
+            self.assertEqual(projection.state, state)
+            self.assertEqual(projection.fills, ())
+        with self.assertRaisesRegex(ValueError, "TWO_LEG_STATE_INCONSISTENT"):
+            TwoLegFillProjection(
+                state=TwoLegState.TIMEOUT,
+                leg_a_quantity="1",
+            )
+
     def test_wrong_type_whitelists_fail_closed(self):
         class EqualsTo:
             __hash__ = None

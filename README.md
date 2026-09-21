@@ -11,10 +11,14 @@ Başlangıç için [ürün kapsamını](docs/URUN_KAPSAMI.md), [özellik matrisi
 Python bağımlılıklarını kilitli kurulumla hazırla:
 
 ```powershell
-$env:PYTHONPATH = "$PWD/src"
 uv sync --frozen
-uv run uvicorn dcabot.server.api:app --host 127.0.0.1 --port 8000
+uv run --frozen python tools/run_api.py --port 8000
 ```
+
+Tek giriş noktası `tools/run_api.py`'dir: önce workspace ön-kontrolü
+yapar, sonra API'yi localhost'a sabitlenmiş tek worker ile başlatır.
+İkinci bir worker aynı kilit dosyasını alamaz ve açılmaz; `--workers`
+seçeneği bilinçli olarak yoktur.
 
 Ayrı bir PowerShell'de frontend'i başlat:
 

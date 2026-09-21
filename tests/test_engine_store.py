@@ -85,6 +85,29 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(out["planned_gross_notional"], "101")
         self.assertFalse(out["within_gross_entry_cap"])
 
+    def test_decision_returns_base_only_on_fresh_state(self):
+        c = Config.parse(raw())
+        s = apply(State(), {"type": "MARK", "price": "100"}, c)
+
+        self.assertEqual(decision(s, c), ("BASE", F(1)))
+
+    def test_decision_never_reopens_base_after_deal_completes(self):
+        c = Config.parse(raw())
+        s = apply(State(), {"type": "MARK", "price": "100"}, c)
+        s = apply(s, intent(), c)
+        s = apply(s, fill(), c)
+        s = apply(s, final(), c)
+        s = apply(s, {"type": "MARK", "price": "103"}, c)
+        self.assertEqual(decision(s, c), ("EXIT", F(1)))
+        s = apply(s, intent(oid="exit", role="EXIT", qty="1", price="103"), c)
+        s = apply(s, fill(eid="exec2", oid="exit", side="SELL", qty="1", price="103"), c)
+        s = apply(s, final(oid="exit", qty="1"), c)
+
+        self.assertIsNone(decision(s, c))
+        out = report(s, c)
+        self.assertTrue(out["deal_complete"])
+        self.assertFalse(out["global_new_risk_gate_open"])
+
     def test_intent_and_status_do_not_manufacture_fills(self):
         c = Config.parse(raw())
         s = apply(State(), {"type": "MARK", "price": "100"}, c)
@@ -352,6 +375,22 @@ class StoreTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             Store(other)
         self.assertEqual(other.read_bytes(), original)
+
+    def test_zero_byte_file_open_fails_closed_with_clear_error(self):
+        partial = Path(self.temp.name) / "partial.db"
+        partial.write_bytes(b"")
+        with self.assertRaises(ValueError):
+            Store(partial)
+        self.assertEqual(partial.read_bytes(), b"")
+
+    def test_second_init_on_existing_database_fails_closed_without_touching_file(self):
+        self.seed()
+        before = self.path.read_bytes()
+        events_before = self.store.audit()["events"]
+        with self.assertRaises(FileExistsError):
+            Store(self.path, raw())
+        self.assertEqual(self.path.read_bytes(), before)
+        self.assertEqual(self.store.audit()["events"], events_before)
 
     def test_tampered_posting_is_detected_on_open(self):
         self.seed()

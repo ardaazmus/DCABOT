@@ -1,6 +1,7 @@
 import { type HTMLAttributes, type KeyboardEvent, type MouseEvent, useEffect, useRef, useState } from "react";
 import { HistoricalChart } from "./HistoricalChart";
 import { ExplanationSection } from "./ExplanationSection";
+import { WindowExpander, useWindowedList } from "./renderWindow";
 import { HistoricalProfileSelector, HistoricalProfileStatus } from "./HistoricalProfileSelector";
 import {
   DATASET_STATUS_META,
@@ -119,6 +120,10 @@ function fixedActionStatus(action: HistoricalSimulationResult["actions"][number]
 
 export function ActionTable({ actions, fixedSlice, title = "AKSİYON GEÇMİŞİ", intro = "Backend’in kaydettiği simülasyon aksiyonları; finansal hesap yapılmadan, oluşma sırasıyla gösterilir.", selectedBarIndex = null, onSelectBarIndex }: { actions: HistoricalSimulationResult["actions"]; fixedSlice: boolean; title?: string; intro?: string; selectedBarIndex?: number | null; onSelectBarIndex?: (barIndex: number) => void }) {
   const interactive = typeof onSelectBarIndex === "function";
+  const windowed = useWindowedList(actions, 100);
+  const selectedBeyondWindow = selectedBarIndex !== null && selectedBarIndex !== undefined
+    && actions.findIndex((action) => action.bar_index === selectedBarIndex) >= windowed.shown;
+  const rows = selectedBeyondWindow ? actions : windowed.visible;
 
   useEffect(() => {
     if (selectedBarIndex === null || selectedBarIndex === undefined) return;
@@ -165,7 +170,7 @@ export function ActionTable({ actions, fixedSlice, title = "AKSİYON GEÇMİŞİ
         <caption className="sr-only">Simülasyonda oluşan aksiyon geçmişi</caption>
         {fixedSlice ? <>
           <thead><tr><th scope="col">Bar</th><th scope="col">Aksiyon</th><th scope="col">Rol</th><th scope="col">Order</th><th scope="col">Orijinal</th><th scope="col">Dolan · kümülatif</th><th scope="col">Kalan</th><th scope="col">Durum</th></tr></thead>
-          <tbody>{actions.map((action) => <tr key={`${action.event_sequence ?? action.bar_index}-${action.action_type ?? action.role}`} {...rowProps(action.bar_index)}>
+          <tbody>{rows.map((action) => <tr key={`${action.event_sequence ?? action.bar_index}-${action.action_type ?? action.role}`} {...rowProps(action.bar_index)}>
             <td data-label="Bar"><code>{action.bar_index.toLocaleString("tr-TR")}</code></td>
             <td data-label="Aksiyon"><span className="historical-action-role">{action.action_type ?? "—"}</span></td>
             <td data-label="Rol">{action.role}</td>
@@ -177,7 +182,7 @@ export function ActionTable({ actions, fixedSlice, title = "AKSİYON GEÇMİŞİ
           </tr>)}</tbody>
         </> : <>
           <thead><tr><th scope="col">Bar</th><th scope="col">Rol</th><th scope="col">Zaman · UTC µs</th><th scope="col">Gerçekleşen fiyat</th><th scope="col">Miktar</th><th scope="col">Fee</th></tr></thead>
-          <tbody>{actions.map((action) => <tr key={`${action.event_sequence ?? action.bar_index}-${action.role}`} {...rowProps(action.bar_index)}>
+          <tbody>{rows.map((action) => <tr key={`${action.event_sequence ?? action.bar_index}-${action.role}`} {...rowProps(action.bar_index)}>
             <td data-label="Bar"><code>{action.bar_index.toLocaleString("tr-TR")}</code></td>
             <td data-label="Rol"><span className="historical-action-role">{action.role}</span></td>
             <td data-label="Zaman · UTC µs"><code>{action.open_time_us}</code></td>
@@ -187,6 +192,7 @@ export function ActionTable({ actions, fixedSlice, title = "AKSİYON GEÇMİŞİ
           </tr>)}</tbody>
         </>}
       </table>
+      {!selectedBeyondWindow && windowed.hasMore && <WindowExpander shown={windowed.shown} total={windowed.total} onMore={windowed.showMore} />}
     </div>}
   </section>;
 }
@@ -256,6 +262,8 @@ function PreflightCard({
   const economicSummary = simulation?.final_economic_summary ?? simulation?.summary ?? null;
   const previousProfileRef = useRef<string | null>(selectedHistoricalProfileId);
   const [selectedBarIndex, setSelectedBarIndex] = useState<number | null>(null);
+  const [draftPrice, setDraftPrice] = useState<string | null>(null);
+  const [draftVerdict, setDraftVerdict] = useState("");
   const simulationExecutionId = simulation?.execution_id ?? null;
 
   useEffect(() => {
@@ -264,7 +272,41 @@ function PreflightCard({
 
   useEffect(() => {
     setSelectedBarIndex(null);
+    setDraftPrice(null);
+    setDraftVerdict("");
   }, [simulationExecutionId]);
+
+  async function onDraftPrice(price: string) {
+    if (chartStatus !== "ready" || !chartData) {
+      setDraftPrice(null);
+      setDraftVerdict("Taslak değerlendirilemedi: grafik kapsamı hazır değil.");
+      return;
+    }
+    if (!price) {
+      setDraftPrice(null);
+      setDraftVerdict("");
+      return;
+    }
+    try {
+      const response = await fetch(`/api/datasets/${encodeURIComponent(chartData.dataset_id)}/draft-level`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({ artifact_sha256: chartData.artifact_sha256, draft_price: price }),
+      });
+      const body = (await response.json()) as { verdict?: string; draft_price?: string; reason?: string; code?: string; detail?: string };
+      if (!response.ok || (body.verdict !== "ACCEPTED" && body.verdict !== "REJECTED") || typeof body.draft_price !== "string" || typeof body.reason !== "string") {
+        setDraftPrice(null);
+        setDraftVerdict(body.detail ? `Taslak reddedildi: ${body.detail}` : "Taslak fiyat geçersiz; seviye çizilmedi.");
+        return;
+      }
+      setDraftPrice(body.draft_price);
+      setDraftVerdict(`${body.verdict}: ${body.reason}`);
+    } catch {
+      setDraftPrice(null);
+      setDraftVerdict("Taslak API'sine bağlanılamadı.");
+    }
+  }
 
   useEffect(() => {
     setFixedSliceAcknowledged(false);
@@ -342,7 +384,7 @@ function PreflightCard({
             <div className="historical-result-values"><ResultValue label={`Brüt gerçekleşen sonuç · ${quoteAsset}`} value={economicSummary.realized_gross} note="Backend modelinden gelir; UI yeniden hesaplamaz." /><ResultValue label={`İşlem ücretleri · ${quoteAsset}`} value={economicSummary.fees} note="Backend’in quote-asset fee toplamıdır." /><ResultValue label={`Model net gerçekleşen sonuç · ${quoteAsset}`} value={economicSummary.realized_net_after_all_costs} note="Backend model sonucudur; funding bu tarihsel modelde işlenmez." /><ResultValue label="Pozisyon durumu" value={economicSummary.position_status === "OPEN_AT_END" ? "OPEN_AT_END" : "CLOSED"} note={economicSummary.position_status === "OPEN_AT_END" ? "Dönem sonunda açık kaldı; forced close uygulanmadı. Exchange mark olmadığı için gerçekleşmemiş sonuç ve equity sayısal olarak gösterilmiyor." : "Dönem sonunda pozisyon kapalı."} /></div>
              <dl className="preflight-facts historical-result-meta"><div><dt>İşlenen bar</dt><dd>{simulation.dataset.processed_bar_count.toLocaleString("tr-TR")}</dd></div><div><dt>Dönem</dt><dd>{simulation.dataset.period_start} → {simulation.dataset.period_end}</dd></div><div><dt>Model</dt><dd>{simulation.assumptions.model}</dd></div><div><dt>Config</dt><dd><code>{shortSha256(simulation.config.config_hash)}</code></dd></div><div><dt>Artifact</dt><dd><code>{shortSha256(simulation.dataset.artifact_sha256)}</code></dd></div></dl>
              <ExplanationSection explanations={simulation.explanations} />
-             <HistoricalChart data={chartData} status={chartStatus} error={chartError} simulation={simulation} selectedBarIndex={selectedBarIndex} onSelectBarIndex={setSelectedBarIndex} />
+             <HistoricalChart data={chartData} status={chartStatus} error={chartError} simulation={simulation} selectedBarIndex={selectedBarIndex} onSelectBarIndex={setSelectedBarIndex} draftPrice={draftPrice} draftVerdict={draftVerdict} onDraftPrice={(price) => void onDraftPrice(price)} />
             <ActionTable actions={simulation.actions} fixedSlice={fixedSliceSimulation} selectedBarIndex={selectedBarIndex} onSelectBarIndex={setSelectedBarIndex} />
           </div>}
           {simulation && simulationStatus === "indeterminate" && <>

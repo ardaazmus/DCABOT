@@ -1,4 +1,4 @@
-import { type KeyboardEvent } from "react";
+import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { type HistoricalChartBar, type HistoricalChartData, type HistoricalSimulationResult } from "./datasetCatalog";
 
 type HistoricalChartStatus = "idle" | "loading" | "ready" | "error";
@@ -10,6 +10,9 @@ type HistoricalChartProps = {
   simulation: HistoricalSimulationResult | null;
   selectedBarIndex?: number | null;
   onSelectBarIndex?: (barIndex: number) => void;
+  draftPrice?: string | null;
+  draftVerdict?: string;
+  onDraftPrice?: (price: string) => void;
 };
 
 type FixedDecimal = {
@@ -87,6 +90,43 @@ function roundCoordinate(value: number): number {
 
 function barX(index: number, count: number): number {
   return count === 1 ? (PLOT_LEFT + PLOT_RIGHT) / 2 : PLOT_LEFT + (index / (count - 1)) * (PLOT_RIGHT - PLOT_LEFT);
+}
+
+function draftRange(data: HistoricalChartData): { minimum: bigint; maximum: bigint; scale: number } | null {
+  const bars = parseBars(data);
+  if (!bars) return null;
+  let scale = 0;
+  for (const bar of data.bars) {
+    for (const text of [bar.open, bar.high, bar.low, bar.close]) {
+      const parsed = parseFixedDecimal(text);
+      if (!parsed) return null;
+      scale = Math.max(scale, parsed.scale);
+    }
+  }
+  const minimum = bars.reduce((value, bar) => value < bar.low ? value : bar.low, bars[0].low);
+  const maximum = bars.reduce((value, bar) => value > bar.high ? value : bar.high, bars[0].high);
+  return { minimum, maximum, scale };
+}
+
+function formatFixedDecimal(value: bigint, scale: number): string {
+  const negative = value < 0n;
+  const digits = (negative ? -value : value).toString().padStart(scale + 1, "0");
+  const body = scale === 0 ? digits : `${digits.slice(0, -scale)}.${digits.slice(-scale)}`;
+  return `${negative ? "-" : ""}${body}`;
+}
+
+function priceAtPlotY(y: number, minimum: bigint, maximum: bigint, scale: number): string {
+  const clamped = Math.min(Math.max(y, PLOT_TOP), PLOT_BOTTOM);
+  const permille = BigInt(Math.round(((PLOT_BOTTOM - clamped) / (PLOT_BOTTOM - PLOT_TOP)) * 1000));
+  const range = maximum - minimum;
+  const value = range === 0n ? minimum : minimum + (range * permille + 500n) / 1000n;
+  return formatFixedDecimal(value, scale);
+}
+
+function draftY(price: string, range: { minimum: bigint; maximum: bigint; scale: number }): number | null {
+  const parsed = parseFixedDecimal(price);
+  if (!parsed) return null;
+  return coordinate(scaleCoefficient(parsed, range.scale), range.minimum, range.maximum - range.minimum);
 }
 
 function parseBars(data: HistoricalChartData): ParsedChartBar[] | null {
@@ -189,7 +229,11 @@ function buildBoundary(data: HistoricalChartData, simulation: HistoricalSimulati
   return { boundary: { barIndex: ambiguity.bar_index, x, labelX: nearRightEdge ? x - 7 : x + 7, textAnchor: nearRightEdge ? "end" : "start" }, error: "" };
 }
 
-export function HistoricalChart({ data, status, error, simulation, selectedBarIndex = null, onSelectBarIndex }: HistoricalChartProps) {
+export function HistoricalChart({ data, status, error, simulation, selectedBarIndex = null, onSelectBarIndex, draftPrice = null, draftVerdict = "", onDraftPrice }: HistoricalChartProps) {
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const dragging = useRef(false);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [draftInput, setDraftInput] = useState("");
   if (status === "idle") return null;
   const titleId = "historical-chart-title";
   const descriptionId = "historical-chart-description";
@@ -197,11 +241,62 @@ export function HistoricalChart({ data, status, error, simulation, selectedBarIn
   const geometry = status === "ready" && data ? chartGeometry(data, simulation) : null;
   const renderError = status === "ready" && !geometry;
   const interactive = typeof onSelectBarIndex === "function";
+  const draftable = typeof onDraftPrice === "function" && data !== null;
+  const range = draftable && data ? draftRange(data) : null;
+  const shownDraft = preview ?? draftPrice;
+  const shownDraftY = shownDraft !== null && range ? draftY(shownDraft, range) : null;
 
   function onMarkerKeyDown(event: KeyboardEvent<SVGCircleElement>, barIndex: number) {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     onSelectBarIndex?.(barIndex);
+  }
+
+  function plotY(clientY: number): number | null {
+    const svg = svgRef.current;
+    if (!svg || !range) return null;
+    const rect = svg.getBoundingClientRect();
+    if (rect.height === 0) return null;
+    return ((clientY - rect.top) / rect.height) * CHART_HEIGHT;
+  }
+
+  function onSvgPointerDown(event: PointerEvent<SVGSVGElement>) {
+    if (!draftable || !range) return;
+    const y = plotY(event.clientY);
+    if (y === null) return;
+    dragging.current = true;
+    (event.target as Element).setPointerCapture?.(event.pointerId);
+    setPreview(priceAtPlotY(y, range.minimum, range.maximum, range.scale));
+  }
+
+  function onSvgPointerMove(event: PointerEvent<SVGSVGElement>) {
+    if (!dragging.current || !draftable || !range) return;
+    const y = plotY(event.clientY);
+    if (y === null) return;
+    setPreview(priceAtPlotY(y, range.minimum, range.maximum, range.scale));
+  }
+
+  function onSvgPointerUp() {
+    if (!dragging.current) return;
+    dragging.current = false;
+    if (preview !== null) {
+      onDraftPrice?.(preview);
+      setPreview(null);
+    }
+  }
+
+  function onDraftHandleKeyDown(event: KeyboardEvent<SVGCircleElement>) {
+    if (!range || shownDraft === null) return;
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+    const parsed = parseFixedDecimal(shownDraft);
+    if (parsed === null || parsed.scale > range.scale) return;
+    event.preventDefault();
+    const span = range.maximum - range.minimum;
+    const step = span === 0n ? 1n : span / 250n >= 1n ? span / 250n : 1n;
+    const current = scaleCoefficient(parsed, range.scale);
+    const moved = event.key === "ArrowUp" ? current + step : current - step;
+    const clamped = moved < range.minimum ? range.minimum : moved > range.maximum ? range.maximum : moved;
+    onDraftPrice?.(formatFixedDecimal(clamped, range.scale));
   }
   return <section className={`historical-chart ${renderError ? "error" : status}`} aria-labelledby={titleId}>
     <div className="historical-chart-heading"><div><p className="preflight-section-label">TARİHSEL OHLC GÖRÜNÜMÜ</p><h6 id={titleId}>Kapalı bar grafiği</h6></div><span className="historical-chart-badge">READ-ONLY</span></div>
@@ -209,10 +304,14 @@ export function HistoricalChart({ data, status, error, simulation, selectedBarIn
     {status === "error" && <div className="historical-chart-state error" role="alert">{error || "Tarihsel OHLC görünümü güvenli biçimde oluşturulamadı."}</div>}
     {renderError && <div className="historical-chart-state error" role="alert">Tarihsel OHLC görünümü güvenli biçimde oluşturulamadı.</div>}
     {geometry && data && <figure className="historical-chart-figure">
-      <svg className="historical-chart-svg" viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} role="img" aria-labelledby={`${titleId} ${descriptionId}`} focusable="false">
+      <svg ref={svgRef} className="historical-chart-svg" viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} role="img" aria-labelledby={`${titleId} ${descriptionId}`} focusable="false" onPointerDown={draftable ? onSvgPointerDown : undefined} onPointerMove={draftable ? onSvgPointerMove : undefined} onPointerUp={draftable ? onSvgPointerUp : undefined}>
         <title id={titleId}>Kapalı bar tarihsel OHLC grafiği</title>
         <desc id={descriptionId}>{geometry.accessibleSummary}</desc>
         <path className="historical-chart-path" d={geometry.path} vectorEffect="non-scaling-stroke" />
+        {draftable && shownDraftY !== null && <g className="historical-chart-draft" aria-hidden={false}>
+          <line className="historical-chart-draft-line" x1={PLOT_LEFT} y1={roundCoordinate(shownDraftY)} x2={PLOT_RIGHT} y2={roundCoordinate(shownDraftY)} />
+          <circle className="historical-chart-draft-handle" cx={PLOT_RIGHT - 8} cy={roundCoordinate(shownDraftY)} r={6} role="button" tabIndex={0} aria-label={`Taslak seviye ${shownDraft}; ok tuşlarıyla ayarla`} onKeyDown={onDraftHandleKeyDown} />
+        </g>}
         <g className="historical-chart-markers" aria-hidden={interactive ? undefined : true}>
           {geometry.markers.map((marker, index) => {
             const selected = selectedBarIndex === marker.barIndex;
@@ -234,6 +333,13 @@ export function HistoricalChart({ data, status, error, simulation, selectedBarIn
         </g>
       </svg>
       <figcaption id={captionId} className="historical-chart-caption">{geometry.accessibleSummary} Kesin fill zamanı ve intrabar sıra gösterilmez.</figcaption>
+      {draftable && <div className="historical-chart-draft-controls">
+        <label className="historical-chart-draft-label">Taslak seviye
+          <input className="historical-chart-draft-input" inputMode="decimal" value={draftInput} onChange={(event) => setDraftInput(event.target.value)} placeholder="örn. 30123.45" />
+        </label>
+        <button type="button" className="historical-chart-draft-button" onClick={() => { onDraftPrice?.(draftInput.trim()); }}>Değerlendir</button>
+        {draftVerdict && <output className="historical-chart-draft-verdict">{draftVerdict}</output>}
+      </div>}
     </figure>}
     {geometry?.markerError && <div className="historical-chart-marker-warning" role="status">{geometry.markerError}</div>}
     {geometry?.boundaryError && <div className="historical-chart-marker-warning" role="status">{geometry.boundaryError}</div>}

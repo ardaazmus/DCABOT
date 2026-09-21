@@ -229,6 +229,51 @@ describe("HistoricalChart", () => {
     expect(document.querySelectorAll(".historical-chart-marker")).toHaveLength(1);
   });
 
+  it("taslak handler'ı yoksa taslak kontrolleri görünmez", () => {
+    renderReady();
+
+    expect(screen.queryByText("Taslak seviye")).not.toBeInTheDocument();
+    expect(document.querySelector(".historical-chart-draft-line")).toBeNull();
+  });
+
+  it("taslak fiyat verilince seviye çizgisi ve klavye tutamacı görünür", () => {
+    const onDraftPrice = vi.fn();
+    render(
+      <HistoricalChart status="ready" data={chartData} error="" simulation={null} draftPrice="101" draftVerdict="ACCEPTED: aralık içinde" onDraftPrice={onDraftPrice} />,
+    );
+
+    expect(document.querySelector(".historical-chart-draft-line")).not.toBeNull();
+    expect(screen.getByRole("button", { name: /Taslak seviye 101/ })).toBeInTheDocument();
+    expect(screen.getByText("ACCEPTED: aralık içinde")).toBeInTheDocument();
+  });
+
+  it("metin girişi kırpılmış değeri bildirir", () => {
+    const onDraftPrice = vi.fn();
+    render(
+      <HistoricalChart status="ready" data={chartData} error="" simulation={null} onDraftPrice={onDraftPrice} />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("örn. 30123.45"), { target: { value: "  101  " } });
+    fireEvent.click(screen.getByRole("button", { name: "Değerlendir" }));
+
+    expect(onDraftPrice).toHaveBeenCalledTimes(1);
+    expect(onDraftPrice).toHaveBeenCalledWith("101");
+  });
+
+  it("tutamak ok tuşları yeni fiyatı bildirir", () => {
+    const onDraftPrice = vi.fn();
+    render(
+      <HistoricalChart status="ready" data={chartData} error="" simulation={null} draftPrice="101" onDraftPrice={onDraftPrice} />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("button", { name: /Taslak seviye 101/ }), { key: "ArrowUp" });
+
+    expect(onDraftPrice).toHaveBeenCalledTimes(1);
+    const next = onDraftPrice.mock.calls[0][0] as string;
+    expect(next).not.toBe("101");
+    expect(next).toMatch(/^\d+$/);
+  });
+
   it("INCOMPLETE boundary çizgisi etkileşimli olmaz", () => {
     const onSelectBarIndex = vi.fn();
     render(

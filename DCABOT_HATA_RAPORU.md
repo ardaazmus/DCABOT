@@ -8,7 +8,7 @@
 
 ## 🔴 KRİTİK HATALAR
 
-### 1. `engine.py` — `decision()` Fonksiyonunda Ölü Kod / Tutarsızlık
+### 1. `engine.py` — `decision()` Fonksiyonunda Ölü Kod / Tutarsızlık — KAPALI (2026-09-21)
 
 **Dosya:** `src/dcabot/domain/engine.py` (~satır 161)
 
@@ -32,6 +32,8 @@ if s.orders or qty != c.base_qty:
 **Öneri:** `decision()` fonksiyonundaki ölü kolu kaldır veya `report()` docstring'inde tek-deal sınırlamasını açıkça belirt.
 
 **Kısmen ele alındı (2026-09-20):** Karar `docs/KARARLAR.md` CORE01'de belgelendi — tek-deal değişmezi kasıtlı çekirdek sınırıdır, `engine.py` bilerek değişmedi. Üst katmanda `historical_simulation.simulate_historical_ohlcv` artık deal kapanınca taze bir `State` açıp yeni BASE başlatıyor (bkz. STATE.md Faz 2.1b), yani ürün seviyesinde "yeni deal başlatılamaz" etkisi orkestrasyon katmanında giderildi. Ama `engine.py:292-293`'teki `decision()` kolu hâlâ hiçbir zaman tetiklenmiyor (`historical_simulation.py` `decision()`'ı hiç çağırmıyor, kendi INTENT/FILL/ORDER_FINAL adımlarını doğrudan uyguluyor) — kod kendisi hâlâ ölü. Canlı/testnet yürütme yolu bu düzeltmeyi henüz kullanmıyor. Tam KAPALI değil; kalan iş bu düzeltmenin canlı yürütme tarafına taşınması veya `decision()`'ın gerçekten kullanılmasıdır.
+
+**Kapanış (2026-09-21, Faz 1):** Doğrulama bulguyu düzeltti: `decision()` ölü değil — canlı iki yol (`service.py` offline replay, `testnet_dca_session.py`) onu çağırıyor ve BASE kolu taze `State`'te tetikleniyor (ilk deal). Tek-deal sonrası yeniden BASE açmaması kasıtlı CORE01 değişmezidir; `report()` bunu `deal_complete` + `global_new_risk_gate_open=false` ile açıkça gösterir. Kapatma: `decision()` docstring'ine single-deal sözleşmesi yazıldı + 2 kilit testi eklendi. Davranış değişikliği yok.
 
 ---
 
@@ -99,7 +101,7 @@ def _load_config(profile_id: str = "paper") -> dict[str, Any]:
 
 ---
 
-### 5. `api.py` — Middleware `content-length < 0` Kontrolü Kısmi
+### 5. `api.py` — Middleware `content-length < 0` Kontrolü Kısmi — KAPALI (2026-09-21)
 
 **Dosya:** `src/dcabot/server/api.py` (~satır 649)
 
@@ -109,6 +111,8 @@ if declared_size < 0:
 ```
 
 **Açıklama:** HTTP spec'e göre `Content-Length` negatif olamaz. Bu kontrol technically correct ama `declared_size == 0` durumunda后续 `len(body) > MAX_...` kontrolü devreye girer — bu, gereksiz bir memory allocation yaratıyor.
+
+**Kapanış (2026-09-21, Faz 1):** Gerçek sorun beyan edilen başlığın yalan söyleyebilmesiydi: `/api/data-quality` küçük-JSON limitlerinin dışındaydı ve eksik/yanlış `Content-Length` ile sınırsız gövde okunabiliyordu. Düzeltme: `ROUTE_BODY_LIMITS` ile route'a 20 MB bütçe handler öncesi zorunlu kılındı (yalan beyanlı/başlıksız 20 MB+ gövde → 413 `REQUEST_TOO_LARGE`, okuma erken kesilir); küçük gövdelerde davranış değişmedi. 3 yeni test (`tests/api/test_request_limits.py`).
 
 ---
 
@@ -132,7 +136,7 @@ state_priority = {
 
 ---
 
-### 7. `store.py` — `transact()` Exclusive Create Race Condition
+### 7. `store.py` — `transact()` Exclusive Create Race Condition — KAPALI (2026-09-21)
 
 **Dosya:** `src/dcabot/persistence/store.py` (~satır 44)
 
@@ -145,6 +149,8 @@ if config is not None:
 ```
 
 **Açıklama:** Dosya `xb` ile oluşturulduktan sonra `sqlite3.connect()` ile yeniden bağlanılıyor. İki işlem arasında一小 race condition var. Local demo için düşük risk.
+
+**Kapanış (2026-09-21, Faz 1):** Pencere sonucu deterministik olarak fail-closed çıktı: yarım dosyayı açan okuyucu schema/metadata doğrulamasında berrak `ValueError` alıyor, ikinci yaratıcı `FileExistsError` alıyor; hiçbir yolda üzerine yazma/yozlaşma yok. 2 kilit testi (`test_zero_byte_file_open_fails_closed_with_clear_error`, `test_second_init_on_existing_database_fails_closed_without_touching_file`). Kod değişikliği gerekmedi.
 
 ---
 
@@ -169,7 +175,7 @@ app.add_middleware(
 
 ---
 
-### 9. `api.py` — Global Mutable Singleton State
+### 9. `api.py` — Global Mutable Singleton State — KABUL EDİLEN SINIR (2026-09-21)
 
 **Dosya:** `src/dcabot/server/api.py` (~satır 95)
 
@@ -181,17 +187,19 @@ HISTORICAL_EXECUTIONS: dict[str, HistoricalRunCapture] = {}
 
 **Açıklama:** Modül seviyesinde global mutable state. Multi-worker (`uvicorn --workers N`) durumunda her worker ayrı state'e sahip olur. Local single-worker kullanım için yeterli.
 
-**Kabul edilen sınır:** Bu local ürün akışında uvicorn tek worker çalışır; multi-worker deployment kapsam dışıdır.
+**Kabul edilen sınır:** Bu local ürün akışında uvicorn tek worker çalışır; multi-worker deployment kapsam dışıdır. Faz 1'de rapor maddesi olarak kapatıldı; tek-worker çalıştırma disiplini Faz 4 paketlemede zorunlu kılınacak (bkz. `docs/YOL_HARITASI.md` Faz 4).
 
 ---
 
-### 10. `App.tsx` — 30+ `useState` Hook'u (Kod Kalitesi)
+### 10. `App.tsx` — 30+ `useState` Hook'u (Kod Kalitesi) — KAPALI (2026-09-21)
 
 **Dosya:** `frontend/src/App.tsx`
 
 Tek component'te 30'dan fazla `useState` hook'u var. Bu, component'in çok karmaşık olduğunu gösteriyor.
 
 **Öneri:** Related state'leri grupla veya `useReducer` / state management kütüphanesi (Zustand/Jotai) kullan. Örneğin: `datasetState`, `simulationState`, `savedRunsState` gibi.
+
+**Kapanış (2026-09-21, Faz 1):** Kalan 93 `useState` bildirimi mevcut `useReducerGroup` mekanizmasıyla 16 tipe-güvenli gruba taşındı (config/quality/binancePublic/binanceAccount/shell/rebalance/paper/template/rebalancePlan/signal/futures/twoLeg/bot/deal/exit/ops); `App.tsx`'te `useState` kalmadı. Setter imzaları (`Dispatch<SetStateAction>`) korunduğu için kullanım yerleri değişmedi; tsc eksiksizliği zorunlu kıldı. `tsc` temiz, `vitest` 102/102, `vite build` PASS.
 
 ---
 
@@ -213,10 +221,10 @@ Tek component'te 30'dan fazla `useState` hook'u var. Bu, component'in çok karma
 ## 🎯 Öncelikli Düzeltme Önerileri
 
 1. _quality_response(): KAPALI; iki durum da JSONResponse + Cache-Control: no-store.
-2. **`decision()`** → KISMEN: historical orkestrasyonu deal restart'ı üst katmanda çözdü (bkz. madde 1), `engine.py`'deki kod hâlâ ölü; canlı yürütme yolu kapsam dışı.
+2. **`decision()`** → KAPALI (Faz 1): ölü-kod iddiası çürütüldü (2 canlı çağıran + taze-State BASE), single-deal sözleşmesi docstring+2 kilit testiyle kilitlendi.
 3. **`_load_config()`** → KAPALI; mtime tabanlı cache uygulandı.
 4. **CORS** → KAPALI; `DCABOT_CORS_ORIGINS` ile configurable, wildcard güvenli varsayılana düşüyor.
-5. **`App.tsx`** → KISMEN: `useReducer` ile dataset/simulation/saved-runs grupları taşındı, kalan `useState` sayısı azaldı ama tam konsolidasyon yapılmadı.
+5. **`App.tsx`** → KAPALI (Faz 1): 93 `useState` → 16 `useReducerGroup`; `useState` kalmadı; tsc+vitest+build yeşil. Rapor boş: 10/10 madde kapalı/kabul-sınırı.
 
 ---
 

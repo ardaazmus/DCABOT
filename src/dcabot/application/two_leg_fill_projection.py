@@ -148,7 +148,12 @@ class TwoLegFillProjection:
                 raise _error("TWO_LEG_SIDE_CONFLICT", "İki hedge leg aynı side olamaz.")
 
         if not self.fills:
-            if self.state in (TwoLegState.NONE, TwoLegState.LEG_A_PENDING):
+            if self.state in (
+                TwoLegState.NONE,
+                TwoLegState.LEG_A_PENDING,
+                TwoLegState.RECOVERY_REQUIRED,
+                TwoLegState.TIMEOUT,
+            ):
                 if (
                     self.leg_a_quantity != "0"
                     or self.leg_b_quantity != "0"
@@ -157,7 +162,7 @@ class TwoLegFillProjection:
                 ):
                     raise _error(
                         "TWO_LEG_STATE_INCONSISTENT",
-                        "Fill olmadan pending/none projection aggregate taşıyamaz.",
+                        "Fill olmadan pending/none/terminal projection aggregate taşıyamaz.",
                     )
                 return
             raise _error(

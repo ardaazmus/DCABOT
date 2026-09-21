@@ -156,3 +156,34 @@ class RequestLimitApiTests(unittest.TestCase):
         messages = _run_request("/api/data-quality", body)
 
         self.assertEqual(messages[0]["status"], 422)
+
+    def test_data_quality_rejects_body_above_upload_budget_without_content_length(self):
+        body = b"x" * (20 * 1024 * 1024 + 1)
+        receive_calls: list[int] = []
+
+        messages = _run_request(
+            "/api/data-quality",
+            body,
+            include_content_length=False,
+            receive_calls=receive_calls,
+        )
+
+        self.assertEqual(messages[0]["status"], 413)
+        self.assertEqual(dict(messages[0]["headers"])[b"content-type"], b"application/problem+json")
+        self.assertEqual(json.loads(messages[1]["body"])["code"], "REQUEST_TOO_LARGE")
+        # First 4 KiB chunk is under budget; the crossing chunk aborts the read.
+        self.assertEqual(len(receive_calls), 2)
+
+    def test_data_quality_rejects_body_above_upload_budget_with_lying_content_length(self):
+        body = b"x" * (20 * 1024 * 1024 + 1)
+
+        messages = _run_request("/api/data-quality", body, content_length_override=0)
+
+        self.assertEqual(messages[0]["status"], 413)
+        self.assertEqual(json.loads(messages[1]["body"])["code"], "REQUEST_TOO_LARGE")
+
+    def test_data_quality_small_body_with_zero_declared_length_still_reaches_handler(self):
+        messages = _run_request("/api/data-quality", b"x" * 100, content_length_override=0)
+
+        self.assertEqual(messages[0]["status"], 422)
+        self.assertNotEqual(json.loads(messages[1]["body"]).get("code"), "REQUEST_TOO_LARGE")

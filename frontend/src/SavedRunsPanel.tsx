@@ -21,6 +21,9 @@ type SavedRunsPanelProps = {
   compareDetails: [SavedRunDetail, SavedRunDetail] | null;
   compareStatus: "idle" | "loading" | "ready" | "error";
   compareError: string;
+  onExportRun: (runId: string, format: "json" | "csv") => void;
+  exportStatus: "idle" | "loading" | "ready" | "error";
+  exportError: string;
 };
 
 const COMPARE_SUMMARY_ROWS: Array<{ key: string; label: string }> = [
@@ -147,7 +150,7 @@ function SavedRunComparePanel({ compareDetails, compareStatus, compareError, onB
   </section>;
 }
 
-function SavedRunDetailPanel({ detail, detailStatus, detailError, onBackToList }: Pick<SavedRunsPanelProps, "detail" | "detailStatus" | "detailError" | "onBackToList">) {
+function SavedRunDetailPanel({ detail, detailStatus, detailError, onBackToList, onExportRun, exportStatus, exportError }: Pick<SavedRunsPanelProps, "detail" | "detailStatus" | "detailError" | "onBackToList" | "onExportRun" | "exportStatus" | "exportError">) {
   if (detailStatus === "loading") return <section className="panel saved-runs-panel" aria-labelledby="saved-run-detail-title"><button className="saved-run-back-button" type="button" onClick={onBackToList}>← Saved Runs’a dön</button><div className="catalog-empty" role="status">Koşu ayrıntısı okunuyor…</div></section>;
   if (detailStatus === "error" || !detail) return <section className="panel saved-runs-panel" aria-labelledby="saved-run-detail-title"><button className="saved-run-back-button" type="button" onClick={onBackToList}>← Saved Runs’a dön</button><div className="form-error" role="alert">{detailError || "Koşu ayrıntısı gösterilemedi."}</div></section>;
 
@@ -167,12 +170,13 @@ function SavedRunDetailPanel({ detail, detailStatus, detailError, onBackToList }
       <JsonEvidence label="Sonuç ve belirsizlik snapshot’ı" value={detail.result_snapshot} />
       <details className="saved-run-evidence-section"><summary>Bütünlük hash’leri</summary><div className="saved-run-integrity"><div><span>Result SHA-256</span><CopyValue label="Kopyala" value={detail.result_sha256} /></div><div><span>Record SHA-256</span><CopyValue label="Kopyala" value={detail.record_sha256} /></div></div></details>
     </div>
-    <div className="saved-run-detail-boundary" role="note"><strong>Salt okunur kayıt</strong><p>Bu ekranda finansal değerler yeniden hesaplanmaz; koşu düzenlenemez, yeniden çalıştırılamaz, silinemez veya dışa aktarılamaz.</p></div>
+    <div className="saved-run-export-bar"><span>Dışa aktar (salt-okunur kopya):</span><button className="catalog-secondary-button" type="button" disabled={exportStatus === "loading"} onClick={() => onExportRun(detail.run_id, "json")}>JSON indir</button><button className="catalog-secondary-button" type="button" disabled={exportStatus === "loading"} onClick={() => onExportRun(detail.run_id, "csv")}>CSV indir</button>{exportStatus === "loading" && <span role="status">Hazırlanıyor…</span>}{exportStatus === "error" && <span className="form-error" role="alert">{exportError || "Export hazırlanamadı."}</span>}</div>
+    <div className="saved-run-detail-boundary" role="note"><strong>Salt okunur kayıt</strong><p>Bu ekranda finansal değerler yeniden hesaplanmaz; koşu düzenlenemez, yeniden çalıştırılamaz veya silinemez. Export, kaydın birebir kopyasıdır.</p></div>
   </section>;
 }
 
 export function SavedRunsPanel(props: SavedRunsPanelProps) {
   if (props.view === "list") return <SavedRunList {...props} />;
   if (props.view === "compare") return <SavedRunComparePanel compareDetails={props.compareDetails} compareStatus={props.compareStatus} compareError={props.compareError} onBackToList={props.onBackToList} />;
-  return <SavedRunDetailPanel detail={props.detail} detailStatus={props.detailStatus} detailError={props.detailError} onBackToList={props.onBackToList} />;
+  return <SavedRunDetailPanel detail={props.detail} detailStatus={props.detailStatus} detailError={props.detailError} onBackToList={props.onBackToList} onExportRun={props.onExportRun} exportStatus={props.exportStatus} exportError={props.exportError} />;
 }

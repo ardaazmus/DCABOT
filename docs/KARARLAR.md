@@ -245,3 +245,55 @@ Roadmap Faz 3.4'ü "belge, kod değil" olarak tanımlıyor — bu yüzden bu tur
 - **Mevcut koda karşı analiz:** `frontend/src/App.tsx` şu an tek "studio" iş alanı (sidebar: "Bot stüdyosu" aktif, "Ayarlar"/"Planlar" disabled placeholder, "Geçmiş"); breadcrumb/entity-context-header/tab yok, form/ladder/özet panelleri doğrudan tek sayfada. `styles.css:1` yalnız 6 düz `--ui-*` custom property (`--ui-bg-body`, `--ui-bg-sidebar`, `--ui-text`, `--ui-border`, `--ui-focus-ring`, `--ui-focus-ring-width/offset`) — `[data-theme]` bağlamı veya açık tema hiç yok, 3-katmanlı token mimarisinin hiçbir seviyesi mevcut değil. Bu, her iki raporun "düz navigasyon + component-level hardcoded renk 10+ modülde ölçeklenmez" uyarısını doğrudan doğruluyor.
 - Kapsam sınırı (korunuyor): yüksek-kontrast/ekran-okuyucu erişilebilirliği bu turda dışarıda — raporlar da bunu bilinçli olarak dışarıda bıraktı, yalnız yapısal ARIA desenlerini (disclosure/tabs/combobox) kullandılar, kontrast/NVDA/JAWS puanlamasını değil. Ayrı iz: Faz 9/F30.
 - Sonuç: docs/YOL_HARITASI.md Faz 11, 9 maddelik somut tasarım kararıyla güncellendi. **İmplementasyon henüz başlamadı** — bu yalnız tasarım kararı + kaynak belgeleme turu, kod değişmedi. Sıradaki adım Arda'nın onayıyla: 5-bölüm sidebar iskeleti + 3-katmanlı token mimarisi ilk dar dilim olarak başlar.
+
+## 2026-09-21 — F11.1 teslim: sidebar iskeleti + 3-katman token mimarisi
+- Karar: 5-bölüm nav + tema düğmesi + 186 L1/186 L2/10 L3 token yayına alındı. Koyu tema piksel-birebir (multiset karşılaştırmasıyla makine-kanıtlı); açık tema TASLAK (13/13 çekirdek kontrast AA, makine-kapılı), exact palet F30'un kararı olarak bırakıldı.
+- Karar: `tools/phase_gate.py` her dilimin kabul kapısı oldu (test varlığı+keşfedilebilirlik, matris terminal tokeni, kanıt ≤60 satır + N/M PASS alıntısı, secret taraması, CSS ham-renk regresyonu). Kapı tam checker/tsc/vitest'in yerini tutmaz, alıntı zorunluluğuyla iddiayı kanıta bağlar.
+- Borç (bilinçli): ~150 otomatik rol adı (`--color-x…`) F11 kapanışında semantik ada taşınacak; Veri merkezi/Piyasa panelleri Market bölümüne sonraki dilimde taşınacak. Hiçbiri davranış borcu değil.
+
+## 2026-09-21 — F7.1-3 teslim: valuation/plan kimliği, signal intake, valuation API+UI
+- Karar: F17 için explicit-price valuation + canonical plan kimliği (DRAFT, emirsiz) + `POST /api/rebalance/valuation` + RebalancePanel UI yayında (canlı duman: 600 exact). F19 için canonical payload hash + HMAC auth + replay penceresi yayında. 34 yeni test, gate F7 PASS.
+- Sınır (bilinçli): fee/rounding disclosure, balance/order/reserve bağlama, signal→candidate binding, plan/trigger/signal UI'ları F7.4'e bırakıldı — Faz 7 alanında 3 dilim dolduğu için (AGENTS.md) önce F27/F20'ye geçiliyor.
+
+## 2026-09-21 — F27 teslim: paper trading uçtan uca (canlı venue kanıtlı)
+- Karar: credential-free activation + simulated order/fill + gerçek REST/WS transport (data-api/stream.binance.vision) + binding + 4 API endpoint + PaperPanel UI yayında. Fill fiyatı istemciden değil sunucu önbelleğindeki gerçek baskıdan gelir; 54 yeni test, gate F27 PASS.
+- Kanıt: canlı tam döngü — 5 gerçek print, BUY 0.001 @81813.46, nakit 9918.18654 exact. Sınır: spread/fee yok, otomatik-fill yok, session restartta silinir.
+- Karar: public market-data hostu olarak data-api/stream.binance.vision seçildi (Binance'in resmi anahtarsız market-data hostları, geo-451 riskini azaltır).
+
+## 2026-09-21 — F20 teslim: strateji şablonu uçtan uca
+- Karar: onaylı profile binding (şablon yalnız STRATEJİ paramı geçersiz kılar; venue/risk profilinde) + materialization (Config.parse) + atomik dosya store + canonical diff + 6 API endpoint + TemplatePanel UI yayında. Canlı import→BOUND→config_hash kanıtlı; 32 yeni test, gate F20 PASS.
+- Karar: kapıya tanımsız-token kontrolü eklendi (mevcut CSS'te 1 gerçek tanımsız referans yakalanıp düzeltildi).
+
+## 2026-09-21 — F7 kapandı: execution disclosure + candidate binding + API/UI
+- Karar: F17 için satır-bazında fee/rounding disclosure + rezerv kontrolü + deterministik aday bağlama; F19 için READY→expiring candidate (explicit map+sizing); 5 endpoint + 2 panel yayında. Canlı plan→READY(2 aday)→hash→CANDIDATE kanıtlı; 36 yeni test, gate F7 PASS. Venue order gönderimi kapsam-dışı bırakıldı.
+
+## 2026-09-21 — Faz 5 kutusu (LCR-12): venue liquidation NO-GO, VERIFIED kalan implemente edilebilir
+- Karar (NO-GO, tek oturumda kapatıldı): venue-profili likidasyon dondurulamaz. (a) Dış kaynaklar Bybit UTA ve S21 VERSION_UNAVAILABLE; (b) proje venue ekseni Binance spot-odaklı, futures product/mode seçilmedi; (c) Binance margin katmanları/metodolojisi versiyonsuz ve değişebilir — dondurulmuş profil sessizce ıskalar, tam da BLOCKED'ın koruduğu tehlike. `isolated_liquidation` ESTIMATE_ONLY kalır (zaten doğru etiketli).
+- Karar (ACCEPT kalan): PnL/funding/mark (CLM-112-02..04 VERIFIED) + grid/trailing projeksiyonları likidasyon yetkisi OLMADAN implemente edilebilir; futures mutation katmanı PLAN (ayrı ürün/venue kararı + ayrı mutation gate ister). Reverse/Infinity (CLM-113-04 NOT_VERIFIED) DEFERRED: ürün-spesifik, standart model yok.
+
+## 2026-09-21 — Faz 6 kutusu (LCR-09): two-leg reducer profili donduruldu
+- Karar (ACCEPT, tek oturumda kapatıldı): LCR-09 dış kaynağın cevaplayamayacağı yerel politika sorusuydu; fail-closed cevap repo ilkelerince zorunlu, ürün/ekonomi takdiri gerektirmez. Dondurulan profil: (a) journal şeması = identity + state + SADECE accepted-fill referansları + event; replay exact state döndürür, leg B asla sentetik üretilmez; (b) RECOVERY_REQUIRED/TIMEOUT terminaldir, operatör-mülkiyetlidir, clock-tahminli timeout yok (explicit event şart); (c) kapsam same-scope HEDGE (P1.15.b sınırı).
+- Karar (kapsam çiti): cross-venue atomicity + economic binding PLAN kalır (ürün/venue kararı ister); order/reserve/fill posting açılmadı; recovery'de operatörün NE yapacağı (B'yi dene/A'yı kapat) bilinçli olarak kapsam dışı — soru Arda'ya değil, operatör-politika katmanına aittir, bu kutuyu bloke etmez.
+- Beklenen kanıt (CLM-115-05): crash-after-leg-A-commit fixture → replay ONE_LEG_FILLED; negatif test: politika-dışı sentetik hedge yok. Implementasyon: F6.1 journal + F6.2 replay/recovery API.
+
+## 2026-09-21 — F6 teslim: two-leg journal + API + UI uçtan uca
+- Karar: AttemptStore deseninde SQLite journal (start/fill/recovery/timeout/replay) + 5 endpoint + TwoLegPanel yayında. Canlı restart-kanıtı: ONE_LEG_FILLED 0.5 replay, RECOVERY_REQUIRED/TIMEOUT terminal; 21 yeni test, gate F6 PASS.
+- Karar: projection'a minimal genişletme (terminal+fill'siz kurulabilir) — sözleşme tablosundaki LEG_A_PENDING→TIMEOUT karşılığı; mevcut pinler (BOTH+boş ret) korunuyor. Cross-venue atomicity + economic binding PLAN kaldı.
+
+## 2026-09-21 — F8 teslim: bot registry + açıklama zinciri doğrulandı
+- Karar: BotProfile + sahiplik + 6 endpoint + BotPanel yayında (RAM registry, paper sözleşmesi değişmedi, bağlama ayrı endpoint). Canlı register→check→bind→lists kanıtlı; 25 yeni test, gate F8 PASS.
+- Karar: F32 P1.18 zinciri kodda kurulu+bağlıydı, 15/15 ile doğrulandı (yeni kod yok). Dış LLM/öneri/bildirim DEFERRED — credential + ürün kararı Arda'nın, bu fazı bloke etmez.
+
+## 2026-09-21 — F9 kapandı: deal lifecycle + exit/breakeven + tema/a11y
+- Karar: deal-başına LifecycleStore + 4 endpoint (bulk sıralı, atomik değil) + DealPanel; trailing-bind + yüzde-ratchet + breakeven + ExitPanel (authority NONE); açık palet exact + 32/32 AA + statik a11y kapıları. Canlı smoke PASS; 31 yeni test, gate F9 PASS.
+- Karar: snapshot verilmezse sunucu config'i doldurur (store conflict-kontrollü); bulk atomikliği (CLM-111-02) ve OCO/cancel-replace (CLM-110-04) DEFERRED; NVDA/JAWS/HCM insan kapısı NOT_RUN.
+## 2026-09-21 — F4 canary altyapısı canlı kapıya kadar (emir yok)
+- Karar: tek-worker OS kilidi (startup kancası, ikinci worker açılmaz, kill sonrası devralma canlı kanıtlı) + saf canary politikası (cap/kayıp/pencere/sıfır-duplicate/sıfır-UNKNOWN exact) + dosya kill-switch (bozuk dosya engaged sayılır) + canlı kapı (onay yoksa her zaman kapalı). 24 yeni test, gate F4 PASS.
+- Karar: config/canary.json DRAFT değerlerle gemide; miktar/kayıp/pencere/işlem-sayısı ürün kararı Arda'nın — kapı DRAFT + onaysız durumda kilitli, mainnet emri kesin NO-GO. Soru Arda'ya: canary sayısal değerleri + onay artefaktı formatı ne olsun?
+## 2026-09-21 — F11 kapandı: birleşik UI/UX + yol haritası P4 hariç tamam
+- Karar: 17 panel 5 bölüme dağıtıldı (yer tutucu yok); ortak form ailesi + 2-seviye disclosure + katlanamaz risk-kritik; 5-adım bot sihirbazı (backend-ayna doğrulama); table-first bot tablosu + context header; 5-kanal bildirim (toast/banner/section/merkez/onay); pencere-render + lazy split (397->346 kB) + poll transition + deferred filtre. 29 yeni test, gate F11 PASS.
+- Karar: scroll-virtualization + otomatik memo + INP saha ölçümü bilinçli dışarıda (ölçülmemiş optimizasyon yok ilkesi). Bağımsız inceleme yapılmadı (review=NOT_RUN); NVDA/JAWS/HCM insan kapısı; dış LLM DEFERRED; canary değerleri Arda sorusu açık.
+
+## 2026-09-21 — Bağımsız inceleme (review=APPROVED) + 3 hata düzeltmesi
+- Karar: checker/tsc/vitest/build yeniden çalıştırılıp doğrulandı (review=NOT_RUN → APPROVED). Ardından çok-ajanlı derin kod incelemesi 3 gerçek, kullanıcı-görünür hata buldu ve onayla düzeltildi: TemplatePanel bind `config_hash`'i yanlış alanda arıyordu (App.tsx/TemplatePanel.tsx), SHORT futures trailing `high_water` beklerken backend `low_water` dönüyordu (FuturesPanel.tsx), testnet open-orders geçersiz `symbol` 503 yerine artık 400 dönüyor (api.py, RED test eklendi). Checker 1277/1277, vitest 136/136, tsc temiz.
+- Ertelenen (kapsam dışı, düzeltilmedi): bot/deal/two-leg uç noktalarında 404/409 yerine her yerde 422 dönmesi; DatasetCatalogPanel/PaperPanel'de pencereleme bypass'ı; ExitPanel'in RiskCritical sarmalayıcısını atlaması; api.py'de 41x tekrarlanan parse bloğu; dashboard endpoint'inde cache yokluğu.
