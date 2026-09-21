@@ -1,15 +1,12 @@
 # Yol haritası
 
-Sıra bağlayıcıdır: P1 yerel demo → P2 Binance testnet → P3 gerçek Binance (sınırlı canary) → P4 diğer borsalar. Bir sonraki faza geçmek için önceki fazın kapanış ölçütü sağlanır. Eski dilim günlükleri: `docs/archive/history/`.
+İki bağımsız eksen var. (1) **Venue ekseni** (bağlayıcı sıra): P1 yerel demo → P2 Binance testnet → P3 gerçek Binance (sınırlı canary) → P4 diğer borsalar. (2) **Özellik ailesi ekseni** (Faz 5-8, 2026-09-21'de dondurmadan çıkarıldı): her aile kendi sözleşme olgunluğuna göre venue eksenine PARALEL ilerler — mainnet'i (P3/P4) beklemez, ama kendi kanıt kapısını (aşağıda) geçmeden implementasyona geçmez. Bir sonraki faza geçmek için önceki fazın kapanış ölçütü sağlanır. Eski dilim günlükleri: `docs/archive/history/`.
 
 ## Şimdi
-- **Faz 3 (P2 testnet) tamamen kapandı — `p2-testnet-complete` etiketlendi.** Sıradaki iş TASK.md'dedir (Faz 4 kapsam kararı Arda'yı bekliyor).
+- **Faz 3 (P2 testnet) tamamen kapandı — `p2-testnet-complete` etiketlendi.** Sıradaki iş TASK.md'dedir (Faz 4 VE Faz 5 kapsam kararları Arda'yı bekliyor).
 
 ## Sonra
-Faz 4 (canary).
-
-## Dondurulmuş (P1'i bekletmez; kod var, arayüze bağlanmadan yeni sözleşme yazılmaz)
-Futures Grid, Reverse/Infinity Grid, two-leg/hedge, rebalancing, signal bot, çoklu bot/pair, LLM açıklayıcı asistan.
+Faz 4 (canary) — venue ekseni. Faz 5 (Futures Grid) — özellik ailesi ekseni. İkisi paralel yürüyebilir, birbirini bloklamaz.
 
 ## Faz 0 — Temizlik (tamam)
 Kural reformu, belge/kanıt arşivi, boyut kapısı. Yeni oturum yalnız AGENTS + STATE + TASK okuyarak doğru işi seçebilmeli.
@@ -42,3 +39,11 @@ Kapanış (tamam, 2026-09-21): 3.1-3.7 tüm dilimler PASS (3.1/3.5/3.6 tam REAL_
 
 ## Faz 4 — P3: gerçek Binance, sınırlı canary (taslak; P2 bitince ayrıntılanır)
 Arda'nın açık onayı olmadan mainnet emri yok. Küçük sabit tutar üst sınırı, kill-switch, günlük kayıp limiti. Canary süresi ve başarı ölçütü (işlem sayısı, sıfır duplicate, çözülmemiş UNKNOWN yok) baştan yazılır. Paketleme ve tek-worker sınırı bu fazda ele alınır. P4 (diğer borsalar) P3 sonrası planlanır.
+
+## Faz 5-8 — Dondurulmuş özellik aileleri açıldı (2026-09-21, Arda: "tüm kapalı olanları aç")
+Sıra: derin kod incelemesine (bağımsız ajan, salt-okunur) dayalı olgunluk — en kanıtlı/en az eksik önce. Her fazın ilk adımı kendi `DEFERRED/NO-GO`/`PLAN` sözleşme boşluğunu kapatan bir araştırma kutusu (AGENTS.md, ≤1 oturum) — kanıtsız implementasyona geçilmez. Tam dosya/satır envanteri ve engel detayı: docs/KARARLAR.md 2026-09-21 "Faz 5-8 açılış".
+
+1. **Faz 5 — Futures Grid + Reverse/Infinity varyantı (F14, F12/F13):** en olgun — `futures_grid_*.py`(10 dosya/1257 satır) + `futures_dca_*.py`(17+7 dosya), 57+ test; implementation `DEFERRED/NO-GO`, API/UI yok. Engel: venue liquidation/funding exact oracle yok. Ayrı Futures venue/mutation katmanı gerekir (P2'nin Spot gate'i doğrudan taşınmaz).
+2. **Faz 6 — two-leg/hedge (F18/F34):** identity+fill-projection tamam, persistence/replay/recovery hiç yazılmamış (`P1.15.c DEFERRED/NO-GO`) — net sonraki adım.
+3. **Faz 7 — rebalancing (F17) + signal bot (F19):** küçük/temiz matematik-kimlik katmanları var, asset-conversion/fee/order-binding (rebalancing) ve auth/replay/webhook (signal bot) `PLAN`.
+4. **Faz 8 — çoklu bot/pair (F05) + LLM açıklayıcı asistan dış-LLM kısmı (F32):** sıfır kod/test, yalnız `PLAN` — en ham. (F32'nin rule-based kısmı zaten P1'de bağlı; bu yalnız dış-LLM önerisini kapsar.)
