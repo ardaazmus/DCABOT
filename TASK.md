@@ -1,6 +1,9 @@
-# Aktif iş — Faz 5-10 kaynaklı bağlandı; sıradaki adım Arda'nın seçimi
+# Aktif iş — Faz 5-11 planlandı; Faz 11 Arda'nın dış araştırmasını bekliyor
 
-Faz 3 (P2 testnet) kapalı (`p2-testnet-complete`). Bu oturumda: (1) 20 F-kodu (7 dondurulmuş aile + 13 kalan madde) derinlemesine incelendi, docs/YOL_HARITASI.md'ye Faz 5-10 olarak bağlandı. (2) F22'nin stale `PLAN` kaydı düzeltildi. (3) `docs/P1_KRITIK_ARASTIRMA_FINAL/` dış araştırma paketi (2026-09-09, 48 kaynak) her Faz'a eşlenip kaynak olarak gösterildi — bazı maddelerin dış araştırma kutusu artık KAPALI. Bu yalnız araştırma+belgeleme — hiçbir kod değişmedi. Ayrıntı: STATE.md, docs/KARARLAR.md 2026-09-21 (üç girdi).
+Faz 3 (P2 testnet) kapalı (`p2-testnet-complete`). Bu oturumda: (1) 20 F-kodu (7 dondurulmuş aile + 13 kalan madde) derinlemesine incelendi, docs/YOL_HARITASI.md'ye Faz 5-10 olarak bağlandı. (2) F22'nin stale `PLAN` kaydı düzeltildi. (3) `docs/P1_KRITIK_ARASTIRMA_FINAL/` dış araştırma paketi (2026-09-09, 48 kaynak) her Faz'a eşlenip kaynak olarak gösterildi. (4) **Faz 11 (Birleşik UI/UX, kapanış fazı) eklendi — Arda'ya anonim araştırma promptu verildi, dış rapor bekleniyor.** Bu yalnız araştırma+belgeleme — hiçbir kod değişmedi. Ayrıntı: STATE.md, docs/KARARLAR.md 2026-09-21 (dört girdi).
+
+## Faz 11 — beklemede, Arda'nın aksiyonu gerekiyor
+Anonim UI/UX araştırma promptu Arda'ya sohbette verildi (proje adı/dosya yolu içermez). Arda bunu bir dış araştırma aracına verip raporu getirdiğinde: Claude raporu `docs/UIUX_ARASTIRMA_FINAL/` (veya Arda'nın getirdiği konuma) okuyup mevcut `frontend/src/` yapısını bu kaynağa göre analiz edecek, Faz 5-10'un tüm yüzeylerini kaldıracak bir bilgi mimarisi önerecek ve docs/YOL_HARITASI.md Faz 11'i ayrıntılandıracak. Bu turda erişilebilirlik (yüksek kontrast/ekran okuyucu) kapsam dışı — ayrı iz Faz 9/F30.
 
 ## Sıradaki: en az sürtünmeli üç seçenek (dış araştırma kutusu zaten kapalı)
 1. **Faz 7 (rebalancing + signal bot):** sıfır blocker, doğrudan yerel implementasyon+test ile başlanabilir.

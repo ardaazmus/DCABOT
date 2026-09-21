@@ -45,3 +45,6 @@ Sıra: derin kod incelemesine (bağımsız ajan, salt-okunur) dayalı olgunluk. 
 
 ## Belge düzeltmeleri (2026-09-21)
 F22 (kayıtlı koşu/kıyas/log-chart) matriste stale `PLAN` kaydediliydi; gerçekte Faz 2.3/2.4 ile teslim edilmiş — `docs/OZELLIK_MATRISI.md` düzeltildi, yalnız CSV/JSON export `PLAN` kaldı.
+
+## Faz 11 — Birleşik UI/UX tasarımı (2026-09-21, kapanış fazı; DIŞ ARAŞTIRMA BEKLİYOR)
+Faz 5-10'un tamamı (Futures Grid, Reverse/Infinity, hedge, rebalancing, signal bot, çoklu bot/pair, strateji şablonu, paper trading, audit/export, timeline replay, bildirim merkezi, dashboard/risk bütçesi...) aynı arayüze aktığında mevcut basit/uzman ekran yapısı karışır — bu faz o çarpışmayı önceden çözer. Kapsam: tüm Faz 5-10 yüzeylerini kaldırabilecek, en mantıklı/doğru/kullanıcı dostu/hızlı bir bilgi mimarisi + navigasyon + form/durum gösterim deseni; **bu turda yüksek-kontrast/ekran-okuyucu erişilebilirliği kapsam dışı** (ayrı iz: Faz 9/F30). Yöntem: Arda'dan anonim bir dış araştırma promptu istendi (2026-09-21, bkz. docs/KARARLAR.md) — proje adı/dosya yolu içermeyen, genel "çok-stratejili algoritmik trading dashboard'u" çerçevesiyle sorulan, kaynaklı bir UI/UX araştırması. Rapor dönünce mevcut `frontend/src/` yapısı bu kaynağa göre analiz edilip tasarım burada ayrıntılandırılacak. **Henüz başlamadı — Arda'nın dış kaynağı getirmesini bekliyor.**

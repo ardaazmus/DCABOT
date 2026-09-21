@@ -29,5 +29,8 @@ Bağımsız review `APPROVED_WITH_FINDINGS`: F1/F2 aynı gün düzeltildi, 9 yen
 ## Kararlar (bkz. `docs/KARARLAR.md`)
 Faz 3 kapandı. Faz 5-10 açıldı, dış araştırma paketiyle eşlendi, F22 düzeltildi. İmplementasyon henüz başlamadı.
 
+## Faz 11 — Birleşik UI/UX (bu oturumda eklendi, DIŞ ARAŞTIRMA BEKLİYOR)
+Arda: "Faz 5-10'u kapsayan son bir UI/UX adımını plana ekle, ama önce benden anonim dış kaynak iste." Faz 5-10'un ~15 yeni ailesi mevcut basit/uzman UI'ı karıştırır — bu faz hepsini kaldıracak birleşik bilgi mimarisini kararlaştıracak. Bu turda yüksek-kontrast/ekran-okuyucu erişilebilirliği KAPSAM DIŞI (Arda'nın talebi; zaten ayrı Faz 9/F30'da). Anonim araştırma promptu Arda'ya sohbette verildi (docs/KARARLAR.md'de kayıtlı). **Henüz başlamadı — Arda'nın dış araştırma raporunu getirmesini bekliyor.**
+
 ## Sıradaki adım
-Arda'nın seçimi. En az sürtünmeli başlangıç: Faz 7, Faz 9/F27 veya Faz 10/F20 (dış araştırma kutusu zaten kapalı). Daha zor: Faz 4 (mainnet kapsamı), Faz 5/6/9-F31/F09 (hâlâ yerel araştırma kutusu açık).
+Arda'nın seçimi. En az sürtünmeli başlangıç: Faz 7, Faz 9/F27 veya Faz 10/F20 (dış araştırma kutusu zaten kapalı). Daha zor: Faz 4 (mainnet kapsamı), Faz 5/6/9-F31/F09 (hâlâ yerel araştırma kutusu açık). Faz 11: Arda'nın UI/UX araştırma raporunu getirmesi bekleniyor.
