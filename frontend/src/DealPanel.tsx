@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { Badge } from "./Badge";
+
 export type DealLifecycleView = {
   deal_id: string;
   config_revision_id: string;
@@ -77,6 +79,7 @@ export function DealPanel({
   bulkResults,
   busy,
   error,
+  replayVerified,
   onCreate,
   onAppend,
   onReplay,
@@ -88,6 +91,7 @@ export function DealPanel({
   bulkResults: { deal_id: string; event_id: string; result?: string; error?: string }[];
   busy: boolean;
   error: string;
+  replayVerified: boolean;
   onCreate: (payload: DealCreatePayload) => void;
   onAppend: (payload: DealAppendPayload) => void;
   onReplay: () => void;
@@ -235,7 +239,14 @@ export function DealPanel({
             <tbody>
               <tr>
                 <td>Durum</td>
-                <td>{lifecycle.status}</td>
+                <td>
+                  {lifecycle.status === "UNKNOWN" ? (
+                    <Badge tone="warn" label="UNKNOWN — inceleniyor" />
+                  ) : (
+                    lifecycle.status
+                  )}{" "}
+                  {replayVerified && <Badge tone="ok" label="Replay Doğrulandı ✓" />}
+                </td>
               </tr>
               <tr>
                 <td>Olay sayısı</td>

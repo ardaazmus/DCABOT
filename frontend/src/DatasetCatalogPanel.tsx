@@ -1,5 +1,6 @@
 import { type HTMLAttributes, type KeyboardEvent, type MouseEvent, useEffect, useRef, useState } from "react";
 import { HistoricalChart } from "./HistoricalChart";
+import { CandleChart, type CandleMarker } from "./CandleChart";
 import { ExplanationSection } from "./ExplanationSection";
 import { WindowExpander, useWindowedList } from "./renderWindow";
 import { HistoricalProfileSelector, HistoricalProfileStatus } from "./HistoricalProfileSelector";
@@ -384,6 +385,7 @@ function PreflightCard({
             <div className="historical-result-values"><ResultValue label={`Brüt gerçekleşen sonuç · ${quoteAsset}`} value={economicSummary.realized_gross} note="Backend modelinden gelir; UI yeniden hesaplamaz." /><ResultValue label={`İşlem ücretleri · ${quoteAsset}`} value={economicSummary.fees} note="Backend’in quote-asset fee toplamıdır." /><ResultValue label={`Model net gerçekleşen sonuç · ${quoteAsset}`} value={economicSummary.realized_net_after_all_costs} note="Backend model sonucudur; funding bu tarihsel modelde işlenmez." /><ResultValue label="Pozisyon durumu" value={economicSummary.position_status === "OPEN_AT_END" ? "OPEN_AT_END" : "CLOSED"} note={economicSummary.position_status === "OPEN_AT_END" ? "Dönem sonunda açık kaldı; forced close uygulanmadı. Exchange mark olmadığı için gerçekleşmemiş sonuç ve equity sayısal olarak gösterilmiyor." : "Dönem sonunda pozisyon kapalı."} /></div>
              <dl className="preflight-facts historical-result-meta"><div><dt>İşlenen bar</dt><dd>{simulation.dataset.processed_bar_count.toLocaleString("tr-TR")}</dd></div><div><dt>Dönem</dt><dd>{simulation.dataset.period_start} → {simulation.dataset.period_end}</dd></div><div><dt>Model</dt><dd>{simulation.assumptions.model}</dd></div><div><dt>Config</dt><dd><code>{shortSha256(simulation.config.config_hash)}</code></dd></div><div><dt>Artifact</dt><dd><code>{shortSha256(simulation.dataset.artifact_sha256)}</code></dd></div></dl>
              <ExplanationSection explanations={simulation.explanations} />
+             <CandleChart bars={chartData?.bars ?? []} status={chartStatus} error={chartError} markers={simulation.actions.map((action): CandleMarker => ({ barIndex: action.bar_index, kind: action.role === "EXIT" || action.role === "SELL" ? "sell" : "buy", label: action.role }))} selectedBarIndex={selectedBarIndex} onSelectBarIndex={setSelectedBarIndex} />
              <HistoricalChart data={chartData} status={chartStatus} error={chartError} simulation={simulation} selectedBarIndex={selectedBarIndex} onSelectBarIndex={setSelectedBarIndex} draftPrice={draftPrice} draftVerdict={draftVerdict} onDraftPrice={(price) => void onDraftPrice(price)} />
             <ActionTable actions={simulation.actions} fixedSlice={fixedSliceSimulation} selectedBarIndex={selectedBarIndex} onSelectBarIndex={setSelectedBarIndex} />
           </div>}

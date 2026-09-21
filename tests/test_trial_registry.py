@@ -153,5 +153,19 @@ class TrialRegistryTests(unittest.TestCase):
             )
 
 
+class TrialParameterHashTests(unittest.TestCase):
+    def test_defaults_to_unset(self):
+        record = TrialRecord("trial-1", TrialStatus.SUCCEEDED)
+        self.assertEqual(record.parameter_hash, "")
+
+    def test_accepts_hex64_identity(self):
+        record = TrialRecord("trial-1", TrialStatus.SUCCEEDED, parameter_hash="b" * 64)
+        self.assertEqual(record.parameter_hash, "b" * 64)
+
+    def test_rejects_malformed_hash(self):
+        with self.assertRaisesRegex(TrialRegistryError, "TRIAL_PARAMETER_HASH_INVALID"):
+            TrialRecord("trial-1", TrialStatus.SUCCEEDED, parameter_hash="zzz")
+
+
 if __name__ == "__main__":
     unittest.main()

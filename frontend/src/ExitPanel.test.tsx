@@ -7,6 +7,7 @@ import {
   type PercentStateView,
   type TrailingBindView,
 } from "./ExitPanel";
+import { I18nProvider, LANGUAGE_STORAGE_KEY } from "./i18n";
 
 const binding: TrailingBindView = {
   trigger_price: "105",
@@ -74,7 +75,7 @@ describe("ExitPanel", () => {
 
   it("yüzde akışı ve breakeven handler çağırır", () => {
     const handlers = renderPanel();
-    fireEvent.change(screen.getByLabelText("Oran"), { target: { value: "0.05" } });
+    fireEvent.change(screen.getByLabelText("İz Sürme Oranı %"), { target: { value: "0.05" } });
     fireEvent.click(screen.getByRole("button", { name: /Yüzde trailing kur/ }));
     expect(handlers.onPercentArm).toHaveBeenCalledWith(
       expect.objectContaining({ rate: "0.05" }),
@@ -86,5 +87,25 @@ describe("ExitPanel", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /Breakeven hesapla/ }));
     expect(handlers.onBreakeven).toHaveBeenCalledTimes(1);
+  });
+
+  it("15.2b: TR sektör terminolojisini gösterir (Açık Pozisyon/Aktivasyon)", () => {
+    renderPanel();
+    expect(screen.getByLabelText("Açık Pozisyon")).toBeInTheDocument();
+    expect(screen.getByLabelText("Aktivasyon Fiyatı")).toBeInTheDocument();
+    expect(screen.getByLabelText("İz Sürme Oranı %")).toBeInTheDocument();
+  });
+
+  it("15.2b: EN dilinde sektör terminolojisini gösterir", () => {
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, "en");
+    render(
+      <I18nProvider>
+        <ExitPanel binding={binding} percent={percent} breakeven={breakeven} busy={false} error="" onBind={() => {}} onPercentArm={() => {}} onPercentObserve={() => {}} onBreakeven={() => {}} />
+      </I18nProvider>,
+    );
+    expect(screen.getByLabelText("Activation Price")).toBeInTheDocument();
+    expect(screen.getByLabelText("Trailing Rate %")).toBeInTheDocument();
+    expect(screen.getByLabelText("Open Position Size")).toBeInTheDocument();
+    window.localStorage.clear();
   });
 });

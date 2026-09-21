@@ -185,6 +185,7 @@ export type HistoricalChartBar = {
   high: string;
   low: string;
   close: string;
+  base_volume: string;
 };
 
 export type HistoricalChartData = {

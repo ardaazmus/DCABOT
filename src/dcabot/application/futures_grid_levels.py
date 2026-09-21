@@ -7,7 +7,7 @@ from dcabot.application.spot_grid_levels import (
     build_arithmetic_grid_levels,
     build_geometric_grid_levels,
 )
-from dcabot.domain.numbers import align, exact_text, number, positive
+from dcabot.domain.numbers import align, bounded, exact_text, number, positive, text
 
 
 class FuturesGridLevelError(ValueError):
@@ -192,3 +192,40 @@ def project_futures_grid_levels(
             "FUTURES_GRID_LEVELS_INVALID",
             f"Exact Futures Grid level projection reddedildi: {error.code}.",
         ) from error
+
+
+def project_gross_spacing_percent(projection: FuturesGridLevelProjection) -> dict[str, object]:
+    """Return the gross per-grid spacing percent (fees/funding excluded).
+
+    Arithmetic grids use step/lower*100, geometric grids (ratio-1)*100.
+    The display value is quantized to 12 places; ``exact`` reports
+    whether that text round-trips to the true ratio, so a repeating
+    decimal is disclosed, never silently rounded.
+    """
+
+    if not isinstance(projection, FuturesGridLevelProjection):
+        raise FuturesGridLevelError(
+            "FUTURES_GRID_SPACING_PROJECTION_INVALID",
+            "Grid projeksiyonu güvenli tipte olmalıdır.",
+        )
+    try:
+        if projection.level_mode == "ARITHMETIC":
+            if projection.arithmetic_step is None:
+                raise ValueError("missing arithmetic step")
+            ratio = bounded(positive(projection.arithmetic_step) * 100 / positive(projection.lower_price))
+        elif projection.level_mode == "GEOMETRIC":
+            if projection.ratio_numerator is None or projection.ratio_denominator is None:
+                raise ValueError("missing geometric ratio")
+            ratio = bounded(
+                (positive(projection.ratio_numerator) / positive(projection.ratio_denominator) - 1) * 100
+            )
+        else:
+            raise ValueError("unknown level mode")
+    except ValueError as error:
+        raise FuturesGridLevelError(
+            "FUTURES_GRID_SPACING_INVALID",
+            "Brüt aralık yüzdesi hesaplanamadı.",
+        ) from error
+    display = text(ratio, 12)
+    assert display is not None
+    return {"percent": display, "exact": number(display) == ratio}

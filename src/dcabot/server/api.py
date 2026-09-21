@@ -68,6 +68,27 @@ from dcabot.application.paper_trading_gate import PaperSession, activate_paper_s
 from dcabot.application.futures_grid_levels import (
     FuturesGridProfile,
     project_futures_grid_levels,
+    project_gross_spacing_percent,
+)
+from dcabot.application.futures_grid_local_lifecycle import (
+    FuturesGridLocalEventType,
+    apply_futures_grid_local_event,
+    new_futures_grid_local_event,
+    new_futures_grid_local_lifecycle,
+)
+from dcabot.application.futures_grid_local_policy import declare_futures_grid_local_lifecycle_policy
+from dcabot.application.futures_grid_margin import project_futures_grid_margin_reserve
+from dcabot.application.futures_grid_order_placement import assess_futures_grid_order_placement
+from dcabot.application.futures_grid_position import (
+    FuturesGridFill,
+    FuturesGridFillSide,
+    apply_accepted_futures_grid_fill,
+    new_futures_grid_position,
+)
+from dcabot.application.ladder_summary import LadderLeg, summarize_ladder
+from dcabot.application.futures_grid_variant_gate import (
+    FuturesGridVariant,
+    assess_futures_grid_variant_admission,
 )
 from dcabot.application.linear_futures_math import LinearFuturesPosition, project_funding
 from dcabot.application.trailing_ratchet import (
@@ -138,8 +159,19 @@ from dcabot.application.lifecycle_event_contract import LifecycleEvent, new_life
 from dcabot.persistence.lifecycle_store import LifecycleStore, LifecycleStoreError
 from dcabot.application.signal_candidate_binding import bind_signal_candidate
 from dcabot.application.signal_event_contract import new_signal_event
-from dcabot.application.signal_intake import hash_signal_payload
+from dcabot.application.signal_intake import SignalIntakeError, hash_signal_payload, verify_signal_signature
+from dcabot.application.signal_native_indicators import detect_crosses
 from dcabot.application.signal_readiness import assess_signal_readiness
+from dcabot.application.tradingview_webhook import (
+    TradingViewWebhookError,
+    canonical_alert_payload,
+    parse_internal_alert,
+    parse_tradingview_alert,
+    verify_webhook_token,
+    webhook_dedup_key,
+    webhook_signal_id,
+)
+from dcabot.persistence.webhook_dedup_store import WebhookDedupStore
 from dcabot.application.strategy_template import new_strategy_template
 from dcabot.application.template_materialization import (
     TemplateFileStore,
@@ -171,6 +203,9 @@ from dcabot.data_adapters.binance_testnet_account import (
     fetch_binance_testnet_open_orders,
 )
 from dcabot.application.signed_request import SignedRequestError
+from dcabot.application.sweep_optimize import SweepOptimizeError, optimize_parameters
+from dcabot.application.sweep_orchestrator import SweepError
+from dcabot.application.trial_sampler import TrialSamplerError
 from dcabot.application.windows_credential_provider import WindowsCredentialManagerProvider
 from dcabot.data_adapters.download_jobs import (
     DownloadJobConflict,
@@ -231,7 +266,17 @@ SMALL_JSON_BODY_LIMITS = {
     "/api/signals/hash": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/signals/assess": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/signals/candidates": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/signals/intake": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/signals/indicators/cross": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/sweeps/optimize": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/signals/webhook/tradingview": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/signals/webhook/{signal_id}/bind": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/futures/grid/levels": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/futures/grid/placement": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/futures/grid/position": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/futures/ladder/summary": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/futures/grid/margin": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/futures/grid/lifecycle": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/futures/position/pnl": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/futures/trailing/arm": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/futures/trailing/observe": SMALL_JSON_BODY_LIMIT_BYTES,
@@ -492,6 +537,7 @@ class HistoricalChartBarResponse(BaseModel):
     high: str
     low: str
     close: str
+    base_volume: str
 
 
 class HistoricalChartDataResponse(BaseModel):
@@ -1362,6 +1408,7 @@ DEAL_LOCK = Lock()
 _DEAL_EVENTS = frozenset({"START", "PAUSE", "RESUME", "COMPLETE", "ABORT", "FAIL"})
 _TWO_LEG_SESSION_RE = re.compile(r"[A-Za-z0-9_.:-]{1,100}\Z", re.ASCII)
 _TWO_LEG_JOURNAL: TwoLegJournal | None = None
+_WEBHOOK_STORE: WebhookDedupStore | None = None
 
 
 def _get_two_leg_journal() -> TwoLegJournal:
@@ -1369,6 +1416,51 @@ def _get_two_leg_journal() -> TwoLegJournal:
     if _TWO_LEG_JOURNAL is None:
         _TWO_LEG_JOURNAL = TwoLegJournal(ROOT / "data" / "two_leg_journal.db")
     return _TWO_LEG_JOURNAL
+
+
+def _get_webhook_store() -> WebhookDedupStore:
+    global _WEBHOOK_STORE
+    if _WEBHOOK_STORE is None:
+        _WEBHOOK_STORE = WebhookDedupStore(ROOT / "data" / "webhook_intakes.db")
+    return _WEBHOOK_STORE
+
+
+def _webhook_expected_token() -> str | None:
+    raw = os.getenv("DCABOT_TRADINGVIEW_WEBHOOK_TOKEN")
+    return raw if raw and raw.strip() else None
+
+
+def _webhook_status() -> dict[str, object]:
+    """Report token configuration without ever exposing the token."""
+
+    return {"configured": _webhook_expected_token() is not None}
+
+
+def _relay_keys() -> dict[str, str]:
+    """Read relay key-id map from env (fail-closed to empty on any error)."""
+
+    raw = os.getenv("DCABOT_SIGNAL_RELAY_KEYS")
+    if not raw or not raw.strip():
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        return {}
+    if not isinstance(parsed, dict):
+        return {}
+    keys: dict[str, str] = {}
+    for key_id, key_hex in parsed.items():
+        if isinstance(key_id, str) and isinstance(key_hex, str):
+            keys[key_id] = key_hex
+    return keys
+
+
+def _webhook_list(store: WebhookDedupStore, limit: int) -> dict[str, object]:
+    """List stored intakes newest-first (bounded, secret-free rows)."""
+
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError("WEBHOOK_LIST_LIMIT_INVALID: Liste limiti 1-100 olmalıdır.")
+    return {"intakes": store.list_intakes(limit=limit)}
 
 
 def _validate_paper_activation_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
@@ -1722,6 +1814,11 @@ REBALANCE_DISCLOSE_FIELDS = {"plan", "projection", "prices", "fee_rate", "qty_st
 SIGNAL_HASH_FIELDS = {"payload"}
 SIGNAL_ASSESS_FIELDS = {"signal", "closed_bar_time_us", "warmup_bars_observed", "required_warmup_bars", "max_staleness_us"}
 SIGNAL_CANDIDATE_FIELDS = SIGNAL_ASSESS_FIELDS | {"action", "symbol", "action_map", "qty", "ttl_us"}
+SIGNAL_INDICATOR_CROSS_FIELDS = {"closes", "fast_window", "slow_window"}
+SWEEP_OPTIMIZE_FIELDS = {"dataset_id", "profile_id", "space", "max_trials"}
+WEBHOOK_ALERT_FIELDS = {"secret", "symbol", "action", "event_time_us", "price", "strategy_order_id"}
+INTERNAL_INTAKE_FIELDS = {"symbol", "action", "event_time_us", "price", "strategy_order_id", "key_id", "signature"}
+WEBHOOK_BIND_FIELDS = {"closed_bar_time_us", "warmup_bars_observed", "required_warmup_bars", "max_staleness_us", "action_map", "qty", "ttl_us"}
 
 
 def _allocation_rows(value: object) -> list[list[str]] | None:
@@ -2031,7 +2128,265 @@ def _signal_bind_candidate(validated: dict[str, object], now_us: int) -> dict[st
     }
 
 
+def _validate_tradingview_webhook_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    unknown = set(payload) - WEBHOOK_ALERT_FIELDS
+    if unknown:
+        return None, {"body": "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))}
+    missing = {"secret", "symbol", "action", "event_time_us"} - set(payload)
+    if missing:
+        return None, {"body": "Eksik alanlar: " + ", ".join(sorted(missing))}
+    body = payload
+    fields: dict[str, str] = {}
+    if not isinstance(body.get("secret"), str) or not body["secret"]:
+        fields["secret"] = "secret string olmalıdır."
+    for name in ("symbol", "action"):
+        if not isinstance(body.get(name), str):
+            fields[name] = f"{name} string olmalıdır."
+    event_time = body.get("event_time_us")
+    if not (type(event_time) is int or isinstance(event_time, str)):
+        fields["event_time_us"] = "event_time_us integer veya string olmalıdır."
+    for name in ("price", "strategy_order_id"):
+        if name in body and not isinstance(body.get(name), str):
+            fields[name] = f"{name} string olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _webhook_accept(store: WebhookDedupStore, validated: dict[str, object], received_us: int) -> dict[str, object]:
+    """Durably record one alert receipt (fast-ACK body; no binding here)."""
+
+    alert = parse_tradingview_alert(validated)
+    payload_hash = hash_signal_payload(canonical_alert_payload(alert))
+    signal_id = webhook_signal_id(alert)
+    status = store.record_intake(
+        signal_id=signal_id,
+        dedup_key=webhook_dedup_key(alert),
+        payload_hash=payload_hash,
+        source=alert.source,
+        symbol=alert.symbol,
+        action=alert.action,
+        event_time_us=alert.event_time_us,
+        price=alert.price,
+        received_us=received_us,
+    )
+    return {"status": status, "signal_id": signal_id, "payload_hash": payload_hash}
+
+
+def _validate_internal_intake_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    unknown = set(payload) - INTERNAL_INTAKE_FIELDS
+    if unknown:
+        return None, {"body": "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))}
+    missing = INTERNAL_INTAKE_FIELDS - {"price", "strategy_order_id"} - set(payload)
+    if missing:
+        return None, {"body": "Eksik alanlar: " + ", ".join(sorted(missing))}
+    body = payload
+    fields: dict[str, str] = {}
+    for name in ("symbol", "action", "key_id", "signature"):
+        if not isinstance(body.get(name), str):
+            fields[name] = f"{name} string olmalıdır."
+    event_time = body.get("event_time_us")
+    if not (type(event_time) is int or isinstance(event_time, str)):
+        fields["event_time_us"] = "event_time_us integer veya string olmalıdır."
+    for name in ("price", "strategy_order_id"):
+        if name in body and not isinstance(body.get(name), str):
+            fields[name] = f"{name} string olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _webhook_accept_internal(
+    store: WebhookDedupStore,
+    validated: dict[str, object],
+    keys: dict[str, str],
+    received_us: int,
+) -> dict[str, object]:
+    """Accept one relay alert after HMAC verification (fast-ACK body)."""
+
+    alert = parse_internal_alert(
+        {name: value for name, value in validated.items() if name not in ("key_id", "signature")}
+    )
+    payload_hash = hash_signal_payload(canonical_alert_payload(alert))
+    verify_signal_signature(
+        payload_hash=payload_hash,
+        signature=validated["signature"],  # type: ignore[arg-type]
+        key_id=validated["key_id"],  # type: ignore[arg-type]
+        keys=keys,
+    )
+    signal_id = webhook_signal_id(alert)
+    status = store.record_intake(
+        signal_id=signal_id,
+        dedup_key=webhook_dedup_key(alert),
+        payload_hash=payload_hash,
+        source=alert.source,
+        symbol=alert.symbol,
+        action=alert.action,
+        event_time_us=alert.event_time_us,
+        price=alert.price,
+        received_us=received_us,
+    )
+    return {"status": status, "signal_id": signal_id, "payload_hash": payload_hash}
+
+
+def _validate_indicator_cross_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    kind: object = "sma"
+    if isinstance(payload, dict) and "kind" in payload:
+        kind = payload["kind"]
+        payload = {key: value for key, value in payload.items() if key != "kind"}
+    body, fields = _template_field_errors(payload, SIGNAL_INDICATOR_CROSS_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if kind not in ("sma", "ema"):
+        return None, {"kind": "kind yalnız sma ya da ema olabilir."}
+    body["kind"] = kind
+    closes = body.get("closes")
+    if (
+        not isinstance(closes, list)
+        or not 2 <= len(closes) <= 1000
+        or not all(isinstance(item, str) for item in closes)
+    ):
+        fields["closes"] = "closes 2-1000 exact decimal string olmalıdır."
+    for name in ("fast_window", "slow_window"):
+        if type(body.get(name)) is not int or not 1 <= body[name] <= 500:  # type: ignore[operator]
+            fields[name] = f"{name} 1-500 integer olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _signal_indicator_cross(validated: dict[str, object]) -> dict[str, object]:
+    result = detect_crosses(
+        tuple(validated["closes"]),  # type: ignore[arg-type]
+        fast_window=validated["fast_window"],  # type: ignore[arg-type]
+        slow_window=validated["slow_window"],  # type: ignore[arg-type]
+        kind=validated["kind"],  # type: ignore[arg-type]
+    )
+    return {
+        "fast": [{"index": p.index, "value": p.value, "exact": p.exact} for p in result.fast],
+        "slow": [{"index": p.index, "value": p.value, "exact": p.exact} for p in result.slow],
+        "events": [{"index": e.index, "direction": e.direction} for e in result.events],
+    }
+
+
+def _validate_sweep_optimize_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    sampler: object = "grid"
+    seed: object = 0
+    if isinstance(payload, dict):
+        rest = dict(payload)
+        if "sampler" in rest:
+            sampler = rest.pop("sampler")
+        if "seed" in rest:
+            seed = rest.pop("seed")
+        payload = rest
+    body, fields = _template_field_errors(payload, SWEEP_OPTIMIZE_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    for name in ("dataset_id", "profile_id"):
+        if not isinstance(body.get(name), str) or not str(body[name]).strip():
+            fields[name] = f"{name} boş olmayan string olmalıdır."
+    if type(body.get("max_trials")) is not int or not 1 <= body["max_trials"] <= 32:  # type: ignore[operator]
+        fields["max_trials"] = "max_trials 1-32 integer olmalıdır."
+    if not isinstance(body.get("space"), dict) or not body["space"]:
+        fields["space"] = "space boş olmayan dict olmalıdır."
+    if sampler not in ("grid", "random"):
+        fields["sampler"] = "sampler yalnız grid ya da random olabilir."
+    if type(seed) is not int:
+        fields["seed"] = "seed integer olmalıdır."
+    if fields:
+        return None, fields
+    body["sampler"] = sampler
+    body["seed"] = seed
+    return body, {}
+
+
+def _sweep_optimize_compute(
+    validated: dict[str, object], dataset: HistoricalDatasetInput, raw_config: dict
+) -> dict[str, object]:
+    return optimize_parameters(  # type: ignore[return-value]
+        dataset,
+        raw_config,
+        space=validated["space"],  # type: ignore[arg-type]
+        max_trials=validated["max_trials"],  # type: ignore[arg-type]
+        seed=validated["seed"],  # type: ignore[arg-type]
+        sampler=validated["sampler"],  # type: ignore[arg-type]
+    )
+
+
+def _validate_webhook_bind_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, WEBHOOK_BIND_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    for name in ("closed_bar_time_us", "warmup_bars_observed", "required_warmup_bars", "max_staleness_us", "ttl_us"):
+        if type(body.get(name)) is not int:
+            fields[name] = f"{name} integer olmalıdır."
+    if not isinstance(body.get("qty"), str):
+        fields["qty"] = "qty string olmalıdır."
+    if _pair_rows(body.get("action_map")) is None:
+        fields["action_map"] = "action_map ikili string listesi olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _webhook_bind(store: WebhookDedupStore, signal_id: str, validated: dict[str, object], now_us: int) -> dict[str, object]:
+    """Bind one stored intake to a candidate (explicit deferred step)."""
+
+    intake = store.get_intake(signal_id)
+    if intake is None:
+        raise LookupError(f"Unknown webhook signal: {signal_id}")
+    signal = new_signal_event(
+        signal_id=str(intake["signal_id"]),
+        source=str(intake["source"]),
+        event_time_us=int(intake["event_time_us"]),  # type: ignore[arg-type]
+        schema_version="signal-v1",
+        payload_hash=str(intake["payload_hash"]),
+    )
+    readiness = assess_signal_readiness(
+        signal,
+        closed_bar_time_us=validated["closed_bar_time_us"],  # type: ignore[arg-type]
+        warmup_bars_observed=validated["warmup_bars_observed"],  # type: ignore[arg-type]
+        required_warmup_bars=validated["required_warmup_bars"],  # type: ignore[arg-type]
+        max_staleness_us=validated["max_staleness_us"],  # type: ignore[arg-type]
+    )
+    candidate = bind_signal_candidate(
+        signal=signal,
+        readiness=readiness,
+        action=str(intake["action"]),
+        symbol=str(intake["symbol"]),
+        action_map=tuple((r[0], r[1]) for r in validated["action_map"]),  # type: ignore[union-attr]
+        qty=validated["qty"],  # type: ignore[arg-type]
+        ttl_us=validated["ttl_us"],  # type: ignore[arg-type]
+        binding_time_us=now_us,
+    )
+    try:
+        store.mark_bound(signal_id, candidate.candidate_id)
+    except ValueError:
+        pass  # already bound: deterministic candidate, idempotent re-bind
+    return {
+        "candidate_id": candidate.candidate_id,
+        "status": candidate.status,
+        "signal_id": candidate.signal_id,
+        "symbol": candidate.symbol,
+        "side": candidate.side,
+        "qty": candidate.qty,
+        "expires_us": candidate.expires_us,
+    }
+
+
 FUTURES_GRID_LEVELS_FIELDS = {"direction", "level_mode", "lower_price", "upper_price", "interval_count", "price_tick", "tick_origin"}
+FUTURES_GRID_PLACEMENT_FIELDS = FUTURES_GRID_LEVELS_FIELDS | {"placement_mode", "range_policy"}
+FUTURES_GRID_POSITION_FIELDS = {"direction", "fills"}
+FUTURES_LADDER_SUMMARY_FIELDS = {"direction", "legs"}
+FUTURES_GRID_MARGIN_FIELDS = {"direction", "fills", "reference_price", "contract_size", "available_margin"}
+FUTURES_GRID_LIFECYCLE_FIELDS = {"events"}
 FUTURES_POSITION_PNL_FIELDS = {"side", "quantity", "contract_size", "entry_price", "mark_price", "settlement_asset"}
 
 
@@ -2067,6 +2422,7 @@ def _futures_grid_levels(validated: dict[str, object]) -> dict[str, object]:
         price_tick=validated["price_tick"],  # type: ignore[arg-type]
         tick_origin=validated["tick_origin"],  # type: ignore[arg-type]
     )
+    spacing = project_gross_spacing_percent(result)
     return {
         "direction": result.direction,
         "level_mode": result.level_mode,
@@ -2077,6 +2433,8 @@ def _futures_grid_levels(validated: dict[str, object]) -> dict[str, object]:
         "arithmetic_step": result.arithmetic_step,
         "ratio_numerator": result.ratio_numerator,
         "ratio_denominator": result.ratio_denominator,
+        "gross_spacing_percent": spacing["percent"],
+        "gross_spacing_percent_exact": spacing["exact"],
         "profile": {
             "venue": profile.venue,
             "product_family": profile.product_family,
@@ -2087,6 +2445,294 @@ def _futures_grid_levels(validated: dict[str, object]) -> dict[str, object]:
             "leverage": profile.leverage,
         },
     }
+
+
+def _validate_grid_fill_rows(value: object) -> list[dict[str, object]] | None:
+    if not isinstance(value, list) or not value or len(value) > 64:
+        return None
+    rows: list[dict[str, object]] = []
+    for row in value:
+        if not isinstance(row, dict):
+            return None
+        if set(row) != {"fill_id", "side", "price", "quantity", "effective_time_us"}:
+            return None
+        if not all(isinstance(row[name], str) for name in ("fill_id", "side", "price", "quantity")):
+            return None
+        if type(row["effective_time_us"]) is not int:
+            return None
+        rows.append(row)
+    return rows
+
+
+def _validate_ladder_leg_rows(value: object) -> list[dict[str, object]] | None:
+    if not isinstance(value, list) or not value or len(value) > 128:
+        return None
+    rows: list[dict[str, object]] = []
+    for row in value:
+        if not isinstance(row, dict):
+            return None
+        if set(row) != {"price", "shares"}:
+            return None
+        if not isinstance(row["price"], str) or not isinstance(row["shares"], str):
+            return None
+        rows.append(row)
+    return rows
+
+
+def _validate_grid_lifecycle_rows(value: object) -> list[dict[str, object]] | None:
+    if not isinstance(value, list) or not value or len(value) > 64:
+        return None
+    rows: list[dict[str, object]] = []
+    for row in value:
+        if not isinstance(row, dict):
+            return None
+        if set(row) - {"event_id", "event_type", "event_sequence", "fill_id"}:
+            return None
+        if not all(isinstance(row.get(name), str) for name in ("event_id", "event_type")):
+            return None
+        if type(row.get("event_sequence")) is not int:
+            return None
+        if "fill_id" in row and not isinstance(row["fill_id"], str):
+            return None
+        rows.append(row)
+    return rows
+
+
+def _grid_fills(validated: dict[str, object]):
+    fills = []
+    for row in validated["fills"]:  # type: ignore[union-attr]
+        fills.append(
+            FuturesGridFill(
+                fill_id=row["fill_id"],
+                side=FuturesGridFillSide(row["side"]),
+                price=row["price"],
+                quantity=row["quantity"],
+                effective_time_us=row["effective_time_us"],
+            )
+        )
+    return fills
+
+
+def _grid_position_state(validated: dict[str, object]):
+    state = new_futures_grid_position(
+        profile=FuturesGridProfile(),
+        direction=validated["direction"],  # type: ignore[arg-type]
+        initial_position_policy="FLAT",
+    )
+    for fill in _grid_fills(validated):
+        state = apply_accepted_futures_grid_fill(state, fill)
+    return state
+
+
+def _validate_futures_grid_placement_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, FUTURES_GRID_PLACEMENT_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if body["direction"] not in ("LONG", "SHORT", "NEUTRAL"):
+        fields["direction"] = "direction LONG, SHORT veya NEUTRAL olmalıdır."
+    if body["level_mode"] not in ("ARITHMETIC", "GEOMETRIC"):
+        fields["level_mode"] = "level_mode ARITHMETIC veya GEOMETRIC olmalıdır."
+    for name in ("lower_price", "upper_price", "price_tick", "tick_origin"):
+        if not isinstance(body.get(name), str):
+            fields[name] = f"{name} string olmalıdır."
+    if type(body.get("interval_count")) is not int:
+        fields["interval_count"] = "interval_count integer olmalıdır."
+    if body.get("placement_mode") not in ("STATIC", "DYNAMIC"):
+        fields["placement_mode"] = "placement_mode STATIC veya DYNAMIC olmalıdır."
+    if body.get("range_policy") not in ("FIXED", "RANGE_REVISION"):
+        fields["range_policy"] = "range_policy FIXED veya RANGE_REVISION olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _futures_grid_placement(validated: dict[str, object]) -> dict[str, object]:
+    projection = project_futures_grid_levels(
+        profile=FuturesGridProfile(),
+        direction=validated["direction"],  # type: ignore[arg-type]
+        initial_position_policy="FLAT",
+        level_mode=validated["level_mode"],  # type: ignore[arg-type]
+        lower_price=validated["lower_price"],  # type: ignore[arg-type]
+        upper_price=validated["upper_price"],  # type: ignore[arg-type]
+        interval_count=validated["interval_count"],  # type: ignore[arg-type]
+        price_tick=validated["price_tick"],  # type: ignore[arg-type]
+        tick_origin=validated["tick_origin"],  # type: ignore[arg-type]
+    )
+    assessment = assess_futures_grid_order_placement(
+        projection,
+        placement_mode=validated["placement_mode"],  # type: ignore[arg-type]
+        range_policy=validated["range_policy"],  # type: ignore[arg-type]
+    )
+    return {
+        "placement_mode": assessment.placement_mode,
+        "range_policy": assessment.range_policy,
+        "decision": assessment.decision,
+        "candidate_levels": list(assessment.candidate_levels),
+        "order_authority": assessment.order_authority,
+        "reason": assessment.reason,
+    }
+
+
+def _validate_futures_grid_position_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, FUTURES_GRID_POSITION_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if body["direction"] not in ("LONG", "SHORT"):
+        fields["direction"] = "direction LONG veya SHORT olmalıdır (one-way)."
+    if _validate_grid_fill_rows(body.get("fills")) is None:
+        fields["fills"] = "fills 1-64 doğrulanmış fill satırı olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _futures_grid_position(validated: dict[str, object]) -> dict[str, object]:
+    state = _grid_position_state(validated)
+    return {
+        "direction": state.direction,
+        "position_side": state.position_side,
+        "quantity": state.quantity,
+        "average_entry": state.average_entry,
+        "fill_count": len(state.fills),
+    }
+
+
+def _validate_futures_ladder_summary_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, FUTURES_LADDER_SUMMARY_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if body["direction"] not in ("LONG", "SHORT"):
+        fields["direction"] = "direction LONG veya SHORT olmalıdır (one-way)."
+    if _validate_ladder_leg_rows(body.get("legs")) is None:
+        fields["legs"] = "legs 1-128 doğrulanmış merdiven satırı olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _futures_ladder_summary(validated: dict[str, object]) -> dict[str, object]:
+    legs = [LadderLeg(price=row["price"], shares=row["shares"]) for row in validated["legs"]]  # type: ignore[union-attr]
+    summary = summarize_ladder(direction=validated["direction"], legs=legs)  # type: ignore[arg-type]
+    return {
+        "direction": summary.direction,
+        "leg_count": summary.leg_count,
+        "total_shares": summary.total_shares,
+        "weighted_average_entry": summary.weighted_average_entry,
+        "weighted_average_exact": summary.weighted_average_exact,
+    }
+
+
+def _validate_futures_grid_margin_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    unknown = set(payload) - FUTURES_GRID_MARGIN_FIELDS
+    if unknown:
+        return None, {"body": "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))}
+    missing = FUTURES_GRID_MARGIN_FIELDS - {"available_margin"} - set(payload)
+    if missing:
+        return None, {"body": "Eksik alanlar: " + ", ".join(sorted(missing))}
+    body = payload
+    fields: dict[str, str] = {}
+    if body["direction"] not in ("LONG", "SHORT"):
+        fields["direction"] = "direction LONG veya SHORT olmalıdır (one-way)."
+    if _validate_grid_fill_rows(body.get("fills")) is None:
+        fields["fills"] = "fills 1-64 doğrulanmış fill satırı olmalıdır."
+    for name in ("reference_price", "contract_size"):
+        if not isinstance(body.get(name), str):
+            fields[name] = f"{name} string olmalıdır."
+    if "available_margin" in body and not isinstance(body.get("available_margin"), str):
+        fields["available_margin"] = "available_margin string olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _futures_grid_margin(validated: dict[str, object]) -> dict[str, object]:
+    state = _grid_position_state(validated)
+    result = project_futures_grid_margin_reserve(
+        state,
+        reference_price=validated["reference_price"],  # type: ignore[arg-type]
+        contract_size=validated["contract_size"],  # type: ignore[arg-type]
+        available_margin=validated.get("available_margin"),  # type: ignore[arg-type]
+    )
+    return {
+        "reference_price": result.reference_price,
+        "contract_size": result.contract_size,
+        "leverage": result.leverage,
+        "notional": result.notional,
+        "required_initial_margin": result.required_initial_margin,
+        "reserve_asset": result.reserve_asset,
+        "available_margin": result.available_margin,
+        "capacity_status": result.capacity_status,
+    }
+
+
+def _validate_futures_grid_lifecycle_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, FUTURES_GRID_LIFECYCLE_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    if _validate_grid_lifecycle_rows(body.get("events")) is None:
+        fields["events"] = "events 1-64 doğrulanmış lifecycle satırı olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _futures_grid_lifecycle(validated: dict[str, object]) -> dict[str, object]:
+    state = new_futures_grid_local_lifecycle()
+    for row in validated["events"]:  # type: ignore[union-attr]
+        event = new_futures_grid_local_event(
+            row["event_id"],
+            FuturesGridLocalEventType(row["event_type"]),
+            row["event_sequence"],
+            row.get("fill_id"),
+        )
+        state, _ = apply_futures_grid_local_event(state, event)
+    return {
+        "status": str(state.status),
+        "fill_ids": list(state.fill_ids),
+        "replacement_admitted": state.replacement_admitted,
+        "event_count": len(state.events),
+        "order_authority": "NONE",
+    }
+
+
+def _futures_grid_policy() -> dict[str, object]:
+    policy = declare_futures_grid_local_lifecycle_policy()
+    return {
+        "scope": policy.scope,
+        "late_fill_authority": policy.late_fill_authority,
+        "replacement_admission": policy.replacement_admission,
+        "reserve_release": policy.reserve_release,
+        "duplicate_trade": policy.duplicate_trade,
+        "unknown_or_conflict": policy.unknown_or_conflict,
+        "replay": policy.replay,
+        "order_authority": policy.order_authority,
+        "economic_authority": policy.economic_authority,
+        "persistence_authority": policy.persistence_authority,
+        "venue_authority": policy.venue_authority,
+    }
+
+
+def _futures_grid_variants() -> dict[str, object]:
+    rows = []
+    for variant in (FuturesGridVariant.REVERSE_GRID, FuturesGridVariant.INFINITY_GRID):
+        admission = assess_futures_grid_variant_admission(variant)
+        rows.append(
+            {
+                "variant": str(admission.variant),
+                "availability": admission.availability,
+                "admission": admission.admission,
+                "order_authority": admission.order_authority,
+                "economic_authority": admission.economic_authority,
+                "reason": admission.reason,
+            }
+        )
+    return {"variants": rows}
 
 
 def _validate_futures_position_pnl_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
@@ -3433,6 +4079,7 @@ def get_dataset_chart_data(dataset_id: str, response: Response):
                 high=bar.high,
                 low=bar.low,
                 close=bar.close,
+                base_volume=bar.base_volume,
             )
             for bar in bars
         ],
@@ -4937,6 +5584,181 @@ async def bind_signal(request: Request):
         return JSONResponse(status_code=422, content=_error(str(exc), fields={"candidate": str(exc)}))
 
 
+@app.post("/api/signals/intake")
+async def receive_internal_intake(request: Request):
+    """Accept one relay alert after HMAC verification (internal clients).
+
+    TradingView itself cannot sign; this endpoint is reserved for
+    DCABOT's own relay processes and manual test clients holding a
+    relay key. Keys come from DCABOT_SIGNAL_RELAY_KEYS and are never
+    logged or echoed.
+    """
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_internal_intake_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {
+            "data": _webhook_accept_internal(
+                _get_webhook_store(), validated, _relay_keys(), time.time_ns() // 1000
+            )
+        }
+    except SignalIntakeError:
+        return _problem(
+            401,
+            "SIGNAL_SIGNATURE_MISMATCH",
+            "İmza doğrulanamadı",
+            "İmza doğrulanamadı.",
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"intake": str(exc)}))
+
+
+@app.post("/api/signals/webhook/tradingview")
+async def receive_tradingview_webhook(request: Request):
+    """Accept one TradingView alert with fast-ACK (durable receipt, no binding).
+
+    Auth is a body-embedded static token (TradingView cannot sign); the
+    expected value comes from DCABOT_TRADINGVIEW_WEBHOOK_TOKEN and is
+    never logged or echoed.
+    """
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    expected = _webhook_expected_token()
+    if expected is None:
+        return _problem(
+            409,
+            "WEBHOOK_TOKEN_NOT_CONFIGURED",
+            "Webhook token yapılandırılmadı",
+            "DCABOT_TRADINGVIEW_WEBHOOK_TOKEN ayarlanmadı.",
+        )
+    presented = payload.get("secret") if isinstance(payload, dict) else None
+    try:
+        verify_webhook_token(presented=presented, expected=expected)
+    except TradingViewWebhookError:
+        return _problem(
+            401,
+            "WEBHOOK_TOKEN_MISMATCH",
+            "Webhook kimliği doğrulanamadı",
+            "Webhook kimliği doğrulanamadı.",
+        )
+    validated, fields = _validate_tradingview_webhook_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _webhook_accept(_get_webhook_store(), validated, time.time_ns() // 1000)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"webhook": str(exc)}))
+
+
+@app.get("/api/signals/webhook/status")
+def get_webhook_status():
+    """Report whether the TradingView token is configured (never the token)."""
+
+    return {"data": _webhook_status()}
+
+
+@app.get("/api/signals/webhook/intakes")
+def list_webhook_intakes(limit: int = 50):
+    """List stored webhook intakes newest-first (bounded)."""
+
+    try:
+        return {"data": _webhook_list(_get_webhook_store(), limit)}
+    except (TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"limit": str(exc)}))
+
+
+@app.post("/api/signals/indicators/cross")
+async def detect_indicator_cross(request: Request):
+    """Detect SMA fast/slow crosses over exact closes (offline, read-only)."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_indicator_cross_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _signal_indicator_cross(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"cross": str(exc)}))
+
+
+@app.post("/api/sweeps/optimize")
+async def optimize_sweep(request: Request):
+    """Suggest bounded trials and rank them by exact net (offline, read-only)."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_sweep_optimize_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    assert validated is not None
+    preflight = _dataset_preflight(str(validated["dataset_id"]))
+    if isinstance(preflight, JSONResponse):
+        return preflight
+    loaded, _preflight = preflight
+    try:
+        _profile, raw_config = load_historical_profile_config(ROOT, str(validated["profile_id"]))
+    except HistoricalProfileError as exc:
+        return _problem(404, "PROFILE_NOT_FOUND", "Profil bulunamadı", str(exc))
+    if not HISTORICAL_EXECUTION_LOCK.acquire(blocking=False):
+        return _problem(
+            409,
+            "SWEEP_EXECUTION_BUSY",
+            "Sweep meşgul",
+            "Başka bir tarihsel koşu sürüyor; tekrar deneyin.",
+        )
+    try:
+        result = _sweep_optimize_compute(validated, loaded, raw_config)
+    except (SweepOptimizeError, SweepError, TrialSamplerError) as exc:
+        code = getattr(exc, "code", "SWEEP_OPTIMIZE_INVALID")
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"optimize": code}))
+    finally:
+        HISTORICAL_EXECUTION_LOCK.release()
+    return {
+        "data": {
+            **result,
+            "dataset_id": validated["dataset_id"],
+            "profile_id": validated["profile_id"],
+        }
+    }
+
+
+@app.post("/api/signals/webhook/{signal_id}/bind")
+async def bind_webhook_signal(signal_id: str, request: Request):
+    """Bind one stored webhook intake to a candidate (explicit deferred step)."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_webhook_bind_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _webhook_bind(_get_webhook_store(), signal_id, validated, time.time_ns() // 1000)}
+    except LookupError:
+        return _problem(
+            404,
+            "WEBHOOK_SIGNAL_UNKNOWN",
+            "Webhook sinyali bulunamadı",
+            "Bu signal_id ile kayıtlı webhook intake yok.",
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"candidate": str(exc)}))
+
+
 @app.post("/api/futures/grid/levels")
 async def project_grid_levels(request: Request):
     try:
@@ -4950,6 +5772,105 @@ async def project_grid_levels(request: Request):
         return {"data": _futures_grid_levels(validated)}
     except (KeyError, TypeError, ValueError) as exc:
         return JSONResponse(status_code=422, content=_error(str(exc), fields={"grid": str(exc)}))
+
+
+@app.post("/api/futures/grid/placement")
+async def assess_grid_placement(request: Request):
+    """Project static placement candidates (read-only, no order authority)."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_futures_grid_placement_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _futures_grid_placement(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"placement": str(exc)}))
+
+
+@app.post("/api/futures/grid/position")
+async def project_grid_position(request: Request):
+    """Project one-way position from accepted fills (read-only)."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_futures_grid_position_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _futures_grid_position(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"position": str(exc)}))
+
+
+@app.post("/api/futures/ladder/summary")
+async def summarize_futures_ladder(request: Request):
+    """Summarize hypothetical ladder legs with exact arithmetic (read-only)."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_futures_ladder_summary_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _futures_ladder_summary(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"ladder": str(exc)}))
+
+
+@app.post("/api/futures/grid/margin")
+async def project_grid_margin(request: Request):
+    """Project isolated initial-margin reserve (read-only, no reservation)."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_futures_grid_margin_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _futures_grid_margin(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"margin": str(exc)}))
+
+
+@app.post("/api/futures/grid/lifecycle")
+async def project_grid_lifecycle(request: Request):
+    """Reduce local lifecycle observations (offline simulation only)."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_futures_grid_lifecycle_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _futures_grid_lifecycle(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"lifecycle": str(exc)}))
+
+
+@app.get("/api/futures/grid/policy")
+def get_grid_policy():
+    """Return the static local lifecycle policy declaration."""
+
+    return {"data": _futures_grid_policy()}
+
+
+@app.get("/api/futures/grid/variants")
+def get_grid_variants():
+    """Return variant admissions (Reverse/Infinity stay BLOCKED)."""
+
+    return {"data": _futures_grid_variants()}
 
 
 @app.post("/api/futures/position/pnl")

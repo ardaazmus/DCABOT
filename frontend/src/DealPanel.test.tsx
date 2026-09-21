@@ -35,6 +35,7 @@ function renderPanel(overrides = {}) {
       bulkResults={[{ deal_id: "deal-1", event_id: "b-1", result: "ACCEPTED" }]}
       busy={false}
       error=""
+      replayVerified={false}
       {...handlers}
     />,
   );
@@ -76,5 +77,34 @@ describe("DealPanel", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /^Replay$/ }));
     expect(handlers.onReplay).toHaveBeenCalledTimes(1);
+  });
+
+  it("15.5: replay doğrulama rozeti yalnız replay sonrasında görünür", () => {
+    renderPanel({ replayVerified: true });
+    expect(screen.getByText("Replay Doğrulandı ✓")).toBeInTheDocument();
+  });
+
+  it("15.5: replay yapılmadıysa rozet görünmez", () => {
+    renderPanel({ replayVerified: false });
+    expect(screen.queryByText("Replay Doğrulandı ✓")).not.toBeInTheDocument();
+  });
+
+  it("15.5: UNKNOWN durum sarı rozet olur", () => {
+    render(
+      <DealPanel
+        dealId="deal-1"
+        lifecycle={{ ...lifecycle, status: "UNKNOWN" }}
+        history={history}
+        bulkResults={[]}
+        busy={false}
+        error=""
+        replayVerified={false}
+        onCreate={() => {}}
+        onAppend={() => {}}
+        onReplay={() => {}}
+        onBulk={() => {}}
+      />,
+    );
+    expect(screen.getByText("UNKNOWN — inceleniyor").className).toMatch(/badge-warn/);
   });
 });

@@ -26,8 +26,8 @@ const chartData: HistoricalChartData = {
   period_end: "2025-01-01T02:00:00Z",
   processed_bar_count: 2,
   bars: [
-    { bar_index: 1, open_time_us: 1, close_time_us: 2, open: "100", high: "102", low: "99", close: "101" },
-    { bar_index: 2, open_time_us: 3, close_time_us: 4, open: "101", high: "103", low: "100", close: "102" },
+    { bar_index: 1, open_time_us: 1, close_time_us: 2, open: "100", high: "102", low: "99", close: "101", base_volume: "10" },
+    { bar_index: 2, open_time_us: 3, close_time_us: 4, open: "101", high: "103", low: "100", close: "102", base_volume: "20" },
   ],
 };
 

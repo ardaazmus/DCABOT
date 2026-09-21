@@ -1,26 +1,25 @@
-# Aktif iş — yok (P4 hariç yol haritası kapalı)
+# Aktif iş — yok (Faz 15 + 15.10 kapalı)
 
-F11 kapandı (checker 1276/1276, vitest 131/131, 29 yeni test,
-E2E smoke PASS, gate F11 PASS, kanıt evidence/F11/SONUC.md).
+F15 12 dilimi (muse) + 15.10 (Claude, doğrudan düzeltme: eski paneller
+"Klasik Görünüm"e taşındı, öksüz :8000/:8001 süreçleri temizlendi).
+15.8/15.9 + PBO/Canary DEFERRED (gerekçeler `docs/KARARLAR.md`'de).
+Sıradaki ürün adımı için `docs/YOL_HARITASI.md` "Şimdi" bölümüne bak;
+Arda onayı bekleniyor.
 
 ## Durum
-12/12 kapı PASS: F1 F4 F5 F6 F7 F8 F9 F10 F11 F11.1 F20 F27.
+checker 1432/1432 · tsc temiz · vitest 234/234 · review=NOT_RUN.
 Çalıştırma: `tools/run_api.py` (tek worker) + `frontend` build.
 
 ## Arda'ya açık sorular
-- Canary: tutar üst sınırı, günlük kayıp, pencere, min işlem,
-  onay artefaktı formatı ne olsun? (`config/canary.json` DRAFT)
-- Dış LLM asistanı açılsın mı? (credential + ürün kararı)
+- Faz 16 (motor esnekliği) kapsamı: risk kontrolleri, pair keşfi,
+  average exactness bayrağı hangileri girsin?
+- 15.8 keşif metriği: backtest-türetilmiş mi, hangi metrik?
+- Canary: tutar üst sınırı, günlük kayıp, pencere, onay formatı?
+- Dış LLM asistanı açılsın mı?
 - NVDA/JAWS/HCM insan kapısı ne zaman?
-- Faz 12 ayrıntılı planı yazıldı (docs/ARASTIRMA_UI_TERMINOLOJI_I18N_FAZ12.md);
-  Arda onayı bekleniyor — implementasyona geçilmedi.
-- Faz 13/14 onayı bekleniyor (kapsam+kaynak: docs/ARASTIRMA_ILERI_BACKTEST_SINYAL_KALITE.md).
-  İstatistik katmanı float/Fraction kararı KAPALI (float64, izole `analytics/`
-  modülünde, §4).
-- 70 modül (küme A-F, docs/ARASTIRMA_UI_TERMINOLOJI_I18N_FAZ12.md §1) hiçbir
-  API/CLI ucuna bağlı değil — çoğu bilinçli/belgeli (Faz 5/9 DEFERRED'leriyle
-  örtüşüyor), ama canary_policy.py/live_gate.py'nin "kilitli kapı" ifadesi
-  dokümantasyon-gerçeklik uyumsuzluğu taşıyor, netleştirilmeli.
+- P4 (diğer borsalar) kapsamı ne olsun?
+- Pine-parity için hangi indikatör taşınsın? (13.5 DEFERRED)
+- F12–F15 bağımsız incelemesi (review=NOT_RUN) ne zaman?
 
 ## Değişmez sınırlar (sürüyor)
 - Credential, secret, gerçek emir, mutation ve mainnet: açık onay olmadan asla.

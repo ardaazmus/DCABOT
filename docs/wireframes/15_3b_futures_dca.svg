@@ -1,0 +1,80 @@
+<svg viewBox="0 0 1400 820" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <defs>
+    <style>
+      .bg { fill: #09121c; }
+      .panel { fill: #101e29; stroke: #2a3c4b; stroke-width: 1.5; rx: 10; }
+      .panel-alt { fill: #0b1621; stroke: #2a3c4b; stroke-width: 1.5; rx: 10; }
+      .placeholder { fill: none; stroke: #2a3c4b; stroke-width: 1; stroke-dasharray: 6 4; rx: 6; }
+      .row { fill: #14212b; stroke: #2a3c4b; stroke-width: 1; }
+      .chip { fill: #14212b; stroke: #2a3c4b; stroke-width: 1; }
+      .segment-on { fill: #1373df; }
+      .h1 { fill: #e8eef5; font-size: 20px; font-weight: bold; }
+      .h2 { fill: #e8eef5; font-size: 14px; font-weight: bold; }
+      .label { fill: #9fb3c8; font-size: 12px; }
+      .num { fill: #2ecc9a; font-size: 13px; font-weight: bold; }
+      .ref { fill: #2ecc9a; font-size: 11px; font-style: italic; }
+      .badge { fill: #10372d; stroke: #2ecc9a; stroke-width: 1; }
+      .badge-text { fill: #2ecc9a; font-size: 10px; font-weight: bold; }
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="820"/>
+
+  <text class="h1" x="24" y="34">Futures DCA Bot — açılış/kapanış tetikleyicileri Pionex yerleşimiyle birebir</text>
+  <text class="ref" x="24" y="54">Ref: 02_pionex_futures_dca.webp (sağ panel, tam bu sıra ve gruplama)</text>
+
+  <!-- LEFT: chart (kept, smaller here since panel is form-dominant like Pionex) -->
+  <rect class="panel-alt" x="24" y="70" width="820" height="720"/>
+  <text class="h2" x="44" y="98">Grafik (CandleChart, sol/geniş — Pionex'te de sol %65)</text>
+  <text class="ref" x="44" y="116">Ref: 02 sol taraf — chart + orderbook alanı; DCABOT'ta orderbook yok, chart tek başına genişler</text>
+
+  <!-- RIGHT: form panel matching Pionex order exactly -->
+  <rect class="panel" x="868" y="70" width="508" height="720"/>
+
+  <text class="h2" x="888" y="98">Parite Seç</text>
+  <rect class="placeholder" x="888" y="106" width="468" height="32"/>
+  <text class="ref" x="888" y="154">Ref: 02 "Choose a trading pair"</text>
+
+  <rect class="segment-on" x="888" y="164" width="228" height="30" rx="15"/><text x="1002" y="184" text-anchor="middle" fill="white" font-size="12">Uzun</text>
+  <rect class="row" x="1128" y="164" width="228" height="30" rx="15"/><text x="1242" y="184" text-anchor="middle" class="label">Kısa</text>
+  <text class="ref" x="888" y="210">Ref: 02 "Long/Short" toggle</text>
+
+  <text class="h2" x="888" y="238">1 · Güvenlik Emri Ladder'ı (Add Position — düşen fiyat)</text>
+  <rect class="row" x="888" y="248" width="468" height="26"/>
+  <text class="label" x="896" y="265">#</text><text class="label" x="960" y="265">Fiyat düşüşü %</text><text class="label" x="1180" y="265">Pay</text>
+  <rect class="placeholder" x="888" y="278" width="468" height="30"/>
+  <text class="label" x="896" y="298">01</text><text class="label" x="960" y="298">0%</text><text class="label" x="1180" y="298">1</text>
+  <rect class="placeholder" x="888" y="312" width="468" height="30"/>
+  <text class="label" x="896" y="332">02</text><text class="label" x="960" y="332">1%</text><text class="label" x="1180" y="332">2</text>
+  <text class="label" x="1310" y="298">+ Ekle</text><text class="label" x="1310" y="332">Sil</text>
+  <text class="ref" x="888" y="358">Ref: 02 "1. Add Position Price (falling)" tablosu — DCABOT'un preview.levels'ı bu şekle sokulur</text>
+
+  <text class="label" x="888" y="382">En Düşük Ortalama Seviyesi</text><text class="num" x="1356" y="382" text-anchor="end">-1% (2.695,47 USDT)</text>
+  <text class="label" x="888" y="402">Toplam Pay</text><text class="num" x="1356" y="402" text-anchor="end">3</text>
+  <text class="label" x="888" y="422">Tahmini Tasfiye Fiyatı</text><text class="num" x="1356" y="422" text-anchor="end">— USDT</text>
+  <text class="ref" x="888" y="442">Ref: 02 özet 3 satırı — Küme B'nin margin/liquidation projeksiyonu buraya bağlanır (Faz 12.3)</text>
+
+  <text class="h2" x="888" y="470">2 · Kâr Al (yükselen fiyat)</text>
+  <rect class="placeholder" x="888" y="480" width="468" height="30"/>
+  <text class="label" x="896" y="500">%0.2 – %999 aralığı</text>
+  <rect class="chip" x="888" y="518" width="86" height="26" rx="13"/><text x="931" y="535" text-anchor="middle" class="label" font-size="11">0.5%</text>
+  <rect class="chip" x="982" y="518" width="86" height="26" rx="13"/><text x="1025" y="535" text-anchor="middle" class="label" font-size="11">1%</text>
+  <rect class="chip" x="1076" y="518" width="86" height="26" rx="13"/><text x="1119" y="535" text-anchor="middle" class="label" font-size="11">2%</text>
+  <rect class="chip" x="1170" y="518" width="86" height="26" rx="13"/><text x="1213" y="535" text-anchor="middle" class="label" font-size="11">5%</text>
+  <rect class="chip" x="1264" y="518" width="92" height="26" rx="13"/><text x="1310" y="535" text-anchor="middle" class="label" font-size="11">10%</text>
+  <text class="ref" x="888" y="562">Ref: 02 "2. Take Profit Price (rising)" + hızlı-% çipleri — DCABOT'un ExitPanel Kâr Al alanı BURAYA taşınır (15.3, i18n 15.2b)</text>
+
+  <text class="h2" x="888" y="590">4 · Yatırım</text>
+  <rect class="placeholder" x="888" y="600" width="380" height="32"/>
+  <text class="label" x="896" y="620">Yatırım (USDT)</text>
+  <rect class="row" x="1276" y="600" width="80" height="32" rx="6"/><text x="1316" y="620" text-anchor="middle" class="label">3x</text>
+  <text class="ref" x="888" y="650">Ref: 02 "4. Investment" + kaldıraç göstergesi + "Auto reserve" toggle</text>
+  <text class="label" x="888" y="672">Kullanılabilir bakiye</text><text class="num" x="1356" y="672" text-anchor="end">0 USDT</text>
+
+  <rect class="badge" x="888" y="688" width="200" height="24" rx="12"/>
+  <text class="badge-text" x="988" y="704" text-anchor="middle">Replay Doğrulandı ✓</text>
+  <text class="ref" x="1100" y="704">Ref: §5 DCABOT-native rozet</text>
+
+  <rect class="segment-on" x="888" y="726" width="468" height="46" rx="8"/>
+  <text x="1122" y="755" text-anchor="middle" fill="white" font-weight="bold">Devam Et</text>
+  <text class="ref" x="888" y="790">Ref: 02 "Continue" birincil buton — tek buton, Backtest bu formda 15.3'teki gibi ayrı da olabilir</text>
+</svg>

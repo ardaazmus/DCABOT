@@ -1,0 +1,72 @@
+<svg viewBox="0 0 1400 640" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <defs>
+    <style>
+      .bg { fill: #09121c; }
+      .panel { fill: #101e29; stroke: #2a3c4b; stroke-width: 1.5; rx: 10; }
+      .placeholder { fill: none; stroke: #2a3c4b; stroke-width: 1; stroke-dasharray: 6 4; rx: 6; }
+      .h1 { fill: #e8eef5; font-size: 20px; font-weight: bold; }
+      .h2 { fill: #e8eef5; font-size: 14px; font-weight: bold; }
+      .label { fill: #9fb3c8; font-size: 12px; }
+      .ref { fill: #2ecc9a; font-size: 11px; font-style: italic; }
+      .note { fill: #f0a63a; font-size: 11px; }
+      .status-pending { fill: #14212b; stroke: #f0a63a; stroke-width: 1.5; }
+      .status-pending-text { fill: #f0a63a; font-size: 12px; font-weight: bold; }
+      .status-ok { fill: #10372d; stroke: #2ecc9a; stroke-width: 1.5; }
+      .status-ok-text { fill: #2ecc9a; font-size: 12px; font-weight: bold; }
+      .status-bad { fill: #3a1414; stroke: #e05f5f; stroke-width: 1.5; }
+      .status-bad-text { fill: #e05f5f; font-size: 12px; font-weight: bold; }
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="640"/>
+
+  <text class="h1" x="24" y="34">Hedge Bot (TwoLegPanel) — referanslarda birebir karşılığı yok, DCABOT-native ama aynı görsel dil</text>
+  <text class="ref" x="24" y="54">Ref: hiçbiri (3Commas/Pionex/Bitsgap'te iki-bacaklı hedge konsepti yok) — kart/rozet/pill dili §2/15.2'den taşındı</text>
+
+  <!-- Status strip -->
+  <rect class="panel" x="24" y="70" width="1352" height="70"/>
+  <text class="label" x="44" y="94">Hedge Durumu</text>
+  <rect class="status-pending" x="44" y="102" width="180" height="28" rx="14"/>
+  <text class="status-pending-text" x="134" y="121" text-anchor="middle">PENDING</text>
+  <text class="label" x="260" y="121">→</text>
+  <rect class="status-ok" x="290" y="102" width="220" height="28" rx="14"/>
+  <text class="status-ok-text" x="400" y="121" text-anchor="middle">BOTH_FILLED</text>
+  <text class="label" x="540" y="121">→ terminal:</text>
+  <rect class="status-bad" x="640" y="102" width="240" height="28" rx="14"/>
+  <text class="status-bad-text" x="760" y="121" text-anchor="middle">RECOVERY_REQUIRED</text>
+  <rect class="status-bad" x="900" y="102" width="180" height="28" rx="14"/>
+  <text class="status-bad-text" x="990" y="121" text-anchor="middle">TIMEOUT</text>
+  <text class="ref" x="1120" y="121">Ref: §4 — durum akışı zaten var (TwoLegJournal), yalnız görsel rozet YENİ</text>
+
+  <!-- Leg A card -->
+  <rect class="panel" x="24" y="158" width="656" height="440"/>
+  <text class="h2" x="44" y="186">Hedge Bacağı A</text>
+  <text class="label" x="44" y="210">Yön: Uzun/Kısa</text>
+  <rect class="placeholder" x="44" y="218" width="200" height="28"/>
+  <text class="label" x="44" y="266">Miktar</text>
+  <rect class="placeholder" x="44" y="274" width="200" height="28"/>
+  <text class="label" x="44" y="322">Dolum Durumu</text>
+  <rect class="status-ok" x="44" y="330" width="140" height="26" rx="13"/><text class="status-ok-text" x="114" y="347" text-anchor="middle">ACCEPTED</text>
+  <text class="label" x="44" y="378">Fill kimliği (idempotency anahtarı)</text>
+  <rect class="placeholder" x="44" y="386" width="600" height="28"/>
+  <text class="ref" x="44" y="432">Ref: §3 terminoloji tablosu — "Bacak"→"Hedge Bacağı A", "Fill durumu"→"Dolum Durumu"</text>
+  <rect class="status-ok" x="44" y="560" width="160" height="24" rx="12"/><text class="status-ok-text" x="124" y="576" text-anchor="middle">Exact ✓</text>
+
+  <!-- Leg B card -->
+  <rect class="panel" x="712" y="158" width="656" height="440"/>
+  <text class="h2" x="732" y="186">Hedge Bacağı B</text>
+  <text class="label" x="732" y="210">Hedge Yönü: Uzun/Kısa</text>
+  <rect class="placeholder" x="732" y="218" width="200" height="28"/>
+  <text class="label" x="732" y="266">Miktar</text>
+  <rect class="placeholder" x="732" y="274" width="200" height="28"/>
+  <text class="label" x="732" y="322">Dolum Durumu</text>
+  <rect class="status-pending" x="732" y="330" width="140" height="26" rx="13"/><text class="status-pending-text" x="802" y="347" text-anchor="middle">PENDING</text>
+  <text class="label" x="732" y="378">Fill kimliği (idempotency anahtarı)</text>
+  <rect class="placeholder" x="732" y="386" width="600" height="28"/>
+  <text class="ref" x="732" y="432">Ref: §3 — "Hedge yönü"→"Hedge Yönü", "Session kimliği"→işlem kimliği görünür etiketli</text>
+
+  <!-- bottom actions -->
+  <rect class="panel" x="24" y="608" width="1344" height="0"/>
+  <text class="label" x="44" y="616" font-size="12">[Replay] [Kurtarma İşaretle] [Zaman Aşımı İşaretle] — mevcut TwoLegPanel aksiyonları, yalnız etiketler ve kart yerleşimi değişiyor</text>
+
+  <text class="note" x="24" y="636">NOT: Bu ekranın motor/API sözleşmesi değişmiyor (two_leg_journal.py aynen kalır) — yalnız sunum: düz form → iki kart + durum şeridi.</text>
+</svg>

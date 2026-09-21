@@ -1,0 +1,147 @@
+<svg viewBox="0 0 1400 900" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <defs>
+    <style>
+      .bg { fill: #09121c; }
+      .panel { fill: #101e29; stroke: #2a3c4b; stroke-width: 1.5; rx: 10; }
+      .panel-alt { fill: #0b1621; stroke: #2a3c4b; stroke-width: 1.5; rx: 10; }
+      .placeholder { fill: none; stroke: #2a3c4b; stroke-width: 1; stroke-dasharray: 6 4; rx: 6; }
+      .segment-off { fill: #14212b; stroke: #2a3c4b; stroke-width: 1; }
+      .segment-on { fill: #1373df; }
+      .chip { fill: #14212b; stroke: #2a3c4b; stroke-width: 1; }
+      .title { fill: #e8eef5; font-size: 22px; font-weight: bold; }
+      .h2 { fill: #e8eef5; font-size: 15px; font-weight: bold; }
+      .label { fill: #9fb3c8; font-size: 12px; }
+      .ref { fill: #2ecc9a; font-size: 11px; font-style: italic; }
+      .note { fill: #f0a63a; font-size: 11px; }
+      .badge { fill: #10372d; stroke: #2ecc9a; stroke-width: 1; }
+      .badge-text { fill: #2ecc9a; font-size: 10px; font-weight: bold; }
+      .candle-up { fill: #2ecc9a; }
+      .candle-down { fill: #e05f5f; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1400" height="900"/>
+
+  <!-- HEADER -->
+  <text class="title" x="24" y="36">Bot Oluştur — DCA / Grid / Futures DCA / Signal (tip seçici üstte)</text>
+  <text class="ref" x="24" y="56">Ref: 01_3commas_dca_bot.png üst başlık şeridi (Back + "Create X Bot" + Tutorial)</text>
+
+  <!-- TYPE SELECTOR (segmented, top) -->
+  <rect class="segment-on" x="24" y="70" width="140" height="34" rx="17"/>
+  <text x="94" y="92" text-anchor="middle" fill="white" font-size="13">DCA Bot</text>
+  <rect class="segment-off" x="170" y="70" width="140" height="34" rx="17"/>
+  <text x="240" y="92" text-anchor="middle" class="label" font-size="13">Grid Bot</text>
+  <rect class="segment-off" x="316" y="70" width="160" height="34" rx="17"/>
+  <text x="396" y="92" text-anchor="middle" class="label" font-size="13">Futures DCA</text>
+  <rect class="segment-off" x="482" y="70" width="140" height="34" rx="17"/>
+  <text x="552" y="92" text-anchor="middle" class="label" font-size="13">Signal Bot</text>
+  <text class="ref" x="24" y="122">YENİ — referanslarda ayrı sayfa/nav öğesi olan bot tipleri burada tek segment; 15.3 kapsamı</text>
+
+  <!-- LEFT COLUMN: FORM (≈35%) -->
+  <rect class="panel" x="24" y="140" width="470" height="720"/>
+  <text class="h2" x="44" y="170">1 · Kimlik ve Parite</text>
+  <rect class="placeholder" x="44" y="182" width="200" height="30"/>
+  <text class="label" x="50" y="201">Bot adı</text>
+  <rect class="placeholder" x="254" y="182" width="200" height="30"/>
+  <text class="label" x="260" y="201">Pair (+ Ekle)</text>
+  <text class="ref" x="44" y="228">Ref: 01 "Pairs / + Add pair", "Use preset"</text>
+
+  <text class="h2" x="44" y="256">Yön</text>
+  <rect class="segment-on" x="44" y="266" width="130" height="30" rx="15"/>
+  <text x="109" y="286" text-anchor="middle" fill="white" font-size="12">Uzun</text>
+  <rect class="segment-off" x="180" y="266" width="130" height="30" rx="15"/>
+  <text x="245" y="286" text-anchor="middle" class="label">Kısa</text>
+  <rect class="segment-off" x="316" y="266" width="130" height="30" rx="15"/>
+  <text x="381" y="286" text-anchor="middle" class="label">İkisi de</text>
+  <text class="ref" x="44" y="312">Ref: 01 "Direction: Long/Short/Both" segmented pill</text>
+
+  <text class="h2" x="44" y="340">Bot Başlatma Koşulu</text>
+  <rect class="segment-on" x="44" y="350" width="140" height="30" rx="15"/>
+  <text x="114" y="370" text-anchor="middle" fill="white" font-size="12">Hemen</text>
+  <rect class="segment-off" x="188" y="350" width="140" height="30" rx="15"/>
+  <text x="258" y="370" text-anchor="middle" class="label">İndikatör</text>
+  <rect class="segment-off" x="332" y="350" width="140" height="30" rx="15"/>
+  <text x="402" y="370" text-anchor="middle" class="label">Webhook</text>
+  <text class="ref" x="44" y="396">Ref: 01/03 "Bot start condition" 3'lü segment — YENİ dilim 15.6</text>
+  <rect class="placeholder" x="44" y="404" width="422" height="70"/>
+  <text class="label" x="50" y="420">(İndikatör seçilirse: Indicator/Period/Value/Condition/Timeframe açılır —</text>
+  <text class="label" x="50" y="436">Faz 13.5 native SMA/EMA/cross'a bağlı. Webhook seçilirse Faz 13 URL'i gösterilir.)</text>
+
+  <text class="h2" x="44" y="498">Baz Emir</text>
+  <rect class="placeholder" x="44" y="508" width="422" height="30"/>
+  <text class="label" x="50" y="527">Tutar + birim dropdown</text>
+  <rect class="chip" x="44" y="546" width="70" height="26" rx="13"/><text x="79" y="563" text-anchor="middle" class="label" font-size="11">5%</text>
+  <rect class="chip" x="120" y="546" width="70" height="26" rx="13"/><text x="155" y="563" text-anchor="middle" class="label" font-size="11">10%</text>
+  <rect class="chip" x="196" y="546" width="70" height="26" rx="13"/><text x="231" y="563" text-anchor="middle" class="label" font-size="11">25%</text>
+  <rect class="chip" x="272" y="546" width="70" height="26" rx="13"/><text x="307" y="563" text-anchor="middle" class="label" font-size="11">50%</text>
+  <rect class="chip" x="348" y="546" width="70" height="26" rx="13"/><text x="383" y="563" text-anchor="middle" class="label" font-size="11">100%</text>
+  <text class="ref" x="44" y="586">Ref: 01/03/06 yüzde hızlı-seçim çipleri — YENİ QuickPercentChips (15.2)</text>
+
+  <text class="h2" x="44" y="612">Güvenlik Emri (Averaging)</text>
+  <text class="label" x="44" y="630">Tutar</text>
+  <rect class="placeholder" x="44" y="636" width="130" height="28"/>
+  <text class="label" x="184" y="630">Sayı</text>
+  <rect class="placeholder" x="184" y="636" width="90" height="28"/><text class="label" x="278" y="655">− ▪ +</text>
+  <text class="label" x="330" y="630">Adım %</text>
+  <rect class="placeholder" x="330" y="636" width="136" height="28"/><text class="label" x="470" y="655" text-anchor="end">− ▪ +</text>
+  <text class="ref" x="44" y="682">Ref: 06 "Averaging orders" +/- stepper kontrolleri — YENİ StepperInput (15.2)</text>
+  <text class="label" x="44" y="700">Hacim Çarpanı  [Off ─●────── x2]     Adım Çarpanı  [Off ────●── x2]</text>
+  <text class="ref" x="44" y="716">Ref: 06 multiplier slider (Off—x1.3—x2) — YENİ LabeledSlider (15.2)</text>
+
+  <text class="h2" x="44" y="746">Çıkış Koşulları</text>
+  <text class="label" x="44" y="764">Kâr Al (TP)</text><circle cx="440" cy="760" r="9" fill="#1373df"/>
+  <text class="label" x="44" y="784">Zararı Durdur (SL)</text><circle cx="440" cy="780" r="9" class="segment-off"/>
+  <text class="label" x="44" y="804">İz Süren Zararı Durdur</text><circle cx="440" cy="800" r="9" class="segment-off"/>
+  <text class="label" x="44" y="824">Ani Hareket Koruması</text><circle cx="440" cy="820" r="9" class="segment-off"/>
+  <text class="ref" x="44" y="844">Ref: 03/07/08 toggle-switch listesi — YENİ ToggleSwitchRow (15.2b, ExitPanel i18n dahil)</text>
+
+  <rect class="segment-off" x="44" y="850" width="200" height="0"/>
+
+  <!-- RIGHT COLUMN: CHART HERO (≈65%) -->
+  <rect class="panel-alt" x="512" y="140" width="864" height="500"/>
+  <text class="h2" x="532" y="168">Grafik (CandleChart — mevcut bileşen, yeniden kullanılıyor)</text>
+  <text class="ref" x="532" y="186">Ref: 01/02/05-08 — grafik HER ZAMAN görünür, form yanında; 3-4 tık gerisinde DEĞİL</text>
+  <!-- fake candles -->
+  <g transform="translate(532,220)">
+    <rect class="candle-up" x="0" y="120" width="8" height="60"/><rect class="candle-up" x="20" y="100" width="8" height="90"/>
+    <rect class="candle-down" x="40" y="140" width="8" height="40"/><rect class="candle-up" x="60" y="80" width="8" height="100"/>
+    <rect class="candle-up" x="80" y="60" width="8" height="70"/><rect class="candle-down" x="100" y="90" width="8" height="50"/>
+    <rect class="candle-up" x="120" y="40" width="8" height="90"/><rect class="candle-up" x="140" y="20" width="8" height="60"/>
+    <rect class="candle-down" x="160" y="50" width="8" height="40"/><rect class="candle-up" x="180" y="10" width="8" height="70"/>
+    <rect class="candle-up" x="200" y="0" width="8" height="50"/><rect class="candle-down" x="220" y="30" width="8" height="30"/>
+    <rect class="candle-up" x="240" y="-10" width="8" height="60"/><rect class="candle-up" x="260" y="-30" width="8" height="50"/>
+    <text class="label" x="0" y="200">... (bar sayısı kadar devam, MAX_CANDLES=300)</text>
+    <!-- volume bars -->
+    <rect fill="#2ecc9a" opacity="0.5" x="0" y="230" width="8" height="20"/><rect fill="#e05f5f" opacity="0.5" x="20" y="220" width="8" height="30"/>
+    <rect fill="#2ecc9a" opacity="0.5" x="40" y="235" width="8" height="15"/><rect fill="#2ecc9a" opacity="0.5" x="60" y="210" width="8" height="40"/>
+    <text class="label" x="0" y="270">hacim çubukları (volume)</text>
+  </g>
+  <rect class="badge" x="1240" y="160" width="110" height="24" rx="12"/>
+  <text class="badge-text" x="1295" y="176" text-anchor="middle">Exact ✓</text>
+  <text class="ref" x="1150" y="200">Ref: §5 DCABOT-native rozet</text>
+
+  <!-- SUMMARY CARD below chart -->
+  <rect class="panel" x="512" y="656" width="420" height="204"/>
+  <text class="h2" x="532" y="682">Özet</text>
+  <text class="label" x="532" y="706">Max fiyat düşüşü karşılanan</text><text class="label" x="900" y="706" text-anchor="end">— %</text>
+  <text class="label" x="532" y="728">Max güvenlik emri sapması</text><text class="label" x="900" y="728" text-anchor="end">— %</text>
+  <text class="label" x="532" y="750">Gerekli</text><text class="label" x="900" y="750" text-anchor="end">—</text>
+  <text class="label" x="532" y="772">Kullanılabilir</text><text class="label" x="900" y="772" text-anchor="end">—</text>
+  <rect class="badge" x="532" y="790" width="220" height="24" rx="12"/>
+  <text class="badge-text" x="642" y="806" text-anchor="middle">Aşırı Uyum Riski: Düşük (PBO %8)</text>
+  <text class="ref" x="532" y="838">Ref: 01 "Summary: Max price drop/Max deviation/Required/Available" (15.3b); PBO rozeti §5 DCABOT-native</text>
+
+  <!-- BACKTEST + CREATE BUTTONS -->
+  <rect class="panel" x="956" y="656" width="420" height="204"/>
+  <text class="h2" x="976" y="682">Geriye Dönük Test</text>
+  <rect class="placeholder" x="976" y="694" width="140" height="30"/><text class="label" x="982" y="714">30g + takvim</text>
+  <rect class="badge" x="1126" y="694" width="120" height="30" rx="8"/><text class="badge-text" x="1186" y="714" text-anchor="middle">Hazır</text>
+  <text class="ref" x="976" y="740">Ref: 06-08 "30d Ready to run" durum rozeti</text>
+  <rect class="segment-off" x="976" y="756" width="180" height="44" rx="8"/>
+  <text x="1066" y="783" text-anchor="middle" class="label">Backtest</text>
+  <rect class="segment-on" x="1166" y="756" width="210" height="44" rx="8"/>
+  <text x="1271" y="783" text-anchor="middle" fill="white" font-weight="bold">Bot Oluştur</text>
+  <text class="ref" x="976" y="820">Ref: 01/03/06-08 alt-bar: Backtest (ikincil) + Create Bot (birincil, vurgulu renk) çift buton</text>
+
+  <text class="note" x="24" y="890">NOT: Bu bir düzen/ölçü şablonudur (wireframe) — renk/köşe değerleri DCABOT'un mevcut token'larından (styles.css) alınmıştır, yeniden icat edilmedi.</text>
+</svg>

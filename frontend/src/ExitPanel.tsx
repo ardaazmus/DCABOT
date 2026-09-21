@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useI18n } from "./i18n";
 
 export type TrailingBindView = {
   trigger_price: string;
@@ -104,10 +105,11 @@ export function ExitPanel({
   const [rate, setRate] = useState("0.05");
   const [observedPrice, setObservedPrice] = useState("110");
   const [formError, setFormError] = useState("");
+  const { t } = useI18n();
 
   function submitBind() {
     if (!stopPrice.trim() || !openQty.trim() || !requestedQty.trim()) {
-      setFormError("Stop fiyatı ve miktarlar boş olamaz.");
+      setFormError(t("exit.form.required"));
       return;
     }
     setFormError("");
@@ -134,7 +136,7 @@ export function ExitPanel({
       <div className="panel-heading">
         <div>
           <p className="eyebrow">EXIT DESK</p>
-          <h2 id="exits-title">Trailing çıkış ve breakeven projeksiyonları</h2>
+          <h2 id="exits-title">{t("exit.panel.title")}</h2>
         </div>
       </div>
       {error && (
@@ -148,46 +150,46 @@ export function ExitPanel({
         </div>
       )}
 
-      <h3 className="paper-subheading">Trailing çıkış adayı</h3>
+      <h3 className="paper-subheading">{t("exit.candidate.heading")}</h3>
       <div className="paper-order-form">
         <label className="field">
-          <span className="field-label">Yön</span>
+          <span className="field-label">{t("exit.side.label")}</span>
           <span className="input-wrap">
-            <input aria-label="Yön" value={side} onChange={(e) => setSide(e.target.value)} />
+            <input aria-label={t("exit.side.label")} value={side} onChange={(e) => setSide(e.target.value)} />
           </span>
         </label>
         <label className="field">
-          <span className="field-label">Stop fiyatı</span>
+          <span className="field-label">{t("exit.stopPrice.label")}</span>
           <span className="input-wrap">
-            <input aria-label="Stop fiyatı" value={stopPrice} onChange={(e) => setStopPrice(e.target.value)} />
+            <input aria-label={t("exit.stopPrice.label")} value={stopPrice} onChange={(e) => setStopPrice(e.target.value)} />
           </span>
         </label>
         <label className="field">
-          <span className="field-label">Açık miktar</span>
+          <span className="field-label">{t("exit.openPosition.label")}</span>
           <span className="input-wrap">
-            <input aria-label="Açık miktar" value={openQty} onChange={(e) => setOpenQty(e.target.value)} />
+            <input aria-label={t("exit.openPosition.label")} value={openQty} onChange={(e) => setOpenQty(e.target.value)} />
           </span>
         </label>
         <label className="field">
-          <span className="field-label">İstenen çıkış</span>
+          <span className="field-label">{t("exit.requestedQty.label")}</span>
           <span className="input-wrap">
-            <input aria-label="İstenen çıkış" value={requestedQty} onChange={(e) => setRequestedQty(e.target.value)} />
+            <input aria-label={t("exit.requestedQty.label")} value={requestedQty} onChange={(e) => setRequestedQty(e.target.value)} />
           </span>
         </label>
       </div>
       <button className="secondary-button" type="button" disabled={busy} onClick={submitBind}>
-        Çıkış adayı üret
+        {t("exit.candidate.submit")}
       </button>
       {binding && (
         <div className="table-wrap paper-result">
           <table>
             <tbody>
               <tr>
-                <td>Tetik fiyatı</td>
+                <td>{t("exit.result.triggerPrice")}</td>
                 <td>{binding.trigger_price}</td>
               </tr>
               <tr>
-                <td>Kalan kapasite</td>
+                <td>{t("exit.result.remainingCapacity")}</td>
                 <td>{binding.remaining_capacity}</td>
               </tr>
             </tbody>
@@ -195,24 +197,24 @@ export function ExitPanel({
         </div>
       )}
 
-      <h3 className="paper-subheading">Yüzde trailing</h3>
+      <h3 className="paper-subheading">{t("exit.percent.heading")}</h3>
       <div className="paper-order-form">
         <label className="field">
-          <span className="field-label">Aktivasyon</span>
+          <span className="field-label">{t("exit.activationPrice.label")}</span>
           <span className="input-wrap">
-            <input aria-label="Aktivasyon" value={activation} onChange={(e) => setActivation(e.target.value)} />
+            <input aria-label={t("exit.activationPrice.label")} value={activation} onChange={(e) => setActivation(e.target.value)} />
           </span>
         </label>
         <label className="field">
-          <span className="field-label">Oran</span>
+          <span className="field-label">{t("exit.trailingRate.label")}</span>
           <span className="input-wrap">
-            <input aria-label="Oran" value={rate} onChange={(e) => setRate(e.target.value)} />
+            <input aria-label={t("exit.trailingRate.label")} value={rate} onChange={(e) => setRate(e.target.value)} />
           </span>
         </label>
         <label className="field">
-          <span className="field-label">Gözlenen fiyat</span>
+          <span className="field-label">{t("exit.observedPrice.label")}</span>
           <span className="input-wrap">
-            <input aria-label="Gözlenen fiyat" value={observedPrice} onChange={(e) => setObservedPrice(e.target.value)} />
+            <input aria-label={t("exit.observedPrice.label")} value={observedPrice} onChange={(e) => setObservedPrice(e.target.value)} />
           </span>
         </label>
       </div>
@@ -225,7 +227,7 @@ export function ExitPanel({
           onPercentArm({ side, activation_price: activation.trim(), rate: rate.trim() });
         }}
       >
-        Yüzde trailing kur
+        {t("exit.percent.arm")}
       </button>
       <button
         className="secondary-button"
@@ -237,18 +239,18 @@ export function ExitPanel({
           onPercentObserve({ side, state: percent as unknown as Record<string, unknown>, price: observedPrice.trim() });
         }}
       >
-        Yüzde gözlemi işle
+        {t("exit.percent.observe")}
       </button>
       {percent && (
         <div className="table-wrap paper-result">
           <table>
             <tbody>
               <tr>
-                <td>Durum</td>
+                <td>{t("exit.result.status")}</td>
                 <td>{percent.status}</td>
               </tr>
               <tr>
-                <td>Stop</td>
+                <td>{t("exit.result.stop")}</td>
                 <td>{percent.stop_price ?? "—"}</td>
               </tr>
             </tbody>
@@ -256,26 +258,26 @@ export function ExitPanel({
         </div>
       )}
 
-      <h3 className="paper-subheading">Breakeven (örnek plan)</h3>
+      <h3 className="paper-subheading">{t("exit.breakeven.heading")}</h3>
       <button className="secondary-button" type="button" disabled={busy} onClick={onBreakeven}>
-        Breakeven hesapla
+        {t("exit.breakeven.submit")}
       </button>
       {breakeven && (
         <div className="table-wrap paper-result">
           <table>
             <tbody>
               <tr>
-                <td>Brüt breakeven</td>
+                <td>{t("exit.breakeven.gross")}</td>
                 <td>{breakeven.gross_breakeven_price}</td>
               </tr>
               <tr>
-                <td>Fee-aware</td>
+                <td>{t("exit.breakeven.feeAware")}</td>
                 <td>{breakeven.fee_aware_breakeven_price ?? breakeven.reason}</td>
               </tr>
             </tbody>
           </table>
           <p className="paper-note">
-            Emir yetkisi yok (NONE); OCO/cancel-replace ve gerçek execution kapsam dışı.
+            {t("exit.authority.note")}
           </p>
         </div>
       )}

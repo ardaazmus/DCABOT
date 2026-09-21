@@ -1,11 +1,15 @@
-import { FormEvent, type Dispatch, type SetStateAction, Suspense, lazy, useEffect, useReducer, useRef, useTransition } from "react";
+import { FormEvent, type Dispatch, type SetStateAction, Suspense, lazy, useEffect, useReducer, useRef, useState, useTransition } from "react";
 import { sectionById, type AppSectionId } from "./appSections";
 import { SectionNav } from "./SectionNav";
 import { NumericParameter } from "./forms";
 import { BotWizard } from "./BotWizard";
+import { FuturesDcaForm } from "./FuturesDcaForm";
+import { BotCreateView, type BotCreateType } from "./BotCreateView";
+import { HeroChartPanel } from "./HeroChartPanel";
 import { BotContextHeader, BotTable } from "./BotTable";
 import { Banner, ConfirmDialog, NotificationCenter, NotificationStore, ToastStack } from "./notifications";
 import { THEME_STORAGE_KEY, applyTheme, resolveTheme, type Theme } from "./theme";
+import { useI18n } from "./i18n"; import { AdvancedTools } from "./AdvancedTools";
 import { RebalancePanel, isRebalanceValuation, parsePairLines, type RebalanceValuation } from "./RebalancePanel";
 import { PaperPanel, isPaperPrints, isPaperSnapshot, type PaperOrderDraft, type PaperPrint, type PaperSnapshot } from "./PaperPanel";
 import { TemplatePanel, isTemplateBindResponse, isTemplateDetail, isTemplateDiffRows, isTemplateMetaList, type TemplateBindPayload, type TemplateBindResult, type TemplateDetail, type TemplateDiffRow, type TemplateImportPayload, type TemplateMeta } from "./TemplatePanel";
@@ -426,6 +430,7 @@ type DealState = {
   dealLifecycle: DealLifecycleView | null;
   dealHistory: DealEventView[];
   dealBulkResults: DealBulkResultRow[];
+  dealReplayVerified: boolean;
   dealBusy: boolean;
   dealError: string;
 };
@@ -435,6 +440,7 @@ const initialDealState: DealState = {
   dealLifecycle: null,
   dealHistory: [],
   dealBulkResults: [],
+  dealReplayVerified: false,
   dealBusy: false,
   dealError: "",
 };
@@ -533,6 +539,7 @@ function isRecordWithSnapshot(value: unknown): value is Record<string, unknown> 
 
 function App() {
   const [configState, setConfigState] = useReducerGroup(initialConfigState);
+  const { lang, setLang, t } = useI18n();
   const { form, preview, errors, status } = configState;
   const setForm: Dispatch<SetStateAction<FormState>> = (value) => setConfigState("form", value);
   const setPreview: Dispatch<SetStateAction<Preview | null>> = (value) => setConfigState("preview", value);
@@ -612,6 +619,7 @@ function App() {
   const setBinanceAccountStatus: Dispatch<SetStateAction<"idle" | "loading" | "ready" | "not_configured" | "error">> = (value) => setBinanceAccountState("binanceAccountStatus", value);
   const [shellState, setShellState] = useReducerGroup({...initialShellState, theme: initialTheme()});
   const { activeSection, theme } = shellState;
+  const [createView, setCreateView] = useState<BotCreateType | null>(null);
   const setActiveSection: Dispatch<SetStateAction<AppSectionId>> = (value) => setShellState("activeSection", value);
   const setTheme: Dispatch<SetStateAction<Theme>> = (value) => setShellState("theme", value);
   const setBinanceAccountError: Dispatch<SetStateAction<string>> = (value) => setBinanceAccountState("binanceAccountError", value);
@@ -677,13 +685,14 @@ function App() {
   const [noticeUiState, setNoticeUiState] = useReducerGroup({ pendingBulk: null as DealBulkAction[] | null });
   const { pendingBulk } = noticeUiState;
   const [dealState, setDealState] = useReducerGroup(initialDealState);
-  const { dealId, dealLifecycle, dealHistory, dealBulkResults, dealBusy, dealError } = dealState;
+  const { dealId, dealLifecycle, dealHistory, dealBulkResults, dealBusy, dealError, dealReplayVerified } = dealState;
   const setDealId: Dispatch<SetStateAction<string>> = (value) => setDealState("dealId", value);
   const setDealLifecycle: Dispatch<SetStateAction<DealLifecycleView | null>> = (value) => setDealState("dealLifecycle", value);
   const setDealHistory: Dispatch<SetStateAction<DealEventView[]>> = (value) => setDealState("dealHistory", value);
   const setDealBulkResults: Dispatch<SetStateAction<DealBulkResultRow[]>> = (value) => setDealState("dealBulkResults", value);
   const setDealBusy: Dispatch<SetStateAction<boolean>> = (value) => setDealState("dealBusy", value);
   const setDealError: Dispatch<SetStateAction<string>> = (value) => setDealState("dealError", value);
+  const setDealReplayVerified: Dispatch<SetStateAction<boolean>> = (value) => setDealState("dealReplayVerified", value);
   const [exitState, setExitState] = useReducerGroup(initialExitState);
   const { exitBinding, exitPercent, exitBreakeven, exitBusy, exitError } = exitState;
   const setExitBinding: Dispatch<SetStateAction<TrailingBindView | null>> = (value) => setExitState("exitBinding", value);
@@ -1427,7 +1436,11 @@ function App() {
       if (isDealReplayView(parsed.data)) {
         setDealLifecycle(parsed.data.lifecycle);
         setDealHistory(parsed.data.history);
-      } else setDealError("Deal yanıtı doğrulanamadı.");
+        setDealReplayVerified(true);
+      } else {
+        setDealReplayVerified(false);
+        setDealError("Deal yanıtı doğrulanamadı.");
+      }
     }
   }
 
@@ -1899,6 +1912,11 @@ function App() {
     }
   }
 
+  function loadHeroChart() {
+    if (!activeDatasetId || !datasetPreflight || datasetPreflight.dataset_id !== activeDatasetId || datasetPreflightStatus !== "ready") return;
+    void loadHistoricalChartData(activeDatasetId, datasetPreflight.artifact.sha256, datasetPreflight.bar_count);
+  }
+
   async function startHistoricalSimulation() {
     if (!datasetPreflight || !datasetRunPlan || !selectedHistoricalProfileId || datasetRunPlan.profile.profile_id !== selectedHistoricalProfileId || datasetRunPlanStatus !== "ready") return;
     historicalSimulationController.current?.abort();
@@ -2271,6 +2289,12 @@ function App() {
     void calculate(nextForm);
   }
 
+  const heroPreflightReady = activeDatasetId !== null && datasetPreflight !== null && datasetPreflight.dataset_id === activeDatasetId && datasetPreflightStatus === "ready";
+  const heroCanLoad = heroPreflightReady && (historicalChartStatus === "idle" || historicalChartStatus === "error");
+  const heroLivePrice = paperPrints.length > 0 ? paperPrints[paperPrints.length - 1].price : null;
+  const heroSymbol = datasetPreflight?.instrument ?? preview?.symbol ?? "—";
+  const heroDataRange = heroPreflightReady && datasetPreflight !== null ? `${datasetPreflight.period_start} → ${datasetPreflight.period_end}` : null;
+
   function submit(event: FormEvent) {
     event.preventDefault();
     void calculate(form);
@@ -2291,7 +2315,7 @@ function App() {
             <span className="mode-chip"><span className="mode-dot" /> OFFLINE DEMO</span>
             <span className="data-status"><span className="online-dot" />Public veri</span>
             <NotificationCenter store={noticeStore} />
-            <button type="button" className="theme-toggle" aria-pressed={theme === "light"} title="Tema: açık/koyu" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? "☾ Koyu" : "☀ Açık"}</button>
+            <button type="button" className="theme-toggle" aria-pressed={theme === "light"} title={t("shell.theme.label")} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>{theme === "dark" ? "☾ Koyu" : "☀ Açık"}</button> <button type="button" className="theme-toggle" aria-pressed={lang === "en"} title={t("shell.language.label")} onClick={() => setLang(lang === "tr" ? "en" : "tr")}>{lang === "tr" ? "TR" : "EN"}</button>
           </div>
         </header>
         {centerError !== "" && <Banner tone="critical">Olay akışı alınamıyor: {centerError}</Banner>}
@@ -2302,14 +2326,21 @@ function App() {
           <TimelinePanel frame={timelineFrame} busy={timelineBusy} error={timelineError} onSeek={(step) => void seekTimeline(step)} />
           <EventPanel events={centerEvents} busy={centerBusy} error={centerError} onRefresh={() => void refreshCenterEvents()} />
         </div>}
-        {activeSection === "bots" && <div className="workspace">
+        {activeSection === "bots" && createView === null && <div className="workspace">
+          <HeroChartPanel bars={historicalChartData?.bars ?? []} status={historicalChartStatus} error={historicalChartError} livePrice={heroLivePrice} symbolLabel={heroSymbol} canLoad={heroCanLoad} loadBusy={historicalChartStatus === "loading"} onLoad={loadHeroChart} />
+          <button className="primary-button create-open-button" type="button" onClick={() => setCreateView("DCA")}>{t("create.open.label")}</button>
+
+          <BotContextHeader profile={botProfile} sessionCount={Object.keys(botSessions).length} />
+          <BotTable rows={botIds.map((id) => (botProfile?.bot_id === id ? { botId: id, name: botProfile.name, sessionCount: Object.keys(botSessions).length, selected: selectedBotId === id } : { botId: id, name: null, sessionCount: null, selected: false }))} busy={botBusy} onSelect={(botId) => void selectBot(botId)} onCreate={() => setCreateView("DCA")} onOpenHistory={() => selectSection("events")} />
+
+          <AdvancedTools title={t("tools.classic.label")}>
           <section className="panel builder-panel" aria-labelledby="builder-title">
             <div className="panel-heading"><div><p className="eyebrow">CONFIGURATION</p><h2 id="builder-title">Bot stüdyosu</h2></div><span className="revision">r{preview?.revision ?? "—"}</span></div>
             <form onSubmit={submit} noValidate>
-              <NumericParameter label="Anchor fiyatı" name="anchor" value={form.anchor} suffix="USDT" error={errors.anchor} onChange={(value) => update("anchor", value)} />
-              <NumericParameter label="Safety miktarı" name="safety_qty" value={form.safety_qty} suffix="BTC" error={errors.safety_qty} onChange={(value) => update("safety_qty", value)} />
-              <NumericParameter integer label="Safety sayısı" name="safety_count" value={form.safety_count} suffix="seviye" error={errors.safety_count} onChange={(value) => update("safety_count", value)} min="0" max="50" />
-              <NumericParameter label="Sapma" name="deviation" value={form.deviation} suffix="oran" error={errors.deviation} onChange={(value) => update("deviation", value)} />
+              <NumericParameter label={t("dca.baseOrder.label")} name="anchor" value={form.anchor} suffix="USDT" error={errors.anchor} onChange={(value) => update("anchor", value)} />
+              <NumericParameter label={t("dca.safetyOrder.label")} name="safety_qty" value={form.safety_qty} suffix="BTC" error={errors.safety_qty} onChange={(value) => update("safety_qty", value)} />
+              <NumericParameter integer label={t("dca.safetyCount.label")} name="safety_count" value={form.safety_count} suffix="seviye" error={errors.safety_count} onChange={(value) => update("safety_count", value)} min="0" max="50" />
+              <NumericParameter label={t("dca.deviation.label")} name="deviation" value={form.deviation} suffix="oran" error={errors.deviation} onChange={(value) => update("deviation", value)} />
               <button className="primary-button" type="submit" disabled={status === "pending"}>
                 <span aria-hidden="true">▣</span>{status === "pending" ? "Hesaplanıyor…" : "Önizlemeyi hesapla"}
               </button>
@@ -2329,23 +2360,51 @@ function App() {
             {preview ? <><Metric label="Planlanan brüt notional" value={preview.planned_gross_notional} unit={preview.quote_asset} /><Metric label="Tahmini başlangıç marjı" value={preview.estimated_initial_margin} unit={preview.quote_asset} /><div className="assumption"><div className="assumption-title"><span className="warning-icon">!</span>Teorik tam dolum varsayımı</div><p>{preview.assumption}</p></div></> : <div className="empty-state">Sonuç bekleniyor…</div>}
            </section>
 
-          <RebalancePanel valuation={rebalanceValuation} status={rebalanceStatus} error={rebalanceError} holdingsText={rebalanceHoldingsText} pricesText={rebalancePricesText} onHoldingsChange={setRebalanceHoldingsText} onPricesChange={setRebalancePricesText} onCalculate={() => void calculateRebalance()} />
+          <BotPanel botIds={botIds} profile={botProfile} sessions={botSessions} check={botCheck} busy={botBusy} error={botError} onRegister={(payload) => void registerBot(payload)} onSelect={(botId) => void selectBot(botId)} onUpdateLists={(payload) => void updateBotLists(payload)} onBind={(payload) => void bindBotSession(payload)} onCheck={(symbol) => void checkBotPair(symbol)} onRefresh={() => void refreshBots()} />
+          <DealPanel dealId={dealId} lifecycle={dealLifecycle} history={dealHistory} bulkResults={dealBulkResults} busy={dealBusy} error={dealError} replayVerified={dealReplayVerified} onCreate={(payload) => void createDeal(payload)} onAppend={(payload) => void appendDealEvent(payload)} onReplay={() => void refreshDeal(dealId)} onBulk={(actions) => setNoticeUiState("pendingBulk", actions)} />
+          <ExitPanel binding={exitBinding} percent={exitPercent} breakeven={exitBreakeven} busy={exitBusy} error={exitError} onBind={(payload) => void bindExitCandidate(payload)} onPercentArm={(payload) => void armExitPercent(payload)} onPercentObserve={(payload) => void observeExitPercent(payload)} onBreakeven={() => void assessExitBreakeven()} />
+          </AdvancedTools>
+
+          <AdvancedTools title={t("tools.strategy.label")}><RebalancePanel valuation={rebalanceValuation} status={rebalanceStatus} error={rebalanceError} holdingsText={rebalanceHoldingsText} pricesText={rebalancePricesText} onHoldingsChange={setRebalanceHoldingsText} onPricesChange={setRebalancePricesText} onCalculate={() => void calculateRebalance()} />
           <TemplatePanel templates={templateMetas} detail={templateDetail} bindResult={templateBindResult} diffRows={templateDiffRows} busy={templateBusy} error={templateError} onImport={(payload) => void importTemplate(payload)} onSelect={(templateId) => void selectTemplate(templateId)} onBind={(templateId, payload) => void bindTemplate(templateId, payload)} onDiff={(firstId, secondId) => void diffTemplates(firstId, secondId)} />
           <RebalancePlanPanel plan={rebalancePlan} disclosure={rebalanceDisclosure} candidates={rebalanceCandidates} busy={rebalancePlanBusy} error={rebalancePlanError} onPlan={(payload) => void submitRebalancePlan(payload)} onDisclose={(payload) => void submitRebalanceDisclose(payload)} />
           <SignalPanel payloadHash={signalHash} readiness={signalReadiness} candidate={signalCandidate} busy={signalBusy} error={signalError} onHash={(payload) => void hashSignalPayload(payload)} onAssess={(payload) => void assessSignal(payload)} onBind={(payload) => void bindSignal(payload)} />
           <FuturesPanel grid={futuresGrid} pnl={futuresPnl} trailing={futuresTrailing} funding={futuresFunding} busy={futuresBusy} error={futuresError} onGrid={(payload) => void submitFuturesGrid(payload)} onPnl={(payload) => void submitFuturesPnl(payload)} onTrailingArm={(payload) => void submitTrailingArm(payload)} onTrailingObserve={(payload) => void submitTrailingObserve(payload)} onFunding={(payload) => void submitFuturesFunding(payload)} />
-          <TwoLegPanel sessionId={twoLegSession} projection={twoLegProjection} busy={twoLegBusy} error={twoLegError} onStart={(sessionId) => void startTwoLegSession(sessionId)} onFill={(payload) => void acceptTwoLegFill(payload)} onRecovery={() => void markTwoLegRecovery()} onTimeout={() => void markTwoLegTimeout()} onReplay={() => void replayTwoLegSession()} />
-          <BotWizard busy={botBusy} error={botError} onRegister={(payload) => void registerBot(payload)} />
-          <BotContextHeader profile={botProfile} sessionCount={Object.keys(botSessions).length} />
-          <BotTable rows={botIds.map((id) => (botProfile?.bot_id === id ? { botId: id, name: botProfile.name, sessionCount: Object.keys(botSessions).length, selected: selectedBotId === id } : { botId: id, name: null, sessionCount: null, selected: false }))} busy={botBusy} onSelect={(botId) => void selectBot(botId)} />
-          <BotPanel botIds={botIds} profile={botProfile} sessions={botSessions} check={botCheck} busy={botBusy} error={botError} onRegister={(payload) => void registerBot(payload)} onSelect={(botId) => void selectBot(botId)} onUpdateLists={(payload) => void updateBotLists(payload)} onBind={(payload) => void bindBotSession(payload)} onCheck={(symbol) => void checkBotPair(symbol)} onRefresh={() => void refreshBots()} />
-          <DealPanel dealId={dealId} lifecycle={dealLifecycle} history={dealHistory} bulkResults={dealBulkResults} busy={dealBusy} error={dealError} onCreate={(payload) => void createDeal(payload)} onAppend={(payload) => void appendDealEvent(payload)} onReplay={() => void refreshDeal(dealId)} onBulk={(actions) => setNoticeUiState("pendingBulk", actions)} />
-          <ExitPanel binding={exitBinding} percent={exitPercent} breakeven={exitBreakeven} busy={exitBusy} error={exitError} onBind={(payload) => void bindExitCandidate(payload)} onPercentArm={(payload) => void armExitPercent(payload)} onPercentObserve={(payload) => void observeExitPercent(payload)} onBreakeven={() => void assessExitBreakeven()} />
-          <RecurringPanel schedule={recurring} busy={recurringBusy} error={recurringError} onProject={(payload) => void projectRecurring(payload)} />
-          <RiskPanel explanation={riskExplain} busy={riskBusy} error={riskError} onExplain={(payload) => void explainRisk(payload)} />
+          <TwoLegPanel sessionId={twoLegSession} projection={twoLegProjection} busy={twoLegBusy} error={twoLegError} onStart={(sessionId) => void startTwoLegSession(sessionId)} onFill={(payload) => void acceptTwoLegFill(payload)} onRecovery={() => void markTwoLegRecovery()} onTimeout={() => void markTwoLegTimeout()} onReplay={() => void replayTwoLegSession()} /></AdvancedTools>
+
+          <AdvancedTools title={t("tools.planningRisk.label")}><RecurringPanel schedule={recurring} busy={recurringBusy} error={recurringError} onProject={(payload) => void projectRecurring(payload)} />
+          <RiskPanel explanation={riskExplain} busy={riskBusy} error={riskError} onExplain={(payload) => void explainRisk(payload)} /></AdvancedTools>
 
         </div>}
+        {activeSection === "bots" && createView !== null && <div className="create-view-wrap">
+          <BotCreateView
+            botType={createView ?? "DCA"}
+            onBotTypeChange={setCreateView}
+            onBack={() => setCreateView(null)}
+            onOpenBacktest={() => setActiveSection("market")}
+            bars={historicalChartData?.bars ?? []}
+            chartStatus={historicalChartStatus}
+            chartError={historicalChartError}
+            livePrice={heroLivePrice}
+            symbolLabel={heroSymbol}
+            canLoadChart={heroCanLoad}
+            chartLoading={historicalChartStatus === "loading"}
+            onLoadChart={loadHeroChart}
+            dataRange={heroDataRange}
+            backtestReady={heroPreflightReady}
+            renderForm={(type) => type === "DCA" ? (
+              <BotWizard busy={botBusy} error={botError} onRegister={(payload) => void registerBot(payload)} onOpenBacktest={() => setActiveSection("market")} chartBars={historicalChartData?.bars} botType={type} optimizeDatasetId={datasetRunPlan?.dataset.dataset_id} optimizeProfileId={selectedHistoricalProfileId ?? undefined} />
+            ) : type === "SIGNAL" ? (
+              <SignalPanel payloadHash={signalHash} readiness={signalReadiness} candidate={signalCandidate} busy={signalBusy} error={signalError} onHash={(payload) => void hashSignalPayload(payload)} onAssess={(payload) => void assessSignal(payload)} onBind={(payload) => void bindSignal(payload)} />
+            ) : type === "FUTURES" ? (
+              <FuturesDcaForm grid={futuresGrid} busy={futuresBusy} error={futuresError} onGrid={(payload) => void submitFuturesGrid(payload)} />
+            ) : (
+              <FuturesPanel grid={futuresGrid} pnl={futuresPnl} trailing={futuresTrailing} funding={futuresFunding} busy={futuresBusy} error={futuresError} onGrid={(payload) => void submitFuturesGrid(payload)} onPnl={(payload) => void submitFuturesPnl(payload)} onTrailingArm={(payload) => void submitTrailingArm(payload)} onTrailingObserve={(payload) => void submitTrailingObserve(payload)} onFunding={(payload) => void submitFuturesFunding(payload)} />
+            )}
+          />
+        </div>}
         {activeSection === "market" && <div className="workspace">
+          <HeroChartPanel bars={historicalChartData?.bars ?? []} status={historicalChartStatus} error={historicalChartError} livePrice={heroLivePrice} symbolLabel={heroSymbol} canLoad={heroCanLoad} loadBusy={historicalChartStatus === "loading"} onLoad={loadHeroChart} />
           <PaperPanel snapshot={paperSnapshot} prints={paperPrints} busy={paperBusy} error={paperError} orderDraft={paperOrderDraft} onActivate={() => void activatePaper()} onRefresh={() => void refreshPaperMarket()} onOrderDraftChange={setPaperOrderDraft} onPlace={() => void placePaperOrder()} onFill={(clientOrderId, eventId) => void fillPaperOrder(clientOrderId, eventId)} />
           <BinancePublicSnapshotPanel snapshot={binancePublicSnapshot} status={binancePublicSnapshotStatus} error={binancePublicSnapshotError} onRetry={() => void loadBinancePublicSnapshot()} />
           <Suspense fallback={<div className="empty-state" role="status">Katalog yükleniyor…</div>}>

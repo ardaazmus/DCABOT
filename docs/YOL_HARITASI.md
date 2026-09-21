@@ -3,9 +3,7 @@
 İki bağımsız eksen var. (1) **Venue ekseni** (bağlayıcı sıra): P1 yerel demo → P2 Binance testnet → P3 gerçek Binance (sınırlı canary) → P4 diğer borsalar. (2) **Özellik ailesi ekseni** (Faz 5-8, 2026-09-21'de dondurmadan çıkarıldı): her aile kendi sözleşme olgunluğuna göre venue eksenine PARALEL ilerler — mainnet'i (P3/P4) beklemez, ama kendi kanıt kapısını (aşağıda) geçmeden implementasyona geçmez. Bir sonraki faza geçmek için önceki fazın kapanış ölçütü sağlanır. Eski dilim günlükleri: `docs/archive/history/`.
 
 ## Şimdi
-- **P4 hariç TÜM FAZLAR kapalı** (Faz 1+3+4+5+6+7+8+9+10+11, F11.1+F27+F20). Kalan: Arda kararları (canary değerleri, dış LLM, NVDA/JAWS/HCM).
-- **Yeni açılan, onay bekleyen (2026-09-21):** Faz 12 (UX/terminoloji/i18n), Faz 13 (TradingView sinyal), Faz 14 (ileri backtest) — detay aşağıda.
-- **En az sürtünmeli** (dış kutu kapalı): **Faz 7**, **Faz 9/F27**, **Faz 10/F20**.
+- **P4 hariç TÜM FAZLAR kapalı** (Faz 1+3+4+5+6+7+8+9+10+11+12+13+14, F11.1+F27+F20). Kalan: Arda kararları (canary değerleri, dış LLM, NVDA/JAWS/HCM, P4 kapsamı).
 
 ## Sonra
 Faz 4 (canary, venue ekseni) · Faz 5-8 (dondurulmuş aileler, açık) · Faz 9 (P1 kapanış borcu) · Faz 10 (yeni aileler) — hepsi birbirinden bağımsız, paralel yürüyebilir; hiçbiri mainnet'i (P3/P4) beklemez.
@@ -23,7 +21,7 @@ Açık hata raporu maddelerini doğrula ve kapat (TASK.md). Çıkış: rapor bo�
 Ana dosyalar: `application/user_stream_reconnect_worker.py`, `rest_catch_up.py`, `testnet_order_execution.py` (mutation gate, 7 kural), `data_adapters/binance_testnet_order_execution.py` (mutation yapabilen TEK dosya), `application/testnet_dca_session.py` (DCA orkestrasyonu). 3.1/3.5/3.6 tam REAL_TESTNET, 3.2/3.7 kısmi. Bağımsız review `APPROVED_WITH_FINDINGS` — 2 bulgu (cancel'in AttemptStore disiplininden geçmemesi, UNKNOWN attempt'in yeni mutation'ı bloklamaması) aynı gün düzeltildi, 9 yeni test. Tüm bulgular/bug'lar/kanıtlar: docs/KARARLAR.md (tarih sırasıyla, 2026-09-20/21).
 
 ## Faz 4 — P3: gerçek Binance, sınırlı canary (altyapı tamam, kapı kapalı)
-Arda'nın açık onayı olmadan mainnet emri yok. Teslim: tek-worker OS kilidi, saf canary politikası (cap/kayıp/pencere/sıfır-duplicate/sıfır-UNKNOWN), dosya kill-switch, kilitli canlı kapı, `tools/run_api.py` paketleme, DRAFT `config/canary.json`. Emir gönderilmedi. Açık: canary sayısal değerleri + onay formatı (Arda). P4 (diğer borsalar) P3 sonrası planlanır.
+Arda'nın açık onayı olmadan mainnet emri yok. Teslim: tek-worker OS kilidi, saf canary politikası (cap/kayıp/pencere/sıfır-duplicate/sıfır-UNKNOWN), dosya kill-switch, test-only canlı kapı (hiçbir kod yolundan çağrılmıyor), `tools/run_api.py` paketleme, DRAFT `config/canary.json`. Emir gönderilmedi. Açık: canary sayısal değerleri + onay formatı (Arda). P4 (diğer borsalar) P3 sonrası planlanır.
 
 ## Faz 5-10 — dondurulmuş + yeni aileler (2026-09-21; KAPALI — claim ID eşlemesi: docs/KARARLAR.md 2026-09-21)
 F5 futures-grid (liquidation `BLOCKED` LCR-12) · F6 two-leg (persistence/recovery LCR-09 AÇIK) · F7 rebalancing+signal (`VERIFIED`) · F8 çoklu-bot+LLM (`CONDITIONAL`) · F9 (F27 `VERIFIED`; F31/F09 kısmen AÇIK; F30 NVDA/JAWS yerel iş) · F10 (F20 blocker yok; F36/F40/F35 tasarım kararı gerekir; F16/F28/F29/F33/F39 `PLAN`).
@@ -45,14 +43,17 @@ Kaynak: iki bağımsız anonim araştırma raporu (docs/UIUX_ARASTIRMA_FINAL/01_
 9. **Bilinçli dışarıda bırakılan:** yüksek-kontrast/ekran-okuyucu erişilebilirliği (Faz 9/F30'da ayrı izleniyor; rapor yalnız yapısal ARIA desenlerini kullandı, kontrast/NVDA/JAWS puanlamasını değil).
 Teslim: 5-bölüm dağıtım + form ailesi/disclosure + bot sihirbazı + bot tablosu/context + 5-kanal bildirim + pencere-render/lazy/transition (F11.2–F11.7, gate F11 PASS).
 
-## Faz 12 — Birleşik bot deneyimi + terminoloji/i18n (2026-09-21, ayrıntılı plan hazır, onay bekliyor)
-"Botlar & Stratejiler" 16 aracı tek sayfada diziyor + gerçek grafik yok + terminoloji sektörden (3Commas/Pionex/Bitsgap) kopuk. 6 alt-dilim: 12.1 chart altyapısı (lightweight-charts) → 12.5 tek-XML i18n (TR/EN, kod adları değişmeden takma-ad) → 12.2 BotWizard+Bot stüdyosu birleşimi (sektör terminolojisiyle) → 12.3 Grid Bot gerçek akışı (küme B'yi bağlar) → 12.4 sinyal/webhook görünümü (Faz 13 ile) → 12.6 küme C/F temizliği. Kapsam+terminoloji tablosu+i18n mimarisi: `docs/ARASTIRMA_UI_TERMINOLOJI_I18N_FAZ12.md`. **Implementasyona geçilmedi.**
+## Faz 12 — Birleşik bot deneyimi + terminoloji/i18n (KAPALI, LOCAL, gate F12 PASS)
+6/6 dilim kapalı: 12.1 mum+hacim+canlı grafik (saf SVG, harici lib yok) → 12.5 tek-XML i18n (TR/EN takma-ad) → 12.2 birleşik sihirbaz → 12.3 küme B bağlantısı (salt okunur) → 12.4 webhook görünümü → 12.6 temizlik. Kanıt: `evidence/F12/SONUC.md`.
 
-## Faz 13 — TradingView sinyal entegrasyonu (2026-09-21, araştırma tamam, onay bekliyor)
-`signal_intake.py`'de HMAC doğrulama + replay-window zaten yazılı/test edilmiş ama hiçbir endpoint'e bağlı değil. Kapsam ve kaynaklar: `docs/ARASTIRMA_ILERI_BACKTEST_SINYAL_KALITE.md` §1, §6.
+## Faz 13 — TradingView sinyal entegrasyonu (KAPALI, LOCAL, gate F13 PASS)
+13.1–13.5 kapalı: static-token webhook + durable dedup + fast-ACK/bind + HMAC internal hat + native indikatörler. Kanıt: `evidence/F13/SONUC.md`.
 
-## Faz 14 — İleri backtest: overfitting direnci + ölçekleme (2026-09-21, araştırma tamam, onay bekliyor)
-`chronological_split.py`/`horizon_overlap.py`/`trial_registry.py`/`oos_lineage.py` CPCV/PBO/DSR'nin temel taşları ama embargo/kombinatoryal-path/skor katmanı yok; backtest tek-thread. Float/Fraction kararı KAPALI (float64, izole `analytics/` modülünde — §4). Kapsam ve kaynaklar: `docs/ARASTIRMA_ILERI_BACKTEST_SINYAL_KALITE.md` §2-4, §6.
+## Faz 14 — İleri backtest: overfitting direnci + ölçekleme (KAPALI, LOCAL, gate F14 PASS)
+14.1–14.6 kapalı: embargo + CPCV + PBO/DSR (izole `analytics/`) + sweep orkestratörü + sampler. Kanıt: `evidence/F14/SONUC.md`.
 
-## Ölü/bağlanmamış kod envanteri (2026-09-21, tek seferlik tarama)
-158 modülden 70'i `api.py`/`tools/*.py`'den hiç import edilmiyor. Çoğu (62) bilinçli/belgeli araştırma kodu (Futures DCA 24, Futures Grid yürütme 9, venue mutabakat 26, overfitting-lineage 2 — Faz 5/9/14 DEFERRED'leriyle örtüşüyor). **Kritik:** `canary_policy.py`/`live_gate.py` hiç çağrılmıyor — "kilitli canlı kapı" ifadesi test-only netleştirilmeli. `bootstrap.py`/`domain/math.py`/`persistence/store.py` temizlik adayı. Tam liste: `docs/ARASTIRMA_UI_TERMINOLOJI_I18N_FAZ12.md` §1.
+## Ölü/bağlanmamış kod envanteri (2026-09-21 tarama + 12.3/12.6 güncellemesi)
+Küme B (9) 12.3'te bağlandı. `bootstrap`/`domain.math`/`store` ERİŞİLİYOR (üretim+tools) → silinmedi. `canary_policy`/`live_gate` test-only netleşti. Geri kalan bilinçli araştırma kodu (Faz 5/9 DEFERRED). Liste: `docs/ARASTIRMA_UI_TERMINOLOJI_I18N_FAZ12.md` §1.
+
+## Faz 15 — Görsel düzeltme + terminoloji + 8-referans minimum özellik listesi (2026-09-21, AÇIK, onay bekliyor)
+Faz 12 checker/vitest/gate PASS oldu ama canlı ekranda görsel/akış benzerliği yoktu; ayrıca ExitPanel.tsx/TwoLegPanel.tsx (Futures TP/SL/Trailing + Hedge Bot ekranları) Faz 12.5'in i18n taramasını hiç görmemiş (0 `t()` çağrısı). 8 referans görselin tamamı tek tek çıkarılıp 30 maddelik minimum özellik listesi çıkarıldı — DCABOT'un olup referanslarda olmayan özellikleri (exact-math, PBO/DSR, replay) aynı görsel dilde rozet olarak gömülüyor, referansların olup DCABOT'ta olmayanları (segmented/slider/stepper kontroller, indikatör formu, Optimize→sweep bağlantısı, risk toggle'ları) dilimlere bölündü. Motor sözleşmesini etkileyen maddeler (DCA Mode, Order type, Stop Trigger vb.) Faz 15 dışı bırakıldı, ayrı karar gerekir. Zorunlu yeni kural: her dilim gerçek ekran-görüntüsü kanıtı olmadan kapanamaz. Tam liste+terminoloji sözlüğü+dilim planı: `docs/ARASTIRMA_FAZ15_GORSEL_DUZELTME.md`. **Implementasyona geçilmedi.**

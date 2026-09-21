@@ -21,6 +21,7 @@ class HistoricalChartBar:
     high: str
     low: str
     close: str
+    base_volume: str
 
 
 def build_historical_chart_data(dataset: HistoricalDatasetInput) -> tuple[HistoricalChartBar, ...]:
@@ -37,6 +38,7 @@ def build_historical_chart_data(dataset: HistoricalDatasetInput) -> tuple[Histor
             high=bar.high,
             low=bar.low,
             close=bar.close,
+            base_volume=bar.base_volume,
         )
         for index, bar in enumerate(dataset.bars, start=1)
     )

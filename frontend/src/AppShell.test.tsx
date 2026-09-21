@@ -80,6 +80,36 @@ describe("App section shell", () => {
     expect(screen.getByText("Bot stüdyosu", { selector: "h2" })).toBeInTheDocument();
   });
 
+  it("15.1: botlar bölümünün en üstünde hero grafik paneli vardır", async () => {
+    render(<App />);
+    const hero = await screen.findByRole("heading", { name: /Piyasa grafiği/ });
+    expect(hero).toBeInTheDocument();
+    const workspace = hero.closest(".workspace");
+    expect(workspace?.firstElementChild?.contains(hero)).toBe(true);
+    expect(screen.getByRole("button", { name: /Grafiği yükle/ })).toBeDisabled();
+  });
+
+  it("15.3: + Yeni Bot tek-amaç görünüme geçer, Geri döndürür", async () => {
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: "Botlar & Stratejiler" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "+ Yeni Bot" }));
+    expect(await screen.findByRole("heading", { name: "Bot Oluştur" })).toBeInTheDocument();
+    expect(screen.queryByText("Bot stüdyosu", { selector: "h2" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "Sinyal Botu" }));
+    expect(await screen.findByText("Sinyal botu: indikatör başlatma")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Kapat" }));
+    expect(await screen.findByText("Bot stüdyosu", { selector: "h2" })).toBeInTheDocument();
+  });
+
+  it("15.3b: Futures DCA tipi Pionex-sırası formu gösterir", async () => {
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: "Botlar & Stratejiler" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "+ Yeni Bot" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "Futures DCA" }));
+    expect(await screen.findByRole("heading", { name: "Futures DCA Bot" })).toBeInTheDocument();
+    expect(screen.getByText(/1\. Pozisyon Fiyatı Ekle/)).toBeInTheDocument();
+  });
+
   it("bölümler gerçek panelleri gösterir, yer tutucu kalmaz", async () => {
     render(<App />);
     const nav = await screen.findByRole("navigation", { name: "Ana menü" });

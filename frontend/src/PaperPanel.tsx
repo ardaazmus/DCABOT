@@ -35,6 +35,7 @@ export type PaperSnapshot = {
 };
 
 import { WindowExpander, useWindowedList } from "./renderWindow";
+import { LiveTickStrip } from "./CandleChart";
 
 export type PaperPrint = {
   event_id: string;
@@ -190,6 +191,7 @@ export function PaperPanel({
       <button className="secondary-button" type="button" disabled={busy} onClick={onRefresh}>
         {busy ? "Yenileniyor…" : "Piyasayı yenile"}
       </button>
+      {prints.length > 0 && <LiveTickStrip ticks={prints} label="Canlı baskılar" />}
       {prints.length > 0 && (
         <div className="table-wrap paper-result">
           <table>

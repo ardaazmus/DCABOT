@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useI18n } from "./i18n";
+import { SegmentedControl, TextParameter } from "./forms";
 
 export type TwoLegIdentityView = {
   account_id: string;
@@ -83,6 +85,90 @@ export function isTwoLegProjectionView(value: unknown): value is TwoLegProjectio
   );
 }
 
+function LegCard({
+  legId,
+  status,
+  quantity,
+  eventTimeUs,
+  busy,
+  onFill,
+  onError,
+}: {
+  legId: "A" | "B";
+  status: string;
+  quantity: string;
+  eventTimeUs: string;
+  busy: boolean;
+  onFill: (payload: TwoLegFillPayload) => void;
+  onError: (message: string) => void;
+}) {
+  const { t } = useI18n();
+  const [fillId, setFillId] = useState("");
+  const [qty, setQty] = useState("");
+  const [side, setSide] = useState("LONG");
+  const [fillStatus, setFillStatus] = useState("FULL");
+  const heading = t(legId === "A" ? "twoleg.result.legA" : "twoleg.result.legB");
+
+  function submit() {
+    if (!fillId.trim() || !qty.trim()) {
+      onError(t("twoleg.form.fillRequired"));
+      return;
+    }
+    const eventTime = Number(eventTimeUs.trim());
+    if (!Number.isInteger(eventTime) || eventTime < 0) {
+      onError(t("twoleg.form.eventTimeInvalid"));
+      return;
+    }
+    onError("");
+    onFill({
+      fill_id: fillId.trim(),
+      leg_id: legId,
+      account_id: "acct-1",
+      venue_profile: "BINANCE-SPOT",
+      product_id: "BTCUSDT",
+      symbol: "BTCUSDT",
+      hedge_side: side,
+      quantity: qty.trim(),
+      fill_status: fillStatus,
+      event_time_us: eventTime,
+    });
+  }
+
+  return (
+    <section className="hedge-leg" role="group" aria-label={`${heading} ${t("twoleg.leg.card")}`}>
+      <h3>{heading}</h3>
+      <p className="hedge-leg-state">{`${t(`twoleg.legState.${status}`)} · ${quantity}`}</p>
+      <div className="hedge-leg-form">
+        <TextParameter label={t("twoleg.fill.id")} name={`hedge-fill-${legId}`} value={fillId} onChange={setFillId} />
+        <TextParameter label={t("twoleg.qty.label")} name={`hedge-qty-${legId}`} value={qty} onChange={setQty} />
+        <SegmentedControl
+          label={t("twoleg.hedgeSide.label")}
+          name={`hedge-side-${legId}`}
+          value={side}
+          options={[
+            { value: "LONG", label: t("twoleg.hedgeSide.long") },
+            { value: "SHORT", label: t("twoleg.hedgeSide.short") },
+          ]}
+          onChange={setSide}
+        />
+        <SegmentedControl
+          label={t("twoleg.fillStatus.label")}
+          name={`hedge-fillstatus-${legId}`}
+          value={fillStatus}
+          options={[
+            { value: "FULL", label: t("twoleg.fillStatus.full") },
+            { value: "PARTIAL", label: t("twoleg.fillStatus.partial") },
+          ]}
+          onChange={setFillStatus}
+        />
+        <button className="secondary-button" type="button" disabled={busy} onClick={submit}>
+          {t("twoleg.fill.accept")}
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export function TwoLegPanel({
   sessionId,
   projection,
@@ -105,54 +191,24 @@ export function TwoLegPanel({
   onReplay: () => void;
 }) {
   const [session, setSession] = useState(sessionId);
-  const [fillId, setFillId] = useState("f-a1");
-  const [legId, setLegId] = useState("A");
-  const [hedgeSide, setHedgeSide] = useState("LONG");
-  const [quantity, setQuantity] = useState("0.5");
-  const [fillStatus, setFillStatus] = useState("FULL");
   const [eventTime, setEventTime] = useState("1000");
   const [formError, setFormError] = useState("");
+  const { t } = useI18n();
 
   function submitStart() {
     if (!session.trim()) {
-      setFormError("Session kimliği boş olamaz.");
+      setFormError(t("twoleg.form.sessionRequired"));
       return;
     }
     setFormError("");
     onStart(session.trim());
   }
 
-  function submitFill() {
-    const eventTimeUs = Number(eventTime.trim());
-    if (!Number.isInteger(eventTimeUs) || eventTimeUs < 0) {
-      setFormError("Event time negatif olmayan tam sayı olmalı.");
-      return;
-    }
-    if (!fillId.trim() || !quantity.trim()) {
-      setFormError("Fill kimliği ve miktar boş olamaz.");
-      return;
-    }
-    setFormError("");
-    onFill({
-      fill_id: fillId.trim(),
-      leg_id: legId,
-      account_id: "acct-1",
-      venue_profile: "BINANCE-SPOT",
-      product_id: "BTCUSDT",
-      symbol: "BTCUSDT",
-      hedge_side: hedgeSide,
-      quantity: quantity.trim(),
-      fill_status: fillStatus,
-      event_time_us: eventTimeUs,
-    });
-  }
-
   return (
-    <section className="panel rebalance-panel" aria-labelledby="twoleg-title">
+    <section className="panel" aria-labelledby="twoleg-title">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">HEDGE LAB</p>
-          <h2 id="twoleg-title">Two-leg session ve replay</h2>
+          <h2 id="twoleg-title">{t("twoleg.panel.title")}</h2>
         </div>
       </div>
       {error && (
@@ -166,104 +222,67 @@ export function TwoLegPanel({
         </div>
       )}
 
-      <h3 className="paper-subheading">Session</h3>
-      <div className="paper-order-form">
-        <label className="field">
-          <span className="field-label">Session kimliği</span>
-          <span className="input-wrap">
-            <input aria-label="Session kimliği" value={session} onChange={(event) => setSession(event.target.value)} />
-          </span>
-        </label>
-      </div>
-      <button className="secondary-button" type="button" disabled={busy} onClick={submitStart}>
-        Session başlat
-      </button>
-      <button className="secondary-button" type="button" disabled={busy} onClick={onReplay}>
-        Replay
-      </button>
-
-      <h3 className="paper-subheading">Accepted fill</h3>
-      <div className="paper-order-form">
-        <label className="field">
-          <span className="field-label">Fill kimliği</span>
-          <span className="input-wrap">
-            <input aria-label="Fill kimliği" value={fillId} onChange={(event) => setFillId(event.target.value)} />
-          </span>
-        </label>
-        <label className="field">
-          <span className="field-label">Bacak</span>
-          <span className="input-wrap">
-            <input aria-label="Bacak" value={legId} onChange={(event) => setLegId(event.target.value)} />
-          </span>
-        </label>
-        <label className="field">
-          <span className="field-label">Hedge yönü</span>
-          <span className="input-wrap">
-            <input aria-label="Hedge yönü" value={hedgeSide} onChange={(event) => setHedgeSide(event.target.value)} />
-          </span>
-        </label>
-        <label className="field">
-          <span className="field-label">Miktar</span>
-          <span className="input-wrap">
-            <input aria-label="Miktar" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
-          </span>
-        </label>
-        <label className="field">
-          <span className="field-label">Fill durumu</span>
-          <span className="input-wrap">
-            <input aria-label="Fill durumu" value={fillStatus} onChange={(event) => setFillStatus(event.target.value)} />
-          </span>
-        </label>
-        <label className="field">
-          <span className="field-label">Event time (µs)</span>
-          <span className="input-wrap">
-            <input aria-label="Event time (µs)" value={eventTime} onChange={(event) => setEventTime(event.target.value)} />
-          </span>
-        </label>
-      </div>
-      <button className="secondary-button" type="button" disabled={busy} onClick={submitFill}>
-        Fill kabul et
-      </button>
-
-      <h3 className="paper-subheading">Terminal işaretleri</h3>
-      <button className="secondary-button" type="button" disabled={busy} onClick={onRecovery}>
-        Recovery işaretle
-      </button>
-      <button className="secondary-button" type="button" disabled={busy} onClick={onTimeout}>
-        Timeout işaretle
-      </button>
-
-      {projection && (
-        <div className="table-wrap paper-result">
-          <table>
-            <tbody>
-              <tr>
-                <td>Durum</td>
-                <td>{projection.state}</td>
-              </tr>
-              <tr>
-                <td>Bacak A</td>
-                <td>
-                  {projection.leg_a_status} · {projection.leg_a_quantity}
-                </td>
-              </tr>
-              <tr>
-                <td>Bacak B</td>
-                <td>
-                  {projection.leg_b_status} · {projection.leg_b_quantity}
-                </td>
-              </tr>
-              <tr>
-                <td>Fill sayısı</td>
-                <td>{projection.fills.length}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p className="paper-note">
-            Yalnız gözlenen fill&apos;ler kaydedilir; sentetik bacak üretilmez, timeout saatten tahmin edilmez.
-          </p>
+      <div className="hedge-status-strip" data-testid="hedge-status-strip">
+        <div>
+          <span className="hedge-strip-label">{t("twoleg.result.state")}</span>
+          <span className="hedge-strip-value">{projection?.state ?? ""}</span>
         </div>
-      )}
+        <div>
+          <span className="hedge-strip-label">{t("twoleg.session.id")}</span>
+          <span className="hedge-strip-value">{sessionId}</span>
+        </div>
+        <div>
+          <span className="hedge-strip-label">{t("twoleg.result.fillCount")}</span>
+          <span className="hedge-strip-value">{projection?.fills.length ?? 0}</span>
+        </div>
+      </div>
+
+      <div className="hedge-levels">
+        <span>{t("twoleg.sr.label")}</span>
+        <span className="badge badge-closed">{t("badge.closed.label")}</span>
+      </div>
+
+      <div className="hedge-legs">
+        <LegCard
+          legId="A"
+          status={projection?.leg_a_status ?? "NONE"}
+          quantity={projection?.leg_a_quantity ?? "0"}
+          eventTimeUs={eventTime}
+          busy={busy}
+          onFill={onFill}
+          onError={setFormError}
+        />
+        <LegCard
+          legId="B"
+          status={projection?.leg_b_status ?? "NONE"}
+          quantity={projection?.leg_b_quantity ?? "0"}
+          eventTimeUs={eventTime}
+          busy={busy}
+          onFill={onFill}
+          onError={setFormError}
+        />
+      </div>
+
+      <div className="hedge-actions">
+        <TextParameter label={t("twoleg.session.id")} name="hedge-session" value={session} onChange={setSession} />
+        <TextParameter label={t("twoleg.eventTime.label")} name="hedge-event-time" value={eventTime} onChange={setEventTime} />
+        <div className="hedge-buttons">
+          <button className="secondary-button" type="button" disabled={busy} onClick={submitStart}>
+            {t("twoleg.session.start")}
+          </button>
+          <button className="secondary-button" type="button" disabled={busy} onClick={onReplay}>
+            {t("twoleg.session.replay")}
+          </button>
+          <button className="secondary-button" type="button" disabled={busy} onClick={onRecovery}>
+            {t("twoleg.terminal.recovery")}
+          </button>
+          <button className="secondary-button" type="button" disabled={busy} onClick={onTimeout}>
+            {t("twoleg.terminal.timeout")}
+          </button>
+        </div>
+      </div>
+
+      <p className="paper-note">{t("twoleg.integrity.note")}</p>
     </section>
   );
 }

@@ -80,6 +80,7 @@ class HistoricalChartDataApiTests(unittest.TestCase):
                     high="101.00",
                     low="99.00",
                     close="100.50",
+                    base_volume="1",
                 ),
                 api.HistoricalChartBarResponse(
                     bar_index=2,
@@ -89,6 +90,7 @@ class HistoricalChartDataApiTests(unittest.TestCase):
                     high="101.00",
                     low="99.00",
                     close="100.50",
+                    base_volume="1",
                 ),
             ],
         )
@@ -96,6 +98,28 @@ class HistoricalChartDataApiTests(unittest.TestCase):
         self.assertEqual(result, expected)
         self.assertEqual(response.headers["Cache-Control"], "no-store")
         self.assertNotIn("path", json.dumps(result.model_dump(mode="json")))
+
+    def test_chart_data_endpoint_includes_base_volume_per_bar(self):
+        dataset = _dataset(2)
+        preflight = api.DatasetPreflightResponse(
+            dataset_id=dataset.metadata.dataset_id,
+            artifact_status="VERIFIED",
+            preflight_status="READY",
+            instrument=dataset.metadata.symbol,
+            interval=dataset.metadata.interval,
+            period_start=date.fromisoformat(dataset.metadata.period_start),
+            period_end=date.fromisoformat(dataset.metadata.period_end),
+            bar_count=len(dataset.bars),
+            timestamp_unit="microseconds",
+            timezone="UTC",
+            data_quality_status="UNKNOWN",
+            data_quality_message="Bu testte kalite özeti kullanılmıyor.",
+            artifact={"sha256": dataset.metadata.artifact_sha256, "byte_size": dataset.metadata.artifact_bytes},
+            read_only=True,
+        )
+        with patch("dcabot.server.api._dataset_preflight", return_value=(dataset, preflight)):
+            result = api.get_dataset_chart_data(dataset.metadata.dataset_id, Response())
+        self.assertEqual([bar.base_volume for bar in result.bars], ["1", "1"])
 
     def test_chart_data_endpoint_rejects_more_than_simulation_limit(self):
         dataset = _dataset(api.MAX_HISTORICAL_SIMULATION_BARS + 1)

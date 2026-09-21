@@ -5,6 +5,7 @@ import re
 
 
 _IDENTIFIER = re.compile(r"[A-Za-z0-9_.:-]{1,100}\Z", re.ASCII)
+_HEX64 = re.compile(r"[0-9a-f]{64}\Z", re.ASCII)
 _STATUSES = ("SUCCEEDED", "FAILED", "INVALID")
 _MAX_TRIALS = 1_000
 
@@ -31,11 +32,20 @@ class TrialRecord:
 
     trial_id: str
     status: str
+    parameter_hash: str = ""
 
     def __post_init__(self) -> None:
         _validate_identifier(self.trial_id, "TRIAL_ID_INVALID")
         if type(self.status) is not str or self.status not in _STATUSES:
             raise TrialRegistryError("TRIAL_STATUS_INVALID", "Trial status geçersiz.")
+        if (
+            type(self.parameter_hash) is not str
+            or (self.parameter_hash != "" and _HEX64.fullmatch(self.parameter_hash) is None)
+        ):
+            raise TrialRegistryError(
+                "TRIAL_PARAMETER_HASH_INVALID",
+                "Parameter hash boş ya da küçük harfli SHA-256 hex olmalıdır.",
+            )
 
 
 @dataclass(frozen=True, slots=True)
