@@ -8,9 +8,11 @@ from dcabot.application.credential_boundary import EphemeralCredentialProvider, 
 from dcabot.application.signed_request import ApiKeyType
 from dcabot.data_adapters.binance_testnet_account import (
     BINANCE_SPOT_TESTNET_ACCOUNT_URL,
+    BINANCE_SPOT_TESTNET_MY_TRADES_URL,
     BINANCE_SPOT_TESTNET_OPEN_ORDERS_URL,
     BinanceTestnetAccountError,
     fetch_binance_testnet_account,
+    fetch_binance_testnet_my_trades,
     fetch_binance_testnet_open_orders,
 )
 
@@ -249,6 +251,77 @@ class BinanceTestnetOpenOrdersTests(unittest.TestCase):
         with self.assertRaisesRegex(BinanceTestnetAccountError, "TESTNET_OPEN_ORDERS_RESPONSE_INVALID"):
             fetch_binance_testnet_open_orders(
                 "testnet-readonly",
+                provider=self.provider,
+                clock=FixedClock(),
+                opener=FakeOpener(response),
+            )
+
+
+class BinanceTestnetMyTradesTests(unittest.TestCase):
+    def setUp(self):
+        self.provider = EphemeralCredentialProvider()
+        self.provider.put(
+            CredentialMaterial(
+                credential_id="testnet-readonly",
+                api_key="dummy-api-key",
+                key_type=ApiKeyType.HMAC,
+                secret=b"dummy-secret",
+            )
+        )
+        self.trade = {
+            "symbol": "BTCUSDT",
+            "id": 555,
+            "orderId": 42,
+            "price": "90.00000000",
+            "qty": "0.50000000",
+            "commission": "0.00050000",
+            "commissionAsset": "BTC",
+            "time": 1_700_000_000_000,
+            "isBuyer": True,
+        }
+
+    def test_signed_my_trades_lookup_is_read_only_and_redacted(self):
+        response = FakeResponse([self.trade])
+        opener = FakeOpener(response)
+
+        result = fetch_binance_testnet_my_trades(
+            "testnet-readonly", "BTCUSDT", order_id=42, provider=self.provider, clock=FixedClock(), opener=opener
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].trade_id, 555)
+        self.assertEqual(result[0].order_id, 42)
+        self.assertEqual(result[0].price, "90.00000000")
+        self.assertEqual(result[0].qty, "0.50000000")
+        self.assertEqual(result[0].commission, "0.00050000")
+        self.assertEqual(result[0].commission_asset, "BTC")
+        self.assertTrue(result[0].is_buyer)
+        self.assertEqual(opener.request.full_url.split("?", 1)[0], BINANCE_SPOT_TESTNET_MY_TRADES_URL)
+        self.assertNotIn("dummy-secret", opener.request.full_url)
+        self.assertTrue(response.closed)
+
+    def test_symbol_mismatch_fails_closed(self):
+        trade = dict(self.trade, symbol="ETHUSDT")
+        response = FakeResponse([trade])
+
+        with self.assertRaisesRegex(BinanceTestnetAccountError, "TESTNET_MY_TRADES_RESPONSE_INVALID"):
+            fetch_binance_testnet_my_trades(
+                "testnet-readonly",
+                "BTCUSDT",
+                order_id=42,
+                provider=self.provider,
+                clock=FixedClock(),
+                opener=FakeOpener(response),
+            )
+
+    def test_malformed_response_fails_closed(self):
+        response = FakeResponse({"not": "a-list"})
+
+        with self.assertRaisesRegex(BinanceTestnetAccountError, "TESTNET_MY_TRADES_RESPONSE_INVALID"):
+            fetch_binance_testnet_my_trades(
+                "testnet-readonly",
+                "BTCUSDT",
+                order_id=42,
                 provider=self.provider,
                 clock=FixedClock(),
                 opener=FakeOpener(response),

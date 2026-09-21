@@ -28,11 +28,14 @@ from dcabot.domain.numbers import number
 BINANCE_SPOT_TESTNET_REST_BASE_URL = "https://testnet.binance.vision/api"
 BINANCE_SPOT_TESTNET_ACCOUNT_URL = f"{BINANCE_SPOT_TESTNET_REST_BASE_URL}/v3/account"
 BINANCE_SPOT_TESTNET_OPEN_ORDERS_URL = f"{BINANCE_SPOT_TESTNET_REST_BASE_URL}/v3/openOrders"
+BINANCE_SPOT_TESTNET_MY_TRADES_URL = f"{BINANCE_SPOT_TESTNET_REST_BASE_URL}/v3/myTrades"
 MAX_ACCOUNT_RESPONSE_BYTES = 256 * 1024
 MAX_OPEN_ORDERS_RESPONSE_BYTES = 256 * 1024
+MAX_MY_TRADES_RESPONSE_BYTES = 256 * 1024
 MAX_BALANCES = 5_000
 MAX_NONZERO_BALANCES = 512
 MAX_OPEN_ORDERS = 512
+MAX_MY_TRADES = 512
 MAX_PERMISSIONS = 32
 DEFAULT_TIMEOUT_SECONDS = 5
 
@@ -503,6 +506,202 @@ def _normalize_open_orders(payload: list[object]) -> tuple[BinanceTestnetOpenOrd
             )
         )
     return tuple(orders)
+
+
+@dataclass(frozen=True, slots=True)
+class BinanceTestnetTrade:
+    """One redacted real fill; the only source of exact fill price/qty/fee."""
+
+    trade_id: int
+    order_id: int
+    symbol: str
+    price: str
+    qty: str
+    commission: str
+    commission_asset: str
+    is_buyer: bool
+    time_ms: int
+
+
+def fetch_binance_testnet_my_trades(
+    credential_id: str,
+    symbol: str,
+    *,
+    order_id: int,
+    provider: CredentialProvider,
+    clock: Clock | None = None,
+    opener: AccountOpener | None = None,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    recv_window_ms: int = DEFAULT_RECV_WINDOW_MS,
+) -> tuple[BinanceTestnetTrade, ...]:
+    """Fetch the exact real fills for one order -- price/qty/fee never come
+    from anywhere else (order-status only gives cumulative totals).
+    """
+
+    if type(timeout_seconds) is not int or not 0 < timeout_seconds <= 30:
+        raise BinanceTestnetAccountError(
+            "TESTNET_MY_TRADES_TIMEOUT_INVALID", "Trade isteği timeout değeri geçersiz."
+        )
+    if (
+        not isinstance(symbol, str)
+        or not 1 <= len(symbol) <= 32
+        or symbol != symbol.strip()
+        or any(ord(char) < 0x20 or ord(char) == 0x7F for char in symbol)
+    ):
+        raise BinanceTestnetAccountError(
+            "TESTNET_MY_TRADES_SYMBOL_INVALID", "Trade symbol değeri geçersiz."
+        )
+    if type(order_id) is not int or order_id < 0:
+        raise BinanceTestnetAccountError(
+            "TESTNET_MY_TRADES_ORDER_ID_INVALID", "Trade order ID değeri geçersiz."
+        )
+    try:
+        material = provider.load(credential_id)
+        if material.key_type is not ApiKeyType.HMAC:
+            raise BinanceTestnetAccountError(
+                "TESTNET_MY_TRADES_KEY_TYPE_UNSUPPORTED", "Yalnız HMAC key destekleniyor."
+            )
+        signed = build_signed_request(
+            (("symbol", symbol), ("orderId", str(order_id))),
+            clock=clock or SystemClock(),
+            recv_window_ms=recv_window_ms,
+            signer=HmacSha256Signer(material.secret),
+        )
+    except BinanceTestnetAccountError:
+        raise
+    except SignedRequestError as exc:
+        raise BinanceTestnetAccountError(exc.code, "İmzalı trade isteği hazırlanamadı.") from exc
+    request = Request(
+        f"{BINANCE_SPOT_TESTNET_MY_TRADES_URL}?{signed.query_string}",
+        headers={
+            "Accept": "application/json",
+            "Accept-Encoding": "identity",
+            "X-MBX-APIKEY": material.api_key,
+        },
+        method="GET",
+    )
+    response: AccountResponse | None = None
+    try:
+        response = (opener or build_opener(_NoRedirectHandler())).open(
+            request, timeout=timeout_seconds
+        )
+        status = getattr(response, "status", None)
+        if status is None:
+            status = response.getcode()  # type: ignore[attr-defined]
+        if status != 200:
+            raise BinanceTestnetAccountError(
+                "TESTNET_MY_TRADES_HTTP_ERROR", "İmzalı trade HTTP yanıtı başarılı değil."
+            )
+        headers = getattr(response, "headers", None)
+        content_length = headers.get("Content-Length") if headers is not None else None
+        if content_length is not None:
+            try:
+                declared_size = int(content_length)
+            except (TypeError, ValueError) as exc:
+                raise BinanceTestnetAccountError(
+                    "TESTNET_MY_TRADES_RESPONSE_INVALID", "Trade Content-Length geçersiz."
+                ) from exc
+            if declared_size < 0 or declared_size > MAX_MY_TRADES_RESPONSE_BYTES:
+                raise BinanceTestnetAccountError(
+                    "TESTNET_MY_TRADES_RESPONSE_TOO_LARGE", "Trade yanıt byte sınırını aşıyor."
+                )
+        encoding = headers.get("Content-Encoding") if headers is not None else None
+        if encoding and encoding.lower() != "identity":
+            raise BinanceTestnetAccountError(
+                "TESTNET_MY_TRADES_ENCODING_INVALID", "Trade yanıt sıkıştırma biçimi reddedildi."
+            )
+        payload_bytes = response.read(MAX_MY_TRADES_RESPONSE_BYTES + 1)
+        if not isinstance(payload_bytes, bytes) or len(payload_bytes) > MAX_MY_TRADES_RESPONSE_BYTES:
+            raise BinanceTestnetAccountError(
+                "TESTNET_MY_TRADES_RESPONSE_TOO_LARGE", "Trade yanıt byte sınırını aşıyor."
+            )
+        try:
+            payload = json.loads(payload_bytes.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise BinanceTestnetAccountError(
+                "TESTNET_MY_TRADES_RESPONSE_INVALID", "Trade yanıtı JSON olarak okunamadı."
+            ) from exc
+        if type(payload) is not list or len(payload) > MAX_MY_TRADES:
+            raise BinanceTestnetAccountError(
+                "TESTNET_MY_TRADES_RESPONSE_INVALID", "Trade yanıtı bounded liste olmalıdır."
+            )
+        return _normalize_trades(payload, symbol)
+    except BinanceTestnetAccountError:
+        raise
+    except (HTTPError, URLError, TimeoutError, OSError) as exc:
+        raise BinanceTestnetAccountError(
+            "TESTNET_MY_TRADES_UNAVAILABLE", "İmzalı trade yanıtı alınamadı."
+        ) from exc
+    finally:
+        if response is not None:
+            response.close()
+
+
+def _normalize_trades(payload: list[object], symbol: str) -> tuple[BinanceTestnetTrade, ...]:
+    trades: list[BinanceTestnetTrade] = []
+    for item in payload:
+        if type(item) is not dict:
+            raise BinanceTestnetAccountError(
+                "TESTNET_MY_TRADES_RESPONSE_INVALID", "Trade öğesi nesne olmalıdır."
+            )
+        for text_field, limit in (
+            ("symbol", 32),
+            ("price", 128),
+            ("qty", 128),
+            ("commission", 128),
+            ("commissionAsset", 32),
+        ):
+            value = item.get(text_field)
+            if (
+                type(value) is not str
+                or not value
+                or len(value) > limit
+                or any(ord(char) < 0x20 or ord(char) == 0x7F for char in value)
+            ):
+                raise BinanceTestnetAccountError(
+                    "TESTNET_MY_TRADES_RESPONSE_INVALID", f"Trade {text_field} alanı geçersiz."
+                )
+        if item["symbol"] != symbol:
+            raise BinanceTestnetAccountError(
+                "TESTNET_MY_TRADES_RESPONSE_INVALID", "Trade symbol kimliği doğrulanamadı."
+            )
+        for int_field in ("id", "orderId", "time"):
+            value = item.get(int_field)
+            if type(value) is not int or value < 0:
+                raise BinanceTestnetAccountError(
+                    "TESTNET_MY_TRADES_RESPONSE_INVALID", f"Trade {int_field} alanı geçersiz."
+                )
+        is_buyer = item.get("isBuyer")
+        if type(is_buyer) is not bool:
+            raise BinanceTestnetAccountError(
+                "TESTNET_MY_TRADES_RESPONSE_INVALID", "Trade isBuyer alanı geçersiz."
+            )
+        try:
+            price = number(item["price"])
+            qty = number(item["qty"])
+            commission = number(item["commission"])
+        except ValueError as exc:
+            raise BinanceTestnetAccountError(
+                "TESTNET_MY_TRADES_RESPONSE_INVALID", "Trade miktarı exact decimal olmalıdır."
+            ) from exc
+        if price < 0 or qty < 0 or commission < 0:
+            raise BinanceTestnetAccountError(
+                "TESTNET_MY_TRADES_RESPONSE_INVALID", "Trade miktarı negatif olamaz."
+            )
+        trades.append(
+            BinanceTestnetTrade(
+                trade_id=item["id"],
+                order_id=item["orderId"],
+                symbol=item["symbol"],
+                price=item["price"],
+                qty=item["qty"],
+                commission=item["commission"],
+                commission_asset=item["commissionAsset"],
+                is_buyer=is_buyer,
+                time_ms=item["time"],
+            )
+        )
+    return tuple(trades)
 
 
 def _string_tuple(raw: object, field_name: str, limit: int) -> tuple[str, ...]:

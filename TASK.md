@@ -1,20 +1,27 @@
-# Aktif iş — Faz 3.6 kapandı; sıradaki adım Faz 3.7 kapsam araştırması
+# Aktif iş — Faz 3.7 kodu tamam; REAL_TESTNET kanıtı Arda'yı bekliyor
 
-Faz 3.6 (dolum + restart kurtarma) `evidence_scope=REAL_TESTNET` ile kapandı. Bkz. STATE.md, docs/KARARLAR.md. Şu anda Claude'un elinde açık kod görevi yok.
+`fetch_binance_testnet_my_trades`, `application/testnet_dca_session.py`, `tools/run_testnet_dca_deal.py` yazıldı. 5 yeni offline test (biri tam BASE→SAFETY→EXIT döngüsü), tam checker 942/942 PASS. Ayrıntı: STATE.md, docs/KARARLAR.md.
 
-## Sıradaki: Faz 3.7 — DCA botu testnet'te uçtan uca (KAPSAM ARAŞTIRMASI, kod yazmadan önce)
-Hedef (docs/YOL_HARITASI.md): base + 1-2 safety + TP — testnet'te gerçek, tam bir DCA döngüsü. Bu Faz 3'ün SON dilimi; tamamlanınca kapanış ölçütü (bağımsız review + `git tag p2-testnet-complete`).
+## Arda'nın yapması gereken (Claude yapamaz — gerçek mutation gerekir)
+Güncel BTCUSDT fiyatını önce kontrol et (`check_price_and_band.py` benzeri, ya da testnet.binance.vision arayüzünden), sonra:
+```powershell
+$env:PYTHONPATH='src'
+$env:DCABOT_TRADING_ENABLED='true'
+uv run --frozen python tools/run_testnet_dca_deal.py testnet-readonly BTCUSDT BTC --base-qty 0.001 --safety-qty 0.001 --safety-count 1 --deviation 0.03 --take-profit 0.01
+```
+- `--deviation 0.03`: safety, mark anchor'ın %3 altına düşerse tetiklenir.
+- `--take-profit 0.01`: TP, ortalama girişin %1 üstünde.
+- BASE emri için onay isteyecek (EVET yaz). Sonra döngü: "Fiyati/dolumlari kontrol et [k], cik [q]" — `k` yazıp Enter'a bas, tekrar tekrar (fiyat hareket edip safety/TP tetiklenene kadar). Her yeni emir (safety, TP) için ayrıca EVET istenecek.
+- İstersen istediğin an `q` ile çıkabilirsin (yarım kalan emirler testnet'te açık kalır, elle takip edilmeli — sonraki bir `run_single_testnet_order.py`/`recover_stuck_attempts` çalıştırması attempt-seviyesinde kurtarır ama açık venue emrini iptal etmez).
+- Çıktının tamamını (credential/secret içermez) buraya yapıştır.
 
-## İlk adımlar
-1. Mevcut `testnet_order_execution.py`/`binance_testnet_order_execution.py` yalnız tek bir LIMIT emri destekliyor — DCA için birden fazla emri (base + safety'ler + TP) sıralı/duruma bağlı yönetmek gerekiyor. Mevcut çekirdek `engine.py`'nin (`State`/`apply`/`decision`) DCA mantığını zaten offline/simülasyonda yönettiğini hatırla — 3.7'nin işi bu mantığı gerçek testnet mutation'larına bağlamak, yeniden icat etmek değil.
-2. Kapsamı büyük olasılıkla küçük tutmak gerekecek: tam bir "canlı bot döngüsü" (sürekli çalışan worker + reconnect + fill event'leri dinleme) yerine, önce elle tetiklenen adımlarla (CLI, Faz 3.5'teki gibi) bir DCA deal'inin tamamını (base gönder → safety tetiklenirse gönder → TP gönder) kanıtlamak daha güvenli olabilir.
-3. Dar kapsamı Arda'ya sun, onaysız kod yazma.
+## Bu geldiğinde Claude'un yapacağı
+- STATE.md'yi `evidence_scope=REAL_TESTNET` olarak günceller.
+- Faz 3'ün kendi kapanış ölçütünü (bağımsız review + `git tag p2-testnet-complete`) çalıştırır.
 
 ## Değişmez sınırlar
 - Credential, secret, gerçek emir, mutation ve mainnet: Arda onayı olmadan asla.
-- Faz 3.4'ün 7 kuralı (kill-switch, tutar tavanı, onay, idempotency, tek-eşzamanlı-mutation, cancel disiplini, testnet hard-code) her yeni mutation'da aynen uygulanır.
-- Claude gerçek testnet'e karşı hiçbir mutation çalıştırmaz.
 - STATE.md/TASK.md yalnız Claude günceller.
 
 ## Kabul
-- Kod yazılmadan önce dar kapsam Arda'ya sunulur ve onaylanır.
+- REAL_TESTNET kanıtı geldiğinde STATE.md güncellenir ve Faz 3 kapanışı başlar.
