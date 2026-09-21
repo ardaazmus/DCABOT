@@ -3,10 +3,10 @@
 İki bağımsız eksen var. (1) **Venue ekseni** (bağlayıcı sıra): P1 yerel demo → P2 Binance testnet → P3 gerçek Binance (sınırlı canary) → P4 diğer borsalar. (2) **Özellik ailesi ekseni** (Faz 5-8, 2026-09-21'de dondurmadan çıkarıldı): her aile kendi sözleşme olgunluğuna göre venue eksenine PARALEL ilerler — mainnet'i (P3/P4) beklemez, ama kendi kanıt kapısını (aşağıda) geçmeden implementasyona geçmez. Bir sonraki faza geçmek için önceki fazın kapanış ölçütü sağlanır. Eski dilim günlükleri: `docs/archive/history/`.
 
 ## Şimdi
-- **Faz 3 (P2 testnet) tamamen kapandı — `p2-testnet-complete` etiketlendi.** Sıradaki iş TASK.md'dedir (Faz 4 VE Faz 5 kapsam kararları Arda'yı bekliyor).
+- **Faz 3 (P2 testnet) tamamen kapandı — `p2-testnet-complete` etiketlendi.** Sıradaki iş TASK.md'dedir (Faz 4, 5, 9 ve 10 kapsam/sıra kararları Arda'yı bekliyor).
 
 ## Sonra
-Faz 4 (canary) — venue ekseni. Faz 5 (Futures Grid) — özellik ailesi ekseni. İkisi paralel yürüyebilir, birbirini bloklamaz.
+Faz 4 (canary, venue ekseni) · Faz 5-8 (dondurulmuş aileler, açık) · Faz 9 (P1 kapanış borcu) · Faz 10 (yeni aileler) — hepsi birbirinden bağımsız, paralel yürüyebilir; hiçbiri mainnet'i (P3/P4) beklemez.
 
 ## Faz 0 — Temizlik (tamam)
 Kural reformu, belge/kanıt arşivi, boyut kapısı. Yeni oturum yalnız AGENTS + STATE + TASK okuyarak doğru işi seçebilmeli.
@@ -25,17 +25,8 @@ Açık hata raporu maddelerini doğrula ve kapat (TASK.md). Çıkış: rapor bo�
 
 Kapanış (tamam, 2026-09-20): temiz klonda (gerçek `git clone`, kalıcı config değişikliği yok) README komutlarıyla 9 adımlık akış hatasız çalıştı (indir/doğrula → kalite → bot kur → önizle → koş → grafikten incele → kaydet → kapat/aç → reproduce ile aynı hash) → bağımsız review `APPROVED_WITH_FINDINGS` (Codex/muse, `evidence/P1_CLOSURE_INDEPENDENT_REVIEW_2026_09_20/SONUC.md`; tek eyleme dönüşen bulgu — click-bubbling kozmetik hata — Claude tarafından aynı gün düzeltildi ve doğrulandı) → `git tag p1-demo-complete` atıldı.
 
-## Faz 3 — P2: gerçek Binance testnet
-Her dilim `evidence_scope=REAL_TESTNET` üretmiyorsa iş sayılmaz. Ayrıntılı uygulama notları docs/KARARLAR.md'de (tarih sırasıyla); burada yalnız durum ve ana dosyalar.
-1. **3.1 Reconnect worker (tamam, REAL_TESTNET):** `application/user_stream_reconnect_worker.py`. Canlı testte gerçek bir bug (`ConnectionClosedError` yakalanmıyordu) bulundu, düzeltildi. Araç: `tools/run_user_stream_reconnect_worker.py`.
-2. **3.2 REST catch-up (kod tamam, kısmi REAL_TESTNET):** `application/rest_catch_up.py`. Tam uçtan uca kanıt gerçek kesintiye uğramış bir attempt gerektiriyor — 3.5 başarıyla geçtiği için henüz oluşmadı. Araç: `tools/run_order_status_lookup_diagnostic.py`.
-3. **3.3 Salt-okunur hesap ekranı (tamam):** backend `binance_testnet_account.py`, frontend `BinanceAccountPanel.tsx` (Codex/muse, dosya-sınırlı brief, Claude doğruladı). Uç noktalar: `GET /api/testnet/account`, `GET /api/testnet/open-orders`.
-4. **3.4 Mutation gate kararı (tamam):** 7 kural onaylandı (kill-switch, `max_entry_notional`, execution-anında onay, idempotent clientOrderId + durable-before-send, tek eşzamanlı mutation, cancel aynı disiplin, testnet hard-code).
-5. **3.5 Tek testnet emri (tamam, REAL_TESTNET):** `data_adapters/binance_testnet_order_execution.py` (mutation yapabilen TEK dosya), `application/testnet_order_execution.py` (7 kuralın kapısı). Gerçek döngü kanıtlandı (`venue_order_id=4423471`: NEW→FOUND→CANCELED). İki gerçek bug bulundu/düzeltildi (UNKNOWN/REJECTED ayrımı, `venue_error_code` işareti). Araç: `tools/run_single_testnet_order.py`.
-6. **3.6 Dolum + restart kurtarma (tamam, REAL_TESTNET):** `AttemptStore.recover_after_restart` artık `PREPARED`/`PERSISTED`/`SENDING` hepsini kurtarıyor (bulundu: `can_transition` ilk ikisine çıkış vermiyordu — sonsuz kilitlenme riski, düzeltildi). `application/testnet_order_execution.py::recover_stuck_attempts` her oturum başında kalan attempt'leri gerçek sorguyla çözer. Elle Ctrl+C zamanlaması pratik olmadığı için `tools/run_single_testnet_order.py --simulate-crash-at {prepared,persisted,sending}` eklendi (gerçek `AttemptStore` geçişleri + `os._exit`). Kanıt: `PERSISTED`'de bırakılan attempt bir sonraki çalıştırmada `UNRESOLVED`'e çözüldü, yeni emir bloke olmadan geçti. Ayrıntı: docs/KARARLAR.md.
-7. **3.7 DCA botu testnet'te uçtan uca (tamam, kısmi REAL_TESTNET — BASE bacağı canlı, SAFETY/EXIT offline):** base + safety + TP. Yeni icat değil — çekirdek `engine.py`'nin `State/apply/decision`'ı (Faz 2'nin de kullandığı aynı mekanizma) gerçek testnet mutation'larına bağlandı. `application/testnet_dca_session.py`: `place_next_action` (INTENT + gated gönder), `sync_order_fills` (yeni `fetch_binance_testnet_my_trades` ile exact dolum verisi, execution_id dedup, tam dolunca `ORDER_FINAL`). Bulundu: `engine.py` fee'nin her zaman quote-asset olmasını istiyor ama gerçek BUY dolumları (BNB indirimsiz) genelde base-asset ücret keser — aynı fill'in kendi fiyatıyla exact dönüştürülüyor, desteklenmeyen asset'te fail-closed. Offline test: tam BASE→SAFETY:1→EXIT döngüsü. Araç: `tools/run_testnet_dca_deal.py`. Bilinen sınır: deal state yalnız process belleğinde, restart'ta devam ettirilemez (attempt-seviyesi kurtarma hâlâ çalışır, ayrıntı docs/KARARLAR.md).
-
-Kapanış (tamam, 2026-09-21): 3.1-3.7 tüm dilimler PASS (3.1/3.5/3.6 tam REAL_TESTNET, 3.2/3.7 kısmi) → bağımsız review (farklı ajan, salt-okunur, `d2dd43f^..60ca267` diff) `APPROVED_WITH_FINDINGS` — 2 gerçek bulgu (F1: cancel AttemptStore disiplininden geçmiyordu; F2: UNKNOWN attempt yeni mutation'ı bloklamıyordu) aynı gün düzeltildi ve 9 yeni testle doğrulandı (bkz. docs/KARARLAR.md) → `git tag p2-testnet-complete` atıldı.
+## Faz 3 — P2: gerçek Binance testnet (tamam, `p2-testnet-complete`)
+Ana dosyalar: `application/user_stream_reconnect_worker.py`, `rest_catch_up.py`, `testnet_order_execution.py` (mutation gate, 7 kural), `data_adapters/binance_testnet_order_execution.py` (mutation yapabilen TEK dosya), `application/testnet_dca_session.py` (DCA orkestrasyonu). 3.1/3.5/3.6 tam REAL_TESTNET, 3.2/3.7 kısmi. Bağımsız review `APPROVED_WITH_FINDINGS` — 2 bulgu (cancel'in AttemptStore disiplininden geçmemesi, UNKNOWN attempt'in yeni mutation'ı bloklamaması) aynı gün düzeltildi, 9 yeni test. Tüm bulgular/bug'lar/kanıtlar: docs/KARARLAR.md (tarih sırasıyla, 2026-09-20/21).
 
 ## Faz 4 — P3: gerçek Binance, sınırlı canary (taslak; P2 bitince ayrıntılanır)
 Arda'nın açık onayı olmadan mainnet emri yok. Küçük sabit tutar üst sınırı, kill-switch, günlük kayıp limiti. Canary süresi ve başarı ölçütü (işlem sayısı, sıfır duplicate, çözülmemiş UNKNOWN yok) baştan yazılır. Paketleme ve tek-worker sınırı bu fazda ele alınır. P4 (diğer borsalar) P3 sonrası planlanır.
@@ -47,3 +38,21 @@ Sıra: derin kod incelemesine (bağımsız ajan, salt-okunur) dayalı olgunluk �
 2. **Faz 6 — two-leg/hedge (F18/F34):** identity+fill-projection tamam, persistence/replay/recovery hiç yazılmamış (`P1.15.c DEFERRED/NO-GO`) — net sonraki adım.
 3. **Faz 7 — rebalancing (F17) + signal bot (F19):** küçük/temiz matematik-kimlik katmanları var, asset-conversion/fee/order-binding (rebalancing) ve auth/replay/webhook (signal bot) `PLAN`.
 4. **Faz 8 — çoklu bot/pair (F05) + LLM açıklayıcı asistan dış-LLM kısmı (F32):** sıfır kod/test, yalnız `PLAN` — en ham. (F32'nin rule-based kısmı zaten P1'de bağlı; bu yalnız dış-LLM önerisini kapsar.)
+
+## Faz 9 — P1 kapanış borcu (2026-09-21, tam envanter docs/KARARLAR.md'de)
+P1'in kendi kapsamında olup kapanışta unutulmuş, kısmen bitmiş 4 madde. Olgunluk sırası:
+1. **F27 — Canlı fiyatla paper trading:** en olgun — normalization/replay/capability-research katmanı `COMPLETE_WITH_LIMITATION/RESEARCH_AUDITED`; yalnız transport activation gate (`P1.17.j`) kasıtlı kapalı, gerçek REST/WS adapter + simulated emir/fill `PLAN`.
+2. **F31 — Bot lifecycle/shared-account bulk actions:** tekli lifecycle tamam; paylaşılan hesapta ownership/isolation (`P1.11.a/e`) `DEFERRED/NO-GO`, cross-deal isolation + toplu işlemler `PLAN`.
+3. **F09 — Trailing TP/SL breakeven kuyruğu:** çekirdek ratchet/exit-binding tamam (API/UI yok); breakeven, OCO/cancel-replace/late-fill, public sözleşmeler `DEFERRED/NO-GO`.
+4. **F30 — Erişilebilirlik kuyruğu:** light theme exact palette kararı bekliyor; NVDA/JAWS/HCM `NOT_RUN` — hiç koşulmamış.
+
+## Faz 10 — Yeni istenen aileler (2026-09-21, hiçbir fazda hiç yer almamıştı)
+9 madde, olgunluk sırasıyla; tam envanter docs/KARARLAR.md'de:
+1. **F20 — Strateji şablonu/kopyalama/paylaşma:** canonical snapshot/hash + onay kapısı `COMPLETE_WITH_LIMITATION`, aktivasyon/profile-binding/import-export/paylaşım/UI `PLAN`.
+2. **F36 — Audit/export/backup/restore:** append-only journal audit alt kümesi var, gerçek backup/restore hiç yok.
+3. **F40 — Zaman çizgisinde replay step/seek/speed:** domain-seviye event replay altyapısı var (`futures_dca_core_replay_*.py`), kullanıcıya dönük timeline/scrubber hiç yok.
+4. **F35 — Çoklu settlement/fee varlığı:** mimari olarak tek-varlığa (USDT) kilitli tasarım kararı — genişletme ayrı bir tasarım gerektirir.
+5. **F16, F28, F29, F33, F39 — eşit derecede ham:** dönemsel alım, dashboard/risk bütçesi, grafik-üstü plan düzenleme, uyarı/bildirim merkezi, hesaplanabilir risk açıklaması — hiçbirinde kod yok, hepsi `PLAN`.
+
+## Belge düzeltmesi (2026-09-21)
+F22 (kayıtlı koşu/kıyas/log-chart) matriste stale `PLAN` kaydediliydi; gerçekte Faz 2.3/2.4 ile teslim edilmiş. `docs/OZELLIK_MATRISI.md` güncellendi — yalnız CSV/JSON export hâlâ `PLAN`.

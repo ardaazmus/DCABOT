@@ -1,12 +1,14 @@
-# Aktif iş — Faz 5-8 yol haritasına bağlandı; sıradaki adım Arda'nın seçimi
+# Aktif iş — Faz 5-10 yol haritasına bağlandı; sıradaki adım Arda'nın seçimi
 
-Faz 3 (P2 testnet) kapalı (`p2-testnet-complete`). Bu oturumda Arda'nın "tüm kapalı olanları aç" talimatıyla 7 dondurulmuş özellik ailesi (Futures Grid/Reverse-Infinity, two-leg/hedge, rebalancing, signal bot, çoklu bot/pair, LLM dış-parça) derinlemesine incelendi ve docs/YOL_HARITASI.md'ye Faz 5-8 olarak bağlandı (olgunluk sırasıyla). Bu yalnız araştırma+belgeleme — hiçbir kod değişmedi, hiçbir yeni sözleşme yazılmadı. Ayrıntı: STATE.md, docs/KARARLAR.md 2026-09-21 "Faz 5-8 açılış".
+Faz 3 (P2 testnet) kapalı (`p2-testnet-complete`). Bu oturumda tam bir gap-analizi yapıldı: 20 F-kodu (7 dondurulmuş aile + 13 kalan madde) derinlemesine incelendi, docs/YOL_HARITASI.md'ye Faz 5-10 olarak bağlandı (olgunluk sırasıyla). Ayrıca F22'nin stale `PLAN` kaydı düzeltildi. Bu yalnız araştırma+belgeleme — hiçbir kod değişmedi. Ayrıntı: STATE.md, docs/KARARLAR.md 2026-09-21 ("Faz 5-8 açılış", "Faz 9-10 açılış").
 
-## Sıradaki: iki paralel seçenek, ikisi de Arda'nın kapsam onayını bekliyor
-1. **Faz 4 (P3 — gerçek Binance, sınırlı canary):** mainnet emri, tutar limiti, kill-switch, canary süresi/başarı ölçütü. Güvenlik çizgisi — AGENTS.md, Arda onayı zorunlu.
-2. **Faz 5 (Futures Grid + Reverse/Infinity varyantı):** en olgun dondurulmuş aile (1257+ satır kod, 57+ test zaten var). İlk adım kod değil — venue liquidation/funding için resmi exact oracle bulunamaması sorununu kapatacak bir araştırma kutusu (AGENTS.md, ≤1 oturum). Ayrıca Binance Futures ayrı bir venue/mutation katmanı gerektirir (P2'nin Spot gate'i doğrudan taşınmaz).
+## Sıradaki: dört paralel seçenek, hepsi Arda'nın kapsam onayını bekliyor
+1. **Faz 4 (P3 — gerçek Binance, sınırlı canary):** mainnet emri, tutar limiti, kill-switch, canary ölçütü. Güvenlik çizgisi — Arda onayı zorunlu.
+2. **Faz 5 (Futures Grid + Reverse/Infinity):** en olgun dondurulmuş aile. İlk adım: venue liquidation/funding oracle sorunu için araştırma kutusu.
+3. **Faz 9 (P1 kapanış borcu):** F27 (paper trading, en olgun — yalnız transport gate kapalı) ile başlamak en mantıklı.
+4. **Faz 10 (yeni aileler):** F20 (strateji şablonu, en olgun — snapshot/onay kapısı zaten var) ile başlamak en mantıklı.
 
-İkisi birbirini bloklamaz, paralel ilerleyebilir.
+Hepsi birbirini bloklamaz, paralel ilerleyebilir.
 
 ## Arda'nın isteğe bağlı yapabileceği
 Testnet hesabındaki 0.0004 BTC açık pozisyonu kapatmak istersen (zararsız, sahte para, zorunlu değil):
@@ -19,4 +21,4 @@ $env:PYTHONPATH='src'; $env:DCABOT_TRADING_ENABLED='true'; uv run --frozen pytho
 - STATE.md/TASK.md yalnız Claude günceller.
 
 ## Kabul
-- Arda Faz 4 (mainnet kapsamı) VEYA Faz 5 (Futures Grid araştırma kutusu) için onay/tercih verdiğinde Claude o dilimi başlatır.
+- Arda Faz 4/5/9/10'dan hangisiyle (veya hangileriyle paralel) başlanacağını seçtiğinde Claude o dilimi başlatır.
