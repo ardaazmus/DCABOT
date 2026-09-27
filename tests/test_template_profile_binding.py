@@ -102,5 +102,24 @@ class BindTemplateToProfileTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code, "TEMPLATE_BINDING_TEMPLATE_INVALID")
 
 
+class BindMaxActiveSafetyOrdersTests(unittest.TestCase):
+    """Faz 17 G.3 UI takibi: preset'ler yeni alanı taşıyabilmeli."""
+
+    def test_integer_value_binds(self):
+        binding = _bind(_template({"max_active_safety_orders": 2}))
+        self.assertEqual(binding.params, (("max_active_safety_orders", 2),))
+
+    def test_null_value_binds_as_explicit_default(self):
+        binding = _bind(_template({"max_active_safety_orders": None}))
+        self.assertEqual(binding.params, (("max_active_safety_orders", None),))
+
+    def test_out_of_range_or_wrong_type_rejected(self):
+        # Not: float template katmanında zaten reddedilir (JSON-safe değil).
+        for bad in (-1, 51, "2", True):
+            with self.assertRaises(TemplateBindingError, msg=repr(bad)) as ctx:
+                _bind(_template({"max_active_safety_orders": bad}))
+            self.assertEqual(ctx.exception.code, "TEMPLATE_BINDING_PARAM_INVALID")
+
+
 if __name__ == "__main__":
     unittest.main()

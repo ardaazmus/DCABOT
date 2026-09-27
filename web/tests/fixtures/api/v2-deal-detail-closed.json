@@ -1,0 +1,62 @@
+{
+  "data": {
+    "bot_id": "bot_65ca1f6fd849",
+    "bot_name": "W-F6 fixture",
+    "symbol": "BTCUSDT",
+    "mode": "PAPER",
+    "deal": 1,
+    "started_at_us": 1790459940000000,
+    "closed_at_us": 1790460014366804,
+    "safety_orders_filled": 0,
+    "manual_orders_filled": 1,
+    "profit": "-0.09762125",
+    "close_reason": "MANUAL_CLOSE",
+    "duration_us": 74366804,
+    "fees": "0.09762415",
+    "gross_profit": "0.0000029",
+    "qty": "0.00058",
+    "cost": "48.8120721",
+    "average_price": "84158.745",
+    "mark_price": null,
+    "unrealized_profit": null,
+    "unrealized_percent": null,
+    "take_profit_price": null,
+    "next_safety_order_price": null,
+    "cumulative_profit": "-0.09762125",
+    "events": [
+      {
+        "time_us": 1790459940000000,
+        "kind": "DEAL_STARTED",
+        "detail": {
+          "deal": 1,
+          "fee": "0.02440604",
+          "price": "84158.75",
+          "qty": "0.00029"
+        }
+      },
+      {
+        "time_us": 1790460013263420,
+        "kind": "MANUAL_ORDER_FILLED",
+        "detail": {
+          "deal": 1,
+          "fee": "0.02440603",
+          "index": 1,
+          "price": "84158.74",
+          "qty": "0.00029"
+        }
+      },
+      {
+        "time_us": 1790460014366804,
+        "kind": "DEAL_CLOSED",
+        "detail": {
+          "deal": 1,
+          "fee": "0.04881208",
+          "price": "84158.75",
+          "profit": "-0.09762125",
+          "qty": "0.00058",
+          "reason": "MANUAL_CLOSE"
+        }
+      }
+    ]
+  }
+}

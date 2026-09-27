@@ -13,9 +13,10 @@ from dcabot.application.historical_features import (
     validate_historical_feature_binding,
 )
 from dcabot.application.historical_profiles import get_historical_profile
+from dcabot.application.equity_curve_scores import equity_curve_sharpe_ratio
 from dcabot.data_adapters.historical import HistoricalDatasetInput
 from dcabot.domain.config import Config
-from dcabot.domain.numbers import number
+from dcabot.domain.numbers import Q, number, text
 
 
 RUN_RECORD_SCHEMA_VERSION = 1
@@ -33,6 +34,42 @@ MAX_ACTION_ROLE_LENGTH = 64
 MAX_ACTION_REFERENCE_LENGTH = 50
 
 _CONFIG_FIELDS = frozenset((*Config.__dataclass_fields__, "mode", "schema_version"))
+# Faz 17 C.1/G.3: `direction` and `max_active_safety_orders` are new on
+# Config and default when absent (see Config.parse) -- a snapshot recorded
+# before either field existed must still validate, so every combination of
+# present/absent optional fields is accepted here, mirroring Config.parse's
+# own backward-compatible contract.
+_CONFIG_OPTIONAL_FIELDS = (
+    "direction",
+    "cooldown_seconds",
+    "min_entry_price",
+    "max_entry_price",
+    "max_active_safety_orders",
+    "base_order_type",
+    "safety_order_type",
+    "exit_order_type",
+    "stop_order_type",
+    "max_adverse_slippage_bps",
+    "slippage_reference",
+    "take_profit_ladder",
+    "stop_loss_rate",
+    "stop_loss_confirmation_bars",
+    # F09a: defaults to None in Config.parse; pre-trailing snapshots
+    # without the key must still validate.
+    "trailing_take_profit_rate",
+    "max_deal_duration_seconds",
+    "max_deal_duration_action",
+    "profit_asset",
+    "safety_sizing",
+    "base_sizing",
+)
+_CONFIG_REQUIRED_FIELDS = _CONFIG_FIELDS - frozenset(_CONFIG_OPTIONAL_FIELDS)
+
+
+def _config_fields_accepted(keys: set[str]) -> bool:
+    return _CONFIG_REQUIRED_FIELDS <= keys <= _CONFIG_FIELDS
+
+
 _RISK_FIELDS = (
     "symbol",
     "base_asset",
@@ -113,7 +150,7 @@ def build_historical_run_capture(
         Config.parse(raw_config)
     except (TypeError, ValueError) as exc:
         raise HistoricalRunContractError("CONFIG_SNAPSHOT_INVALID", "Config snapshot geçersiz.") from exc
-    if set(raw_config) != _CONFIG_FIELDS:
+    if not _config_fields_accepted(set(raw_config)):
         raise HistoricalRunContractError("CONFIG_SNAPSHOT_INVALID", "Config snapshot allowlist ile eşleşmiyor.")
     if result.feature_binding is not None:
         try:
@@ -313,6 +350,22 @@ def _result_payload(
         raise HistoricalRunContractError("RESULT_CONTEXT_INVALID", "Result para birimi veya sembol context’i geçersiz.")
     deal_count = max((action["deal_sequence"] for action in actions), default=0)
     completed_deal_count = max(deal_count - (1 if result.position_status == "OPEN_AT_END" else 0), 0)
+    deal_pnls = summary.get("deal_pnls", [])
+    if not isinstance(deal_pnls, list) or len(deal_pnls) != completed_deal_count:
+        raise HistoricalRunContractError("RESULT_VALUE_INVALID", "Deal PnL listesi tamamlanan deal sayısıyla eşleşmiyor.")
+    for value in deal_pnls:
+        _plain_decimal(value, "RESULT_VALUE_INVALID")
+    equity_curve = summary.get("equity_curve", [])
+    # One point per bar the reducer loop actually visited -- NOT
+    # `processed_bar_count` (which counts every dataset bar, including any
+    # feature-warmup prefix `_feature_start_index` skips before the loop
+    # even starts). Bound-checked against the dataset's own scope instead.
+    if not isinstance(equity_curve, list) or not 1 <= len(equity_curve) <= result.processed_bar_count:
+        raise HistoricalRunContractError(
+            "RESULT_VALUE_INVALID", "Equity eğrisi işlenen bar kapsamıyla uyuşmuyor."
+        )
+    for value in equity_curve:
+        _plain_decimal(value, "RESULT_VALUE_INVALID")
     safe_summary = {name: summary[name] for name in (*numeric_summary_fields, "unrealized", "anchor", "take_profit_price")}
     safe_summary.update(
         {
@@ -327,6 +380,17 @@ def _result_payload(
             "action_count": summary["action_count"],
             "average_entry_price": summary.get("average_entry_price"),
             "time_in_position_us": summary["time_in_position_us"],
+            "deal_pnls": deal_pnls,
+            "equity_curve": equity_curve,
+            "sharpe_ratio": equity_curve_sharpe_ratio(tuple(equity_curve)),
+            **performance_metrics(
+                deal_pnls,
+                peak_equity=summary["peak_equity"],
+                realized_net_after_all_costs=summary["realized_net_after_all_costs"],
+                roles=[str(action["role"]) for action in actions],
+                max_active_safety_orders=Config.parse(raw_config).effective_max_active_safety_orders,
+                deal_count=deal_count,
+            ),
         }
     )
     return {
@@ -370,6 +434,53 @@ def _feature_binding_payload(binding: HistoricalFeatureRunBinding | None) -> dic
         "first_eligible_bar_index": binding.first_eligible_bar_index,
         "last_eligible_bar_index": binding.last_eligible_bar_index,
         "row_count": len(binding.rows),
+    }
+
+
+def performance_metrics(
+    deal_pnls: list[str],
+    *,
+    peak_equity: str,
+    realized_net_after_all_costs: str,
+    roles: list[str],
+    max_active_safety_orders: int,
+    deal_count: int,
+) -> dict[str, object]:
+    """AA.7a (v1) derived, display-only metrics -- shared by the run-contract
+    path (`_result_payload`) and the sweep orchestrator (per-trial), so a
+    sweep-optimize trial gets the same 6 fields a saved run does, computed
+    the same way, not a second re-derivation.
+
+    No new economic modeling: `deal_pnls` is `report()`'s own cumulative
+    `realized_net_after_all_costs` delta at each deal close
+    (historical_simulation.py); every metric here is an exact-Fraction ratio
+    over already-validated exact fields. `None` marks a degenerate
+    denominator (no completed deals, no losses, zero peak equity, zero
+    safety-order capacity) rather than a fabricated 0. Equity-series/Sharpe
+    are explicitly out of scope (AA.7a-2, DEFERRED -- require per-bar equity
+    instrumentation + an annualization convention, see docs/KARARLAR.md
+    2026-09-23)."""
+
+    nets = [number(value) for value in deal_pnls]
+    completed = len(nets)
+    win_count = sum(1 for net in nets if net > 0)
+    win_rate = text(Q(win_count, completed)) if completed else None
+    gross_win = sum((net for net in nets if net > 0), Q(0))
+    gross_loss = sum((-net for net in nets if net < 0), Q(0))
+    profit_factor = text(gross_win / gross_loss) if gross_loss > 0 else None
+    peak_equity_q = number(peak_equity)
+    realized_net = number(realized_net_after_all_costs)
+    roi = text(realized_net / peak_equity_q) if peak_equity_q > 0 else None
+    so_fill_count = sum(1 for role in roles if role.startswith("SAFETY:"))
+    so_capacity = deal_count * max_active_safety_orders
+    so_fill_rate = text(Q(so_fill_count, so_capacity)) if so_capacity > 0 else None
+    return {
+        "win_count": win_count,
+        "win_rate": win_rate,
+        "profit_factor": profit_factor,
+        "roi": roi,
+        "safety_order_fill_count": so_fill_count,
+        "safety_order_fill_rate": so_fill_rate,
     }
 
 

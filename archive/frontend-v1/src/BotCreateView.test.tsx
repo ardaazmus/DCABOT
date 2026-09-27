@@ -47,9 +47,9 @@ describe("BotCreateView (15.3)", () => {
     expect(props.onBotTypeChange).toHaveBeenCalledWith("GRID");
   });
 
-  it("grafik her zaman görünür (hero yeniden kullanımı)", () => {
+  it("grafik her zaman görünür (hero yeniden kullanımı)", async () => {
     renderView({ bars: BARS, chartStatus: "ready" });
-    expect(screen.getByRole("img", { name: /Mum grafiği/ })).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: /TradingView grafiği/ })).toBeInTheDocument();
   });
 
   it("alt bar veri aralığı + hazır rozeti + backtest düğmesi gösterir", () => {
@@ -63,5 +63,22 @@ describe("BotCreateView (15.3)", () => {
   it("veri yokken hazır rozeti yerine beklenti gösterir", () => {
     const { container } = renderView({ dataRange: null, backtestReady: false });
     expect(container.querySelector(".bot-create-footer .state-label")).toHaveTextContent("Veri bekleniyor");
+  });
+  it("overlay notunu grafik altında gösterir (A.3)", () => {
+    renderView({
+      bars: BARS,
+      chartStatus: "ready",
+      overlayLines: [{ id: "entry", price: "104", color: "#94a3b8", title: "GİRİŞ", lineStyle: "solid" }],
+      overlayNote: "Seviye önizlemesi alınamadı",
+    });
+    expect(screen.getByText("Seviye önizlemesi alınamadı")).toBeInTheDocument();
+  });
+
+  it("AI Önerici rozeti hazırsa çıkar, değilse çıkmaz (B.2)", () => {
+    const { unmount } = renderView({ aiRecommenderReady: true });
+    expect(screen.getByText("AI Önerici")).toBeInTheDocument();
+    unmount();
+    renderView({ aiRecommenderReady: false });
+    expect(screen.queryByText("AI Önerici")).not.toBeInTheDocument();
   });
 });

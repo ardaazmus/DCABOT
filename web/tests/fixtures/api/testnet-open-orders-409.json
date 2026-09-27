@@ -1,0 +1,1 @@
+{"type":"urn:local-api:problem:TESTNET-CREDENTIAL-NOT-CONFIGURED","title":"Testnet credential yapılandırılmadı","status":409,"detail":"DCABOT_TESTNET_CREDENTIAL_ID ayarlanmadı veya tools/configure_testnet_credential.py hiç çalıştırılmadı.","code":"TESTNET_CREDENTIAL_NOT_CONFIGURED"}

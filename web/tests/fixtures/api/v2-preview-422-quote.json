@@ -1,0 +1,1 @@
+{"type":"urn:local-api:problem:SECTOR-QUOTE-UNSUPPORTED","title":"Bot ayarları geçersiz","status":422,"detail":"Şimdilik yalnız USDT pariteleri destekleniyor.","code":"SECTOR_QUOTE_UNSUPPORTED","errors":[{"field":"strategy.symbol","code":"SECTOR_QUOTE_UNSUPPORTED"}]}

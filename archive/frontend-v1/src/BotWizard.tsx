@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { BotRegisterPayload } from "./BotPanel";
 import { CandleChart } from "./CandleChart";
@@ -35,10 +35,47 @@ const IDENTIFIER = /^[A-Za-z0-9_.:-]{1,100}$/;
 const SYMBOL = /^[A-Z0-9]{3,20}$/;
 const DECIMAL = /^(?:0|[1-9]\d*)(?:\.\d+)?$/;
 const COUNT = /^(?:0|[1-9]\d*)$/;
+/* Faz 17 H: (0..1) ailesi salt-biçim kapıları — ondalık karşılaştırma
+ * yok, yalnız string şekli (backend `number()` ile aynı kümeyi kabul
+ * eder; kesin doğrulama sunucuda). */
+const UNIT_OPEN = /^0\.\d*[1-9]\d*$/;
+const UNIT_CLOSED = /^(?:0(?:\.\d+)?|1(?:\.0+)?)$/;
+const UNIT_HALF_OPEN = /^(?:0\.\d*[1-9]\d*|1(?:\.0+)?)$/;
 
 export const STRATEGY_DRAFT_PREFIX = "dcabot-strategy-draft:";
 
 export type StartCondition = "immediate" | "indicator" | "webhook";
+
+/**
+ * Faz 17 A.3: canlı grafik-overlay için sihirbazdan yukarı yayınlanan DCA
+ * parametreleri — `/api/preview` yükünün istemci-taslak karşılığı (yalnızca
+ * backend'in gerçekten okuduğu 3 alan; çarpanlar sunucu configinden gelir).
+ */
+export type WizardPreviewParams = {
+  safetyQty: string;
+  safetyCount: string;
+  deviation: string;
+};
+
+/**
+ * Faz 17 A.4: bot detay overlay'i için istemci taslağındaki DCA üçlüsünü
+ * okur. Eksik/bozuk taslakta null döner (uydurma yok); BotTable'daki
+ * `readDraftBotType` ile aynı dürüstlük disiplini.
+ */
+export function readDraftPreviewParams(botId: string): WizardPreviewParams | null {
+  try {
+    const raw = window.localStorage.getItem(`${STRATEGY_DRAFT_PREFIX}${botId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<Record<"safetyQty" | "safetyCount" | "deviation", unknown>>;
+    const { safetyQty, safetyCount, deviation } = parsed;
+    if (typeof safetyQty !== "string" || safetyQty === "") return null;
+    if (typeof safetyCount !== "string" || safetyCount === "") return null;
+    if (typeof deviation !== "string" || deviation === "") return null;
+    return { safetyQty, safetyCount, deviation };
+  } catch {
+    return null;
+  }
+}
 
 export type IndicatorKind = "sma" | "ema";
 export type CrossCondition = "up" | "down";
@@ -54,15 +91,31 @@ export type WizardDraft = {
   fastWindow: string;
   slowWindow: string;
   crossCondition: CrossCondition;
+  marginMode: string;
+  maxActiveDealsAccount: string;
+  maxActiveDealsPerBot: string;
+  allowedDealsOnSamePair: string;
   baseQty: string;
   safetyQty: string;
   safetyCount: string;
+  maxActive: string;
   deviation: string;
   volumeMult: string;
   stepMult: string;
   takeProfit: string;
+  takeProfitLadder: string;
+  reinvestPercent: string;
+  profitAsset: string;
   stopLoss: string;
+  stopLossBars: string;
+  maxDealDuration: string;
+  maxDealDurationAction: string;
   trailingStop: string;
+  baseOrderType: string;
+  safetyOrderType: string;
+  exitOrderType: string;
+  stopOrderType: string;
+  maxSlippageBps: string;
   budget: string;
 };
 
@@ -77,15 +130,31 @@ const INITIAL_DRAFT: WizardDraft = {
   fastWindow: "9",
   slowWindow: "21",
   crossCondition: "up",
+  marginMode: "ISOLATED",
+  maxActiveDealsAccount: "",
+  maxActiveDealsPerBot: "",
+  allowedDealsOnSamePair: "",
   baseQty: "0.001",
   safetyQty: "0.002",
   safetyCount: "3",
+  maxActive: "",
   deviation: "0.02",
   volumeMult: "2",
   stepMult: "1.5",
   takeProfit: "0.01",
+  takeProfitLadder: "",
+  reinvestPercent: "",
+  profitAsset: "QUOTE",
   stopLoss: "",
+  stopLossBars: "",
+  maxDealDuration: "",
+  maxDealDurationAction: "",
   trailingStop: "",
+  baseOrderType: "LIMIT",
+  safetyOrderType: "LIMIT",
+  exitOrderType: "LIMIT",
+  stopOrderType: "LIMIT",
+  maxSlippageBps: "",
   budget: "",
 };
 
@@ -112,15 +181,61 @@ function parseCsv(raw: string): string[] {
   return raw.split(",").map((s) => s.trim()).filter((s) => s.length > 0);
 }
 
+/* Faz 17 H: taslak JSON → kademe satırları ([ağırlık, hedef] string
+ * çiftleri, backend `take_profit_ladder` biçimiyle birebir). Boş
+ * taslak [] (kademesiz = null); bozuk girdi null (savunma; taslaklar
+ * forma geri yüklenmez, editör daima geçerli JSON yazar). */
+type LadderRow = [string, string];
+
+function parseLadderRows(raw: string): LadderRow[] | null {
+  if (raw.trim() === "") return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const rows: LadderRow[] = [];
+    for (const item of parsed) {
+      if (!Array.isArray(item) || item.length !== 2) return null;
+      const [weight, target] = item;
+      if (typeof weight !== "string" || typeof target !== "string") return null;
+      rows.push([weight, target]);
+    }
+    return rows;
+  } catch {
+    return null;
+  }
+}
+
+const DURATION_ACTIONS = ["FORCE_CLOSE", "STOP_NEW_SAFETY_ORDERS", "WARN_ONLY", "FREEZE"];
+
+/* Faz 17 I: §8.1 zorunlu tek-seferlik Base-kâr onayı (LabPanel deseni —
+ * global, localStorage; taslak-bağımsız). */
+const PROFIT_BASE_ACK_KEY = "dcabot.profit_base.risk_ack";
+
+function readProfitBaseAck(): boolean {
+  try {
+    return window.localStorage.getItem(PROFIT_BASE_ACK_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 /* Faz 15.3: şablon yükü (snake_case Config anahtarları) → taslak alanları.
  * Yalnız string değerler alınır (safety_count için tam-sayı da kabul);
  * bilinmeyen anahtarlar yoksayılır, sunucu doğrulaması değişmez. */
-type WizardPresetField = "baseQty" | "safetyQty" | "safetyCount" | "deviation" | "volumeMult" | "stepMult" | "takeProfit";
+type WizardPresetField = "baseQty" | "safetyQty" | "safetyCount" | "maxActive" | "deviation" | "volumeMult" | "stepMult" | "takeProfit";
+
+/* Faz 17 G.2: rol-bazlı emir tipi seçenekleri (backend Config ile aynı
+ * iki değer; varsayılan LIMIT bugünkü örtük davranışla birebir aynı). */
+const ORDER_TYPE_OPTIONS = (t: (key: string) => string) => [
+  { value: "LIMIT", label: t("orderType.limit.label") },
+  { value: "MARKET", label: t("orderType.market.label") },
+];
 
 const PRESET_FIELD_MAP: { key: string; draft: WizardPresetField }[] = [
   { key: "base_qty", draft: "baseQty" },
   { key: "safety_qty", draft: "safetyQty" },
   { key: "safety_count", draft: "safetyCount" },
+  { key: "max_active_safety_orders", draft: "maxActive" },
   { key: "deviation", draft: "deviation" },
   { key: "volume_multiplier", draft: "volumeMult" },
   { key: "step_multiplier", draft: "stepMult" },
@@ -171,6 +286,63 @@ function PairListInput({ value, onChange }: { value: string; onChange: (csv: str
   );
 }
 
+/* Faz 17 H: kademeli-TP satır editörü (PairListInput deseni — satır
+ * ekle/kaldır, iki hücre). Değer, taslaktaki JSON dizgidir. */
+function LadderRowsInput({ value, onChange }: { value: string; onChange: (next: string) => void }) {
+  const { t } = useI18n();
+  const rows = parseLadderRows(value) ?? [];
+  function setCell(index: number, cell: 0 | 1, next: string) {
+    const copy = rows.map((row) => row.slice() as LadderRow);
+    copy[index][cell] = next;
+    onChange(JSON.stringify(copy));
+  }
+  function addRow() {
+    onChange(JSON.stringify([...rows, ["", ""]]));
+  }
+  function removeRow(index: number) {
+    onChange(JSON.stringify(rows.filter((_, i) => i !== index)));
+  }
+  return (
+    <div className="pair-list-field">
+      <span className="field-label">{t("exit.ladder.group.label")}</span>
+      {rows.map((row, index) => {
+        const rowLabel = `${t("exit.ladder.row.label")} ${index + 1}`;
+        return (
+          <div className="pair-row" key={index}>
+            <span className="input-wrap pair-input-wrap">
+              <span className="field-label">{rowLabel}</span>
+              <input
+                aria-label={`${rowLabel} ${t("exit.ladder.weight.label")}`}
+                value={row[0]}
+                inputMode="decimal"
+                onChange={(event) => setCell(index, 0, event.target.value)}
+              />
+              <input
+                aria-label={`${rowLabel} ${t("exit.ladder.target.label")}`}
+                value={row[1]}
+                inputMode="decimal"
+                onChange={(event) => setCell(index, 1, event.target.value)}
+              />
+            </span>
+            <button
+              type="button"
+              className="secondary-button pair-remove"
+              aria-label={`${rowLabel} ${t("exit.ladder.remove")}`}
+              onClick={() => removeRow(index)}
+            >
+              ×
+            </button>
+          </div>
+        );
+      })}
+      <button type="button" className="secondary-button pair-add" onClick={addRow}>
+        {t("exit.ladder.add")}
+      </button>
+      <p className="helper-text">{t("exit.ladder.note")}</p>
+    </div>
+  );
+}
+
 function stepError(step: number, draft: WizardDraft, t: (key: string) => string): string {
   if (step === 0) {
     if (!IDENTIFIER.test(draft.botId.trim())) return "Bot kimliği geçersiz (harf/rakam/._:- , 1-100 karakter).";
@@ -190,6 +362,21 @@ function stepError(step: number, draft: WizardDraft, t: (key: string) => string)
       if (!COUNT.test(fast) || Number(fast) < 1) return `${t("wizard.indicator.fast.label")}: ${t("wizard.indicator.invalid")}`;
       if (!COUNT.test(slow) || Number(slow) < 1) return `${t("wizard.indicator.slow.label")}: ${t("wizard.indicator.invalid")}`;
     }
+    /* Faz 17 G.1: backend zorunlu-alan aynası (Config.parse) — SegmentedControl
+     * daima geçerli değer üretir; bu kapı savunma amaçlıdır. */
+    if (draft.marginMode !== "ISOLATED" && draft.marginMode !== "CROSS") {
+      return `${t("marginMode.label")} Isolated ya da Cross olmalıdır.`;
+    }
+    /* Faz 17 I: registry kural aynası (None ya da pozitif integer). */
+    const dealLimits: [string, string][] = [
+      [t("deals.account.label"), draft.maxActiveDealsAccount.trim()],
+      [t("deals.perBot.label"), draft.maxActiveDealsPerBot.trim()],
+      [t("deals.samePair.label"), draft.allowedDealsOnSamePair.trim()],
+    ];
+    for (const [label, value] of dealLimits) {
+      if (value === "") continue;
+      if (!COUNT.test(value) || Number(value) < 1) return `${label} boş ya da pozitif tam sayı olmalıdır.`;
+    }
     return "";
   }
   if (step === 1) {
@@ -208,18 +395,100 @@ function stepError(step: number, draft: WizardDraft, t: (key: string) => string)
     }
     const count = Number(draft.safetyCount.trim());
     if (count > 50) return `${t("dca.safetyCount.label")} en fazla 50 olabilir.`;
+    const maxActiveRaw = draft.maxActive.trim();
+    if (maxActiveRaw !== "") {
+      if (!COUNT.test(maxActiveRaw)) return `${t("dca.maxActiveSafetyOrders.label")} boş ya da tam sayı olmalıdır.`;
+      const maxActive = Number(maxActiveRaw);
+      if (count === 0) {
+        if (maxActive !== 0) return `${t("dca.maxActiveSafetyOrders.label")} safety sayısı 0 iken yalnız boş ya da 0 olabilir.`;
+      } else if (maxActive < 1 || maxActive > count) {
+        return `${t("dca.maxActiveSafetyOrders.label")} 1 ile safety sayısı (${count}) arasında olmalıdır.`;
+      }
+    }
+    /* Faz 17 G.2: backend fail-closed aynası (Config.parse) — biçim/aralık
+     * kapısı; kesin doğrulama sunucuda. Sihirbaz bps'i tam sayı ister
+     * (backend ek olarak kesirli decimal kabul eder). */
+    const orderRoles: [string, string][] = [
+      [t("orderType.base.label"), draft.baseOrderType],
+      [t("orderType.safety.label"), draft.safetyOrderType],
+      [t("orderType.exit.label"), draft.exitOrderType],
+      [t("orderType.stop.label"), draft.stopOrderType],
+    ];
+    for (const [label, value] of orderRoles) {
+      if (value !== "LIMIT" && value !== "MARKET") return `${label} Limit ya da Market olmalıdır.`;
+    }
+    const slippageRaw = draft.maxSlippageBps.trim();
+    if (orderRoles.some(([, value]) => value === "MARKET")) {
+      if (!COUNT.test(slippageRaw)) return `${t("orderType.slippage.label")} 1-9999 tam sayı olmalıdır (bps).`;
+      const bps = Number(slippageRaw);
+      if (bps < 1 || bps > 9999) return `${t("orderType.slippage.label")} 1-9999 tam sayı olmalıdır (bps).`;
+    } else if (slippageRaw !== "") {
+      return `${t("orderType.slippage.label")} hiçbir rol Market değilken boş olmalıdır.`;
+    }
     return "";
   }
   if (step === 2) {
     if (!DECIMAL.test(draft.takeProfit.trim())) {
       return `${t("exit.takeProfit.label")} exact decimal metni olmalıdır (negatif yok).`;
     }
-    const optionals: [string, string][] = [
-      [t("exit.stopLoss.label"), draft.stopLoss.trim()],
-      [t("exit.trailingStop.label"), draft.trailingStop.trim()],
-    ];
-    for (const [label, value] of optionals) {
-      if (value !== "" && !DECIMAL.test(value)) return `${label} boş ya da exact decimal metni olmalıdır.`;
+    /* Faz 17 H: backend kural aynası (Config.parse + reinvest_pool) —
+     * yalnız biçim/yapı/eş-zorunluluk; toplam=1, artan-sıra ve aralık
+     * kesinliği sunucuda. */
+    const ladderRaw = draft.takeProfitLadder.trim();
+    if (ladderRaw !== "") {
+      const rows = parseLadderRows(ladderRaw);
+      if (rows === null) return `${t("exit.ladder.group.label")} biçimi bozuk.`;
+      if (rows.length === 1) return `${t("exit.ladder.group.label")} en az 2 kademe ya da boş olmalıdır.`;
+      for (let index = 0; index < rows.length; index += 1) {
+        const [weight, target] = rows[index];
+        if (!UNIT_HALF_OPEN.test(weight.trim())) {
+          return `${t("exit.ladder.row.label")} ${index + 1}: ${t("exit.ladder.weight.label")} (0,1] aralığında olmalıdır.`;
+        }
+        if (!UNIT_OPEN.test(target.trim())) {
+          return `${t("exit.ladder.row.label")} ${index + 1}: ${t("exit.ladder.target.label")} (0,1) aralığında olmalıdır.`;
+        }
+      }
+    }
+    const reinvestRaw = draft.reinvestPercent.trim();
+    if (reinvestRaw !== "" && !UNIT_CLOSED.test(reinvestRaw)) {
+      return `${t("exit.reinvest.label")} 0..1 aralığında exact decimal olmalıdır.`;
+    }
+    /* Faz 17 I: QUOTE/BASE kip aynası (sembol eşleşmesi sunucuda) +
+     * base+ladder ret aynası + §8.1 tek-seferlik onay kapısı. */
+    if (draft.profitAsset !== "QUOTE" && draft.profitAsset !== "BASE") {
+      return `${t("exit.profitAsset.label")} Quote ya da Base olmalıdır.`;
+    }
+    if (draft.profitAsset === "BASE") {
+      if (ladderRaw !== "") {
+        return `${t("exit.profitAsset.label")}: Base kâr + kademeli TP birlikte kullanılamaz.`;
+      }
+      if (!readProfitBaseAck()) {
+        return `${t("exit.profitAsset.label")}: Base kâr riski onayı gerekli.`;
+      }
+    }
+    const stopLossRaw = draft.stopLoss.trim();
+    const barsRaw = draft.stopLossBars.trim();
+    if (stopLossRaw !== "") {
+      if (!UNIT_OPEN.test(stopLossRaw)) return `${t("exit.stopLoss.label")} (0,1) aralığında exact decimal olmalıdır.`;
+      if (!COUNT.test(barsRaw) || Number(barsRaw) < 1) {
+        return `${t("exit.stopLoss.bars.label")} SL ayarlıyken pozitif tam sayı olmalıdır.`;
+      }
+    } else if (barsRaw !== "") {
+      return `${t("exit.stopLoss.bars.label")} SL boşken boş olmalıdır.`;
+    }
+    const durationRaw = draft.maxDealDuration.trim();
+    const actionRaw = draft.maxDealDurationAction;
+    if (durationRaw !== "") {
+      if (!COUNT.test(durationRaw) || Number(durationRaw) < 1) {
+        return `${t("exit.duration.label")} pozitif tam sayı olmalıdır (saniye).`;
+      }
+      if (!DURATION_ACTIONS.includes(actionRaw)) return `${t("exit.duration.action.label")} seçilmelidir.`;
+    } else if (actionRaw !== "") {
+      return `${t("exit.duration.action.label")} süre boşken boş olmalıdır.`;
+    }
+    const trailingRaw = draft.trailingStop.trim();
+    if (trailingRaw !== "" && !DECIMAL.test(trailingRaw)) {
+      return `${t("exit.trailingStop.label")} boş ya da exact decimal metni olmalıdır.`;
     }
     return "";
   }
@@ -284,6 +553,8 @@ function isCrossPreviewEvents(value: unknown): value is CrossPreviewEvent[] {
   });
 }
 
+export type WizardExternalFill = { values: Record<string, unknown>; nonce: number } | null;
+
 export function BotWizard({
   busy,
   error,
@@ -293,6 +564,8 @@ export function BotWizard({
   botType,
   optimizeDatasetId,
   optimizeProfileId,
+  onParamsChange,
+  externalFill,
 }: {
   busy: boolean;
   error: string;
@@ -302,6 +575,8 @@ export function BotWizard({
   botType?: string;
   optimizeDatasetId?: string;
   optimizeProfileId?: string;
+  onParamsChange?: (params: WizardPreviewParams) => void;
+  externalFill?: WizardExternalFill;
 }) {
   const { t } = useI18n();
   const [draft, setDraft] = useState<WizardDraft>(INITIAL_DRAFT);
@@ -312,6 +587,7 @@ export function BotWizard({
   const [presetId, setPresetId] = useState("");
   const [presetStatus, setPresetStatus] = useState("");
   const [presetBusy, setPresetBusy] = useState(false);
+  const [profitBaseAcked, setProfitBaseAcked] = useState<boolean>(readProfitBaseAck);
   const [previewEvents, setPreviewEvents] = useState<CrossPreviewEvent[] | null>(null);
   const [previewIssue, setPreviewIssue] = useState("");
   const [previewSliced, setPreviewSliced] = useState(false);
@@ -320,7 +596,24 @@ export function BotWizard({
   function update(key: keyof WizardDraft, value: string) {
     setDraft((current) => ({ ...current, [key]: value }));
     setStepIssue("");
+    if (key === "safetyQty" || key === "safetyCount" || key === "deviation") {
+      onParamsChange?.({
+        safetyQty: key === "safetyQty" ? value : draft.safetyQty,
+        safetyCount: key === "safetyCount" ? value : draft.safetyCount,
+        deviation: key === "deviation" ? value : draft.deviation,
+      });
+    }
   }
+
+  // Faz 17 A.3: açılışta da overlay hesaplansın (qwen anında-önizleme davranışı).
+  useEffect(() => {
+    onParamsChange?.({
+      safetyQty: INITIAL_DRAFT.safetyQty,
+      safetyCount: INITIAL_DRAFT.safetyCount,
+      deviation: INITIAL_DRAFT.deviation,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function generateName() {
     const prefix = (botType ?? "DCA").toLowerCase();
@@ -485,6 +778,24 @@ export function BotWizard({
     }
   }
 
+  /* Faz 17 AA.7b: preset + OPT-doldurma ORTAK yolu — eşleme yalnız doldurma,
+   * hesap yok; bilinmeyen anahtarlar sessizce atlanır (allowlist-dışı). */
+  function applyFieldMap(source: Record<string, unknown>): number {
+    const updates: Partial<WizardDraft> = {};
+    for (const { key, draft: field } of PRESET_FIELD_MAP) {
+      const raw: unknown = source[key];
+      if (typeof raw === "string" && raw !== "") updates[field] = raw;
+      else if ((field === "safetyCount" || field === "maxActive") && typeof raw === "number" && Number.isInteger(raw)) updates[field] = String(raw);
+      else if (field === "maxActive" && raw === null) updates[field] = "";
+    }
+    setDraft((current) => ({ ...current, ...updates }));
+    if ("safetyQty" in updates || "safetyCount" in updates || "deviation" in updates) {
+      const next = { ...draft, ...updates };
+      onParamsChange?.({ safetyQty: next.safetyQty, safetyCount: next.safetyCount, deviation: next.deviation });
+    }
+    return Object.keys(updates).length;
+  }
+
   async function applyPreset() {
     if (presetId === "") return;
     setPresetBusy(true);
@@ -496,21 +807,26 @@ export function BotWizard({
         setPresetStatus(t("wizard.preset.error"));
         return;
       }
-      const payload = body.data.payload;
-      const updates: Partial<WizardDraft> = {};
-      for (const { key, draft: field } of PRESET_FIELD_MAP) {
-        const raw: unknown = payload[key];
-        if (typeof raw === "string" && raw !== "") updates[field] = raw;
-        else if (field === "safetyCount" && typeof raw === "number" && Number.isInteger(raw)) updates[field] = String(raw);
-      }
-      setDraft((current) => ({ ...current, ...updates }));
-      setPresetStatus(`${t("wizard.preset.applied")}: ${Object.keys(updates).length}`);
+      const count = applyFieldMap(body.data.payload);
+      setPresetStatus(`${t("wizard.preset.applied")}: ${count}`);
     } catch {
       setPresetStatus(t("wizard.preset.error"));
     } finally {
       setPresetBusy(false);
     }
   }
+
+  /* Faz 17 AA.7b: OPT-panelinden "sihirbaza doldur" — nonce başına TEK KEZ
+   * uygulanır (tekrar-render ezemez); bilinmeyen anahtar atlanır. */
+  const appliedFillNonce = useRef<number | null>(null);
+  useEffect(() => {
+    if (externalFill === null || externalFill === undefined) return;
+    if (appliedFillNonce.current === externalFill.nonce) return;
+    appliedFillNonce.current = externalFill.nonce;
+    const count = applyFieldMap(externalFill.values);
+    setPresetStatus(`${t("wizard.preset.applied")}: ${count}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalFill]);
 
   function submit() {
     for (let s = 0; s < STEP_KEYS.length - 1; s += 1) {
@@ -532,15 +848,31 @@ export function BotWizard({
           fastWindow: draft.fastWindow.trim(),
           slowWindow: draft.slowWindow.trim(),
           crossCondition: draft.crossCondition,
+          marginMode: draft.marginMode,
+          maxActiveDealsAccount: draft.maxActiveDealsAccount.trim(),
+          maxActiveDealsPerBot: draft.maxActiveDealsPerBot.trim(),
+          allowedDealsOnSamePair: draft.allowedDealsOnSamePair.trim(),
           baseQty: draft.baseQty.trim(),
           safetyQty: draft.safetyQty.trim(),
           safetyCount: draft.safetyCount.trim(),
+          maxActive: draft.maxActive.trim(),
           deviation: draft.deviation.trim(),
           volumeMult: draft.volumeMult.trim(),
           stepMult: draft.stepMult.trim(),
           takeProfit: draft.takeProfit.trim(),
+          takeProfitLadder: draft.takeProfitLadder.trim(),
+          reinvestPercent: draft.reinvestPercent.trim(),
+          profitAsset: draft.profitAsset,
           stopLoss: draft.stopLoss.trim(),
+          stopLossBars: draft.stopLossBars.trim(),
+          maxDealDuration: draft.maxDealDuration.trim(),
+          maxDealDurationAction: draft.maxDealDurationAction,
           trailingStop: draft.trailingStop.trim(),
+          baseOrderType: draft.baseOrderType,
+          safetyOrderType: draft.safetyOrderType,
+          exitOrderType: draft.exitOrderType,
+          stopOrderType: draft.stopOrderType,
+          maxSlippageBps: draft.maxSlippageBps.trim(),
         }),
       );
     } catch {
@@ -557,6 +889,11 @@ export function BotWizard({
   }
 
   const pairCount = parseCsv(draft.pairs).length;
+  const anyMarketOrderType =
+    draft.baseOrderType === "MARKET" ||
+    draft.safetyOrderType === "MARKET" ||
+    draft.exitOrderType === "MARKET" ||
+    draft.stopOrderType === "MARKET";
 
   return (
     <section className="panel rebalance-panel" aria-labelledby="bot-wizard-title">
@@ -659,6 +996,24 @@ export function BotWizard({
               </p>
               <p className="helper-text">{t("bot.startCondition.webhookUrl.note")}</p>
             </ConditionalField>
+            <SegmentedControl
+              label={t("marginMode.label")}
+              name="wizard_margin_mode"
+              value={draft.marginMode}
+              options={[
+                { value: "ISOLATED", label: t("marginMode.isolated.label") },
+                { value: "CROSS", label: t("marginMode.cross.label") },
+              ]}
+              onChange={(v) => update("marginMode", v)}
+            />
+            <ConditionalField when={draft.marginMode === "CROSS"}>
+              <p className="liq-fastmove" role="note">{t("marginMode.cross.warning")}</p>
+            </ConditionalField>
+            <p className="eyebrow">{t("deals.group.label")}</p>
+            <NumericParameter label={t("deals.account.label")} name="wizard_max_deals_account" value={draft.maxActiveDealsAccount} integer min="1" onChange={(v) => update("maxActiveDealsAccount", v)} />
+            <NumericParameter label={t("deals.perBot.label")} name="wizard_max_deals_per_bot" value={draft.maxActiveDealsPerBot} integer min="1" onChange={(v) => update("maxActiveDealsPerBot", v)} />
+            <NumericParameter label={t("deals.samePair.label")} name="wizard_allowed_deals_same_pair" value={draft.allowedDealsOnSamePair} integer min="1" onChange={(v) => update("allowedDealsOnSamePair", v)} />
+            <p className="helper-text">{t("deals.note")}</p>
             <AdvancedDetails title="Gelişmiş: liste yönetimi">
               <TextParameter label="Blacklist" name="wizard_blacklist" value={draft.blacklist} onChange={(v) => update("blacklist", v)} />
               <TextParameter label="Favoriler" name="wizard_favorites" value={draft.favorites} onChange={(v) => update("favorites", v)} />
@@ -668,9 +1023,23 @@ export function BotWizard({
             <NumericParameter label={t("dca.baseOrder.label")} name="wizard_base_qty" value={draft.baseQty} onChange={(v) => update("baseQty", v)} />
             <NumericParameter label={t("dca.safetyOrder.label")} name="wizard_safety_qty" value={draft.safetyQty} onChange={(v) => update("safetyQty", v)} />
             <StepperInput label={t("dca.safetyCount.label")} name="wizard_safety_count" value={draft.safetyCount} min="0" max="50" step="1" onChange={(v) => update("safetyCount", v)} />
+            <StepperInput label={t("dca.maxActiveSafetyOrders.label")} name="wizard_max_active" value={draft.maxActive} min="0" max="50" step="1" onChange={(v) => update("maxActive", v)} />
+            <p className="helper-text">Boş bırakılırsa safety sayısı kullanılır.</p>
             <NumericParameter label={t("dca.deviation.label")} name="wizard_deviation" value={draft.deviation} suffix="oran" onChange={(v) => update("deviation", v)} />
             <LabeledSlider label={t("dca.volumeMultiplier.label")} name="wizard_volume_mult" value={draft.volumeMult} stops={MULTIPLIER_STOPS} minLabel={t("multiplier.off.label")} maxLabel="×2" onChange={(v) => update("volumeMult", v)} />
             <LabeledSlider label={t("dca.stepMultiplier.label")} name="wizard_step_mult" value={draft.stepMult} stops={MULTIPLIER_STOPS} minLabel={t("multiplier.off.label")} maxLabel="×2" onChange={(v) => update("stepMult", v)} />
+            <p className="eyebrow">{t("orderType.group.label")}</p>
+            <SegmentedControl label={t("orderType.base.label")} name="wizard_base_order_type" value={draft.baseOrderType} options={ORDER_TYPE_OPTIONS(t)} onChange={(v) => update("baseOrderType", v)} />
+            <SegmentedControl label={t("orderType.safety.label")} name="wizard_safety_order_type" value={draft.safetyOrderType} options={ORDER_TYPE_OPTIONS(t)} onChange={(v) => update("safetyOrderType", v)} />
+            <SegmentedControl label={t("orderType.exit.label")} name="wizard_exit_order_type" value={draft.exitOrderType} options={ORDER_TYPE_OPTIONS(t)} onChange={(v) => update("exitOrderType", v)} />
+            <SegmentedControl label={t("orderType.stop.label")} name="wizard_stop_order_type" value={draft.stopOrderType} options={ORDER_TYPE_OPTIONS(t)} onChange={(v) => update("stopOrderType", v)} />
+            <p className="helper-text">{t("orderType.reference.note")}</p>
+            <ConditionalField when={anyMarketOrderType}>
+              <NumericParameter label={t("orderType.slippage.label")} name="wizard_max_slippage_bps" value={draft.maxSlippageBps} integer min="1" max="9999" suffix="bps" onChange={(v) => update("maxSlippageBps", v)} />
+              <p className="helper-text">{t("orderType.slippage.required")}</p>
+            </ConditionalField>
+            <p className="eyebrow">{t("wizard.airecommender.title")}</p>
+            <p className="helper-text">{t("wizard.airecommender.engine")}</p>
             {optimizeReady ? (
               <>
                 <SegmentedControl
@@ -690,6 +1059,7 @@ export function BotWizard({
                 {optimizeIssue !== "" && <p className="helper-text" role="status">{optimizeIssue}</p>}
                 {optimizeResult && (
                   <div className="optimize-result">
+                    <span className="state-label ready">{t("wizard.airecommender.badge")}</span>
                     <p className="helper-text">
                       {`${t("wizard.optimize.best.label")}: ${optimizeResult.best_metric} (${optimizeResult.trial_count} ${t("wizard.optimize.trials.unit")}${(optimizeResult.skipped_count ?? 0) > 0 ? ` · ${optimizeResult.skipped_count} ${t("wizard.optimize.skipped.unit")}` : ""})`}
                     </p>
@@ -711,13 +1081,67 @@ export function BotWizard({
           {step === 2 && <FieldGroup label={`3 · ${t(STEP_KEYS[2])}`}>
             <NumericParameter label={t("exit.takeProfit.label")} name="wizard_take_profit" value={draft.takeProfit} suffix="oran" onChange={(v) => update("takeProfit", v)} />
             <QuickPercentChips label={t("chips.percent.label")} options={TAKE_PROFIT_CHIPS} onSelect={(ratio) => update("takeProfit", ratio)} />
-            <ToggleSwitchRow label={t("exit.stopLoss.label")} checked={draft.stopLoss.trim() !== ""} onChange={(checked) => update("stopLoss", checked ? (draft.stopLoss.trim() === "" ? "0.01" : draft.stopLoss) : "")} />
+            <LadderRowsInput value={draft.takeProfitLadder} onChange={(v) => update("takeProfitLadder", v)} />
+            <NumericParameter label={t("exit.reinvest.label")} name="wizard_reinvest_percent" value={draft.reinvestPercent} suffix="oran" onChange={(v) => update("reinvestPercent", v)} />
+            <p className="helper-text">{t("exit.reinvest.note")}</p>
+            <SegmentedControl
+              label={t("exit.profitAsset.label")}
+              name="wizard_profit_asset"
+              value={draft.profitAsset}
+              options={[
+                { value: "QUOTE", label: t("exit.profitAsset.quote.label") },
+                { value: "BASE", label: t("exit.profitAsset.base.label") },
+              ]}
+              onChange={(v) => update("profitAsset", v)}
+            />
+            <ConditionalField when={draft.profitAsset === "BASE"}>
+              <p className="liq-fastmove" role="note">{t("exit.profitAsset.base.warning")}</p>
+              {!profitBaseAcked && (
+                <div className="whatif-opt-in">
+                  <label htmlFor="wizard-profit-base-ack">
+                    <input
+                      id="wizard-profit-base-ack"
+                      type="checkbox"
+                      checked={false}
+                      onChange={() => {
+                        try {
+                          window.localStorage.setItem(PROFIT_BASE_ACK_KEY, "1");
+                        } catch {
+                          return;
+                        }
+                        setProfitBaseAcked(true);
+                      }}
+                    />
+                    {t("exit.profitAsset.base.ack.label")}
+                  </label>
+                </div>
+              )}
+            </ConditionalField>
+            <ToggleSwitchRow label={t("exit.stopLoss.label")} checked={draft.stopLoss.trim() !== ""} onChange={(checked) => {
+              if (!checked) update("stopLossBars", "");
+              update("stopLoss", checked ? (draft.stopLoss.trim() === "" ? "0.01" : draft.stopLoss) : "");
+            }} />
             <ConditionalField when={draft.stopLoss.trim() !== ""}>
               <NumericParameter label={t("exit.stopLoss.label")} name="wizard_stop_loss" value={draft.stopLoss} suffix="oran" onChange={(v) => update("stopLoss", v)} />
+              <NumericParameter label={t("exit.stopLoss.bars.label")} name="wizard_stop_loss_bars" value={draft.stopLossBars} integer min="1" onChange={(v) => update("stopLossBars", v)} />
             </ConditionalField>
             <ToggleSwitchRow label={t("exit.trailingStop.label")} checked={draft.trailingStop.trim() !== ""} onChange={(checked) => update("trailingStop", checked ? (draft.trailingStop.trim() === "" ? "0.01" : draft.trailingStop) : "")} />
             <ConditionalField when={draft.trailingStop.trim() !== ""}>
               <NumericParameter label={t("exit.trailingStop.label")} name="wizard_trailing_stop" value={draft.trailingStop} suffix="oran" onChange={(v) => update("trailingStop", v)} />
+            </ConditionalField>
+            <NumericParameter label={t("exit.duration.label")} name="wizard_max_deal_duration" value={draft.maxDealDuration} integer min="1" suffix="sn" onChange={(v) => update("maxDealDuration", v)} />
+            <ConditionalField when={draft.maxDealDuration.trim() !== ""}>
+              <label className="field">
+                <span className="field-label">{t("exit.duration.action.label")}</span>
+                <span className="input-wrap">
+                  <select aria-label={t("exit.duration.action.label")} value={draft.maxDealDurationAction} onChange={(event) => update("maxDealDurationAction", event.target.value)}>
+                    <option value="">{t("exit.duration.action.placeholder")}</option>
+                    {DURATION_ACTIONS.map((action) => (
+                      <option key={action} value={action}>{action}</option>
+                    ))}
+                  </select>
+                </span>
+              </label>
             </ConditionalField>
             <p className="helper-text">Kapalı anahtar taslakta "ayarlanmadı" sayılır; açılınca görünür bir varsayılan oran yazılır.</p>
           </FieldGroup>}

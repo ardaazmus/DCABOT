@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proje Durumu · Hybrid DCA + Grid Bot</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/700.css">
+<script>
+tailwind.config={theme:{extend:{
+  fontFamily:{sans:['"Space Grotesk"','sans-serif'],mono:['"JetBrains Mono"','monospace']},
+  colors:{ink:{950:'#06080d',900:'#0a0f18',800:'#0e1522',700:'#162032'}}
+}}}
+</script>
+<style>
+  body{background:#06080d}
+  .bg-grid{background-image:linear-gradient(rgba(251,191,36,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(251,191,36,.035) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,black 35%,transparent 100%)}
+  .panel{background:rgba(14,21,34,.85);border:1px solid rgba(148,163,184,.12);border-radius:14px;backdrop-filter:blur(8px)}
+  .ptitle{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:#7d8ba3;font-weight:700}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:8px}
+  .chip{font-size:11px;padding:4px 10px;border-radius:9999px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.16);color:#cbd5e1;display:inline-block}
+  .livebadge{color:#34d399;border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.08)}
+  .simbadge{color:#fbbf24;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+  .pendbadge{color:#a78bfa;border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.08)}
+  .lgbox{background:rgba(30,41,59,.4);border-radius:10px;padding:8px 12px}
+  .bar{height:10px;border-radius:9999px;background:#1e293b;overflow:hidden}
+  .bar>div{height:100%;border-radius:9999px;transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+  .heroimg{mask-image:linear-gradient(to bottom,black 55%,transparent 100%)}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .fade{animation:fadeUp .5s cubic-bezier(.22,1,.36,1)}
+  .phase-row{border-left:3px solid transparent}
+  .phase-row.done{border-left-color:#34d399}
+  .phase-row.part{border-left-color:#fbbf24}
+  .phase-row.wait{border-left-color:#64748b}
+</style>
+</head>
+<body class="text-slate-200 font-sans antialiased min-h-screen">
+<div class="fixed inset-0 pointer-events-none z-0 bg-grid"></div>
+
+<div class="relative z-10 flex flex-col min-h-screen">
+  <header class="sticky top-0 z-20 h-16 flex items-center gap-3 px-4 md:px-6 bg-ink-950/85 backdrop-blur-xl border-b border-slate-800/70">
+    <span class="w-9 h-9 rounded-xl flex items-center justify-center font-mono text-sm font-bold" style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.45);color:#fbbf24">PD</span>
+    <div>
+      <h1 class="font-bold text-slate-100 leading-none">Proje Durumu</h1>
+      <div class="text-[10px] font-mono text-slate-500 mt-1">HYBRID DCA + GRID BOT · GENEL DURUM RAPORU</div>
+    </div>
+    <div class="ml-auto flex items-center gap-2">
+      <span class="chip livebadge">VERİ: CANLI BINANCE</span>
+      <span class="chip simbadge">İŞLEM: SİMÜLASYON</span>
+    </div>
+  </header>
+
+  <main class="flex-1 p-4 md:p-6 space-y-5 max-w-6xl mx-auto w-full">
+
+    <!-- HERO -->
+    <section class="panel overflow-hidden relative fade">
+      <div class="grid lg:grid-cols-2 gap-6 items-center p-6">
+        <div>
+          <div class="flex gap-2 mb-4">
+            <span class="chip livebadge">FAZ 1–7.5 ✓</span>
+            <span class="chip pendbadge">FAZ 8 BEKLİYOR</span>
+          </div>
+          <h2 class="text-3xl md:text-4xl font-bold text-slate-50 leading-tight">Proje %<span id="overallPct">0</span> Tamam</h2>
+          <p class="text-sm text-slate-400 mt-3 leading-relaxed">Frontend prototipi ve tüm simülasyon motorları hazır. <b class="text-slate-200">Gerçek emir iletimi (Faz 8)</b> için backend ve sunucu tarafında <code class="text-amber-300">.env</span></code> API anahtarı gerekiyor.</p>
+          <div class="mt-5 bar"><div id="overallBar" style="width:0%;background:linear-gradient(90deg,#34d399,#fbbf24)"></div></div>
+        </div>
+        <img src="https://image.qwenlm.ai/public_source/8c15eb31-c77d-4860-89a7-f934d91dc1ae/19e1d430c-d0a2-490c-87f9-4b3df4fcda38.png" alt="Proje yol haritası" class="heroimg rounded-2xl border border-slate-800/70 w-full object-cover">
+      </div>
+    </section>
+
+    <!-- DÜRÜSTLÜK / API KEY -->
+    <section class="panel p-5 fade" style="border-color:rgba(251,113,133,.35)">
+      <div class="flex items-start gap-3">
+        <span class="text-2xl">🔑</span>
+        <div>
+          <h3 class="font-bold text-rose-300">Önemli · Testnet API Anahtarı Hakkında Dürüstlük</h3>
+          <p class="text-sm text-slate-300 mt-2 leading-relaxed">Tarayıcı prototipine girdiğiniz Testnet API anahtarı <b>gerçekte Binance'e bağlanmaz</b>. Bu bir frontend simülasyonudur; tarayıcıdan Binance'e gerçek emir gönderilmez ve anahtarınız yalnızca o sayfa içinde tutulur.</p>
+          <p class="text-sm text-slate-400 mt-2 leading-relaxed">Gerçek bağlantı için <b class="text-slate-200">Faz 8 backend'i</b> (Python/FastAPI) kurulmalı ve anahtar <b class="text-amber-300">sunucu tarafında <code>.env</code></b> dosyasına yazılmalıdır. Tarayıcıya asla gerçek anahtar girmeyin.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAZ DURUMU -->
+    <section class="panel p-5 fade">
+      <div class="ptitle mb-4">FAZ DURUMU</div>
+      <div id="phaseList" class="space-y-3"></div>
+    </section>
+
+    <!-- YAPILAN / BEKLEYEN -->
+    <section class="grid lg:grid-cols-2 gap-4 fade">
+      <div class="panel p-5">
+        <div class="ptitle mb-3" style="color:#34d399">✓ HAZIR (FRONTEND + SİMÜLASYON)</div>
+        <ul id="doneList" class="space-y-2 text-sm text-slate-300"></ul>
+      </div>
+      <div class="panel p-5">
+        <div class="ptitle mb-3" style="color:#a78bfa">⏳ BEKLEYEN (BACKEND GEREKİR)</div>
+        <ul id="waitList" class="space-y-2 text-sm text-slate-300"></ul>
+      </div>
+    </section>
+
+    <!-- SONRAKİ ADIMLAR -->
+    <section class="panel p-5 fade">
+      <div class="ptitle mb-4">SONRAKİ ADIMLAR · FAZ 8'E GEÇİŞ</div>
+      <div id="nextSteps" class="space-y-2 text-sm text-slate-300"></div>
+    </section>
+  </main>
+
+  <footer class="px-6 py-4 text-center text-[10px] font-mono text-slate-600 border-t border-slate-800/50">
+    PROJE DURUMU · %<span id="footPct">0</span> · FAZ 8 İÇİN BACKEND + .env GEREKİR
+  </footer>
+</div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+
+const phases=[
+ {n:'1',t:'Veri Pipeline',d:'Binance canlı veri + Parquet depo',s:'done'},
+ {n:'2',t:'DCA Engine (3Commas paritesi)',d:'UI + simülasyon mantığı',s:'part'},
+ {n:'3',t:'Grid & Hybrid Motor',d:'UI + simülasyon mantığı',s:'part'},
+ {n:'4',t:'Backtest Motoru',d:'Gerçek veri + olay-tabanlı sim',s:'done'},
+ {n:'4.5',t:'Optimizasyon + Parite Analizi',d:'Walk-forward + backtest↔paper',s:'done'},
+ {n:'5',t:'Gelişmiş Modüller',d:'Adaptif DCA, rejim, korelasyon',s:'part'},
+ {n:'6',t:'Maliyet & Arbitraj',d:'Maker/taker, funding, MMR',s:'part'},
+ {n:'7',t:'Dashboard + Bot AI',d:'Grafikler + kalıcı hafıza',s:'done'},
+ {n:'7.5',t:'Paper Trading',d:'Canlı fiyatla emir provası',s:'done'},
+ {n:'8',t:'Testnet Execution + Deploy',d:'Backend + .env + sunucu',s:'wait'}
+];
+const done=[
+ 'Canlı Binance veri entegrasyonu (WS + REST, anahtarsız)',
+ 'Event-driven backtest motoru (komisyon + slipaj)',
+ 'Parametre optimizasyonu + Walk-Forward',
+ 'Backtest ↔ Paper parite analizi (doğrulama döngüsü)',
+ 'Paper trading motoru (canlı fiyatla emir provası)',
+ 'Strateji Laboratuvarı (portföy + karşılaştırma)',
+ 'Testnet Execution Console (dry-run)',
+ 'Bot AI + kalıcı hafıza bankası'
+];
+const wait=[
+ 'Faz 8 backend (Python/FastAPI) gerçek emir iletimi',
+ 'Testnet API anahtarının sunucu .env\'e yazılması',
+ 'Gerçek DCA/Grid execution motorları',
+ 'Sunucu deployment (Docker + Nginx + SSL)'
+];
+const steps=[
+ '1 · Faz 8 backend iskeletini kur (FastAPI + Binance connector).',
+ '2 · Testnet API anahtarını sunucuda .env\'e yaz (tarayıcıya DEĞİL).',
+ '3 · Paper→Testnet geçiş testi: aynı execution koduyla küçük emirler.',
+ '4 · Canlı izleme + alarm katmanı ekle, ardından kademeli büyü.'
+];
+
+const doneCount=phases.filter(p=>p.s==='done').length;
+const partCount=phases.filter(p=>p.s==='part').length;
+const pct=Math.round((doneCount+partCount*0.5)/phases.length*100);
+
+$('#overallPct').textContent=pct;
+$('#footPct').textContent=pct;
+setTimeout(()=>{$('#overallBar').style.width=pct+'%';},100);
+
+const badge={done:'<span class="chip livebadge">✓ TAMAM</span>',part:'<span class="chip simbadge">◐ KISMİ</span>',wait:'<span class="chip pendbadge">⏳ BEKLİYOR</span>'};
+$('#phaseList').innerHTML=phases.map(p=>
+ '<div class="phase-row '+p.s+' bg-slate-800/40 rounded-xl p-3 flex items-center gap-3">'
+ +'<span class="font-mono text-slate-500 w-8">F'+p.n+'</span>'
+ +'<div class="flex-1"><div class="text-sm font-semibold text-slate-200">'+p.t+'</div><div class="text-[11px] text-slate-500">'+p.d+'</div></div>'
+ +badge[p.s]+'</div>').join('');
+
+$('#doneList').innerHTML=done.map(d=>'<li class="flex gap-2"><span class="text-emerald-400">✓</span><span>'+d+'</span></li>').join('');
+$('#waitList').innerHTML=wait.map(d=>'<li class="flex gap-2"><span class="text-violet-300">▸</span><span>'+d+'</span></li>').join('');
+$('#nextSteps').innerHTML=steps.map(d=>'<div class="flex gap-2"><span class="text-cyan-300">→</span><span>'+d+'</span></div>').join('');
+</script>
+</body>
+</html>

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strateji Laboratuvarı · Hybrid DCA + Grid</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/700.css">
+<script>
+tailwind.config={theme:{extend:{
+  fontFamily:{sans:['"Space Grotesk"','sans-serif'],mono:['"JetBrains Mono"','monospace']},
+  colors:{ink:{950:'#06080d',900:'#0a0f18',800:'#0e1522',700:'#162032'}}
+}}}
+</script>
+<style>
+  body{background:#06080d}
+  .bg-grid{background-image:linear-gradient(rgba(251,191,36,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(251,191,36,.035) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,black 35%,transparent 100%)}
+  .panel{background:rgba(14,21,34,.85);border:1px solid rgba(148,163,184,.12);border-radius:14px;backdrop-filter:blur(8px)}
+  .ptitle{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:#7d8ba3;font-weight:700}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:8px}
+  .tab-section{display:none}
+  .tab-section.active{display:block;animation:fadeUp .4s cubic-bezier(.22,1,.36,1)}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .chip{font-size:11px;padding:4px 10px;border-radius:9999px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.16);color:#cbd5e1;display:inline-block}
+  .chipBtn{cursor:pointer;transition:all .2s}
+  .chipBtn.active{background:rgba(251,191,36,.14);color:#fcd34d;border-color:rgba(251,191,36,.5)}
+  .flabel{display:block;font-size:11px;color:#8fa0b8;margin-bottom:6px}
+  .fin{width:100%;background:rgba(10,15,24,.9);border:1px solid rgba(148,163,184,.18);border-radius:9px;padding:8px 10px;font-size:13px;color:#e2e8f0;outline:none}
+  .fin:focus{border-color:rgba(251,191,36,.6)}
+  .livebadge{color:#34d399;border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.08)}
+  .simbadge{color:#fbbf24;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+  .lgbox{background:rgba(30,41,59,.4);border-radius:10px;padding:8px 12px}
+  .bar{height:8px;border-radius:9999px;background:#1e293b;overflow:hidden}
+  .bar>div{height:100%;border-radius:9999px;transition:width .8s cubic-bezier(.22,1,.36,1)}
+  @keyframes pingd{0%{transform:scale(1);opacity:.8}80%,100%{transform:scale(2.5);opacity:0}}
+  .pingr{animation:pingd 1.6s cubic-bezier(0,0,.2,1) infinite}
+  #toast{transform:translateY(130%);transition:transform .45s cubic-bezier(.22,1,.36,1)}
+  #toast.show{transform:translateY(0)}
+  .heroimg{mask-image:linear-gradient(to bottom,black 55%,transparent 100%)}
+</style>
+</head>
+<body class="text-slate-200 font-sans antialiased min-h-screen">
+<div class="fixed inset-0 pointer-events-none z-0 bg-grid"></div>
+
+<div class="relative z-10 flex flex-col min-h-screen">
+  <header class="sticky top-0 z-20 h-16 flex items-center gap-3 px-4 md:px-6 bg-ink-950/85 backdrop-blur-xl border-b border-slate-800/70">
+    <span class="w-9 h-9 rounded-xl flex items-center justify-center font-mono text-sm font-bold" style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.45);color:#fbbf24">SL</span>
+    <div>
+      <h1 class="font-bold text-slate-100 leading-none">Strateji Laboratuvarı</h1>
+      <div class="text-[10px] font-mono text-slate-500 mt-1">PORTFÖY + STRATEJİ KARŞILAŞTIRMA + KONFİGÜRATÖR · CANLI BINANCE</div>
+    </div>
+    <div class="ml-auto flex items-center gap-2">
+      <span id="dsChip" class="text-[10px] font-mono font-bold px-2.5 py-1.5 rounded-full border" style="color:#fbbf24;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)">● BAĞLANIYOR…</span>
+    </div>
+  </header>
+
+  <main class="flex-1 p-4 md:p-6 space-y-5 max-w-7xl mx-auto w-full">
+
+    <!-- HERO -->
+    <section class="panel overflow-hidden relative">
+      <div class="grid lg:grid-cols-2 gap-6 items-center p-6">
+        <div>
+          <div class="flex gap-2 mb-4">
+            <span class="chip livebadge">FAZ 7.5+ · AKTİF</span>
+            <span class="chip simbadge">VERİ: CANLI BINANCE</span>
+          </div>
+          <h2 class="text-3xl md:text-4xl font-bold text-slate-50 leading-tight">Strateji Laboratuvarı</h2>
+          <p class="text-sm text-slate-400 mt-3 leading-relaxed">Tüm botlarınızı tek portföyde izleyin, <b class="text-slate-200">DCA / Grid / Hybrid</b> stratejilerini gerçek veri üzerinde yan yana karşılaştırın ve yeni stratejileri güvenle fırlatın. Parite Analizi ile doğrulanmış stratejiler Faz 8'e hazır işaretlenir.</p>
+          <div class="grid grid-cols-3 gap-2 mt-5 text-center">
+            <div class="lgbox"><div id="hBots" class="text-xl font-bold font-mono text-emerald-400">0</div><div class="text-[9px] text-slate-500">AKTİF BOT</div></div>
+            <div class="lgbox"><div id="hPnl" class="text-xl font-bold font-mono text-emerald-400">+$0</div><div class="text-[9px] text-slate-500">PORTFÖY PnL</div></div>
+            <div class="lgbox"><div id="hParity" class="text-xl font-bold font-mono text-cyan-300">—</div><div class="text-[9px] text-slate-500">ORT. PARİTE</div></div>
+          </div>
+        </div>
+        <img src="https://image.qwenlm.ai/public_source/8c15eb31-c77d-4860-89a7-f934d91dc1ae/167819139-1628-4cc7-b197-0c86f9167f02.png" alt="Strateji Laboratuvarı" class="heroimg rounded-2xl border border-slate-800/70 w-full object-cover">
+      </div>
+    </section>
+
+    <!-- TABS -->
+    <div class="flex gap-2 flex-wrap">
+      <button class="chip chipBtn active" data-tab="portfolio">📊 Portföy</button>
+      <button class="chip chipBtn" data-tab="compare">⚖️ Strateji Karşılaştırma</button>
+      <button class="chip chipBtn" data-tab="config"> Konfigüratör</button>
+      <button class="chip chipBtn" data-tab="ai">🤖 AI Önerileri</button>
+    </div>
+
+    <!-- PORTFÖY -->
+    <section id="sec-portfolio" class="tab-section active space-y-5">
+      <div class="grid lg:grid-cols-3 gap-4">
+        <div class="panel p-5 lg:col-span-2">
+          <div class="ptitle mb-3">PORTFÖY DAĞILIMI</div>
+          <div class="grid md:grid-cols-2 gap-4 items-center">
+            <canvas id="allocDonut" class="w-full h-56"></canvas>
+            <div id="allocLegend" class="space-y-2"></div>
+          </div>
+        </div>
+        <div class="panel p-5">
+          <div class="ptitle mb-3">PORTFÖY ÖZETİ</div>
+          <div id="portSummary" class="space-y-2"></div>
+        </div>
+      </div>
+      <div class="panel p-5">
+        <div class="ptitle mb-3">BOT BAZINDA CANLI PnL</div>
+        <div id="botRows" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- KARŞILAŞTIRMA -->
+    <section id="sec-compare" class="tab-section space-y-5">
+      <div class="panel p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div class="ptitle">STRATEJİ KARŞILAŞTIRMA · AYNI VERİ</div>
+          <div class="flex gap-2">
+            <select id="cmpSym" class="fin !w-auto !py-1.5 text-xs"><option>BTCUSDC</option><option>ETHUSDC</option><option>SOLUSDC</option></select>
+            <button id="cmpRun" class="text-xs font-semibold px-4 py-2 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25 transition">▶ Karşılaştır</button>
+          </div>
+        </div>
+        <canvas id="cmpChart" class="w-full h-72"></canvas>
+        <div class="flex gap-3 mt-3 text-[10px] font-mono">
+          <span class="text-emerald-400">— DCA</span><span class="text-cyan-300">— Grid</span><span class="text-amber-300">— Hybrid</span>
+        </div>
+      </div>
+      <div class="panel p-5 overflow-x-auto">
+        <div class="ptitle mb-3">METRİK KARŞILAŞTIRMASI</div>
+        <table class="w-full text-[11px] font-mono min-w-[640px]">
+          <thead><tr class="text-left text-slate-500 border-b border-slate-800/70">
+            <th class="py-2 pr-3">Strateji</th><th class="py-2 pr-3">Net</th><th class="py-2 pr-3">ROI</th><th class="py-2 pr-3">Win%</th><th class="py-2 pr-3">MaxDD</th><th class="py-2 pr-3">Sharpe</th><th class="py-2">İşlem</th>
+          </tr></thead>
+          <tbody id="cmpTable"><tr><td colspan="7" class="py-3 text-slate-500">"Karşılaştır" ile gerçek veri üzerinde çalıştırın.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- KONFİGÜRATÖR -->
+    <section id="sec-config" class="tab-section space-y-5">
+      <div class="panel p-5">
+        <div class="ptitle mb-4">YENİ STRATEJİ KONFİGÜRATÖRÜ</div>
+        <div class="grid lg:grid-cols-3 gap-4">
+          <div class="space-y-3">
+            <label><span class="flabel">Strateji Tipi</span>
+              <select id="cfgType" class="fin"><option value="DCA">DCA</option><option value="GRID">Grid</option><option value="HYBRID">Hybrid</option></select></label>
+            <label><span class="flabel">Parite</span>
+              <select id="cfgSym" class="fin"><option>BTCUSDC</option><option>ETHUSDC</option><option>SOLUSDC</option><option>XRPUSDC</option></select></label>
+            <label><span class="flabel">Yön</span>
+              <select id="cfgDir" class="fin"><option>LONG</option><option>SHORT</option><option>BIDIRECTIONAL</option></select></label>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <label><span class="flabel">Base Order</span><input id="cfgBo" type="number" class="fin" value="50"></label>
+            <label><span class="flabel">Safety Order</span><input id="cfgSo" type="number" class="fin" value="25"></label>
+            <label><span class="flabel">Max SO</span><input id="cfgSoC" type="number" class="fin" value="8"></label>
+            <label><span class="flabel">Sapma %</span><input id="cfgDev" type="number" class="fin" value="1.0" step="0.1"></label>
+            <label><span class="flabel">TP %</span><input id="cfgTp" type="number" class="fin" value="1.2" step="0.1"></label>
+            <label><span class="flabel">SL %</span><input id="cfgSl" type="number" class="fin" value="8" step="0.5"></label>
+          </div>
+          <div class="flex flex-col justify-end gap-2">
+            <button id="cfgLaunch" class="text-sm font-bold px-4 py-3 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25 transition">🚀 Stratejiyi Fırlat (Paper)</button>
+            <button id="cfgParity" class="text-sm font-semibold px-4 py-3 rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/20 transition">🔬 Önce Parite Testi</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel p-5">
+        <div class="ptitle mb-3">FIRLATILAN STRATEJİLER</div>
+        <div id="launchedList" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- AI -->
+    <section id="sec-ai" class="tab-section space-y-5">
+      <div class="panel p-5">
+        <div class="ptitle mb-4">🤖 AI STRATEJİ ÖNERİLERİ</div>
+        <div id="aiRecs" class="space-y-3"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="px-6 py-4 text-center text-[10px] font-mono text-slate-600 border-t border-slate-800/50">
+    STRATEJİ LABORATUVARI · CANLI BINANCE · FAZ 8 İÇİN ANAHTAR BEKLENİYOR
+  </footer>
+</div>
+
+<div id="toast" class="fixed bottom-6 right-6 z-50 panel px-5 py-3.5 flex items-center gap-3 border-emerald-500/30 shadow-xl"><span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-sm font-bold">✓</span><span id="toastMsg" class="text-sm text-slate-200">Tamamlandı</span></div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const clampV=(v,a,b)=>Math.min(b,Math.max(a,v));
+const pad2=n=>String(n).padStart(2,'0');
+const fmtUsd=v=>(v>=0?'+$':'-$')+Math.abs(v).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtPct=v=>(v>=0?'+':'-')+'%'+Math.abs(v).toLocaleString('tr-TR',{maximumFractionDigits:2});
+
+let toastTimer=null;
+function showToast(m){$('#toastMsg').textContent=m;const t=$('#toast');t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);}
+
+/* ---------- veri ---------- */
+const market={candles:{},mode:'connecting',ws:null};
+const SIM_BASE={BTCUSDC:64890,ETHUSDC:3412,SOLUSDC:147.2,XRPUSDC:0.584};
+async function fetchKlines(sym,iv){
+  try{const r=await fetch('https://api.binance.com/api/v3/klines?symbol='+sym+'&interval='+iv+'&limit=500');
+    if(!r.ok)return null;const j=await r.json();
+    return j.map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4]}));}catch(e){return null;}
+}
+function seedSim(sym){
+  const base=SIM_BASE[sym]||100;let p=base*0.99;const arr=[];const nowT=Math.floor(Date.now()/1000);
+  for(let i=500;i>0;i--){const o=p;const c=Math.max(base*0.4,p+(Math.random()-0.482)*base*0.002);
+    arr.push({time:nowT-i*60,open:o,high:Math.max(o,c)*1.0005,low:Math.min(o,c)*0.9995,close:c});p=c;}
+  market.candles[sym]=arr;
+}
+async function loadAll(){
+  market.mode='connecting';setChip();
+  const syms=Object.keys(SIM_BASE);
+  const res=await Promise.all(syms.map(s=>fetchKlines(s,'1m')));
+  let ok=false;
+  res.forEach((r,i)=>{if(r&&r.length){market.candles[syms[i]]=r;ok=true;}});
+  if(ok){market.mode='live';connectWS();}
+  else{market.mode='sim';syms.forEach(seedSim);startSim();}
+  setChip();
+}
+function setChip(){
+  const el=$('#dsChip');
+  if(market.mode==='live'){el.textContent='● CANLI · Binance WS';el.style.color='#34d399';el.style.borderColor='rgba(52,211,153,.4)';el.style.background='rgba(52,211,153,.08)';}
+  else if(market.mode==='connecting'){el.textContent='● BAĞLANIYOR…';}
+  else{el.textContent='● SİMÜLASYON';}
+}
+function connectWS(){
+  const streams=Object.keys(SIM_BASE).map(s=>s.toLowerCase()+'@kline_1m').join('/');
+  try{
+    const ws=new WebSocket('wss://data-stream.binance.vision/stream?streams='+streams);
+    market.ws=ws;
+    ws.onmessage=ev=>{try{const m=JSON.parse(ev.data);const k=m.data&&m.data.k;if(!k)return;
+      const sym=k.s;const arr=market.candles[sym];if(!arr||!arr.length)return;
+      const bar={time:Math.floor(k.t/1000),open:+k.o,high:+k.h,low:+k.l,close:+k.c};
+      if(arr[arr.length-1].time===bar.time)arr[arr.length-1]=bar;
+      else if(bar.time>arr[arr.length-1].time){arr.push(bar);if(arr.length>500)arr.shift();}
+    }catch(e){}};
+    ws.onclose=()=>{market.mode='sim';Object.keys(SIM_BASE).forEach(seedSim);startSim();setChip();};
+  }catch(e){market.mode='sim';Object.keys(SIM_BASE).forEach(seedSim);startSim();setChip();}
+}
+let simTimer=null;
+function startSim(){
+  if(simTimer)return;
+  simTimer=setInterval(()=>{
+    Object.keys(market.candles).forEach(sym=>{
+      const arr=market.candles[sym];if(!arr||!arr.length)return;
+      const last=arr[arr.length-1];const base=SIM_BASE[sym]||last.close;
+      const np=Math.max(base*0.4,last.close+(Math.random()-0.494)*base*0.0015);
+      const nowT=Math.floor(Date.now()/1000);
+      if(nowT-last.time>=60){arr.push({time:last.time+60,open:last.close,high:Math.max(last.close,np),low:Math.min(last.close,np),close:np});if(arr.length>500)arr.shift();}
+      else{last.close=np;last.high=Math.max(last.high,np);last.low=Math.min(last.low,np);}
+    });
+  },900);
+}
+
+/* ---------- strateji motorları (hafif) ---------- */
+function runDCA(candles,cfg){
+  let cash=1000,coins=0,avg=0,inv=0,so=0;const eq=[];const trades=[];let peak=-1e18,maxDD=0;
+  for(const c of candles){
+    if(coins>0){
+      const tp=avg*(1+cfg.tp/100),sl=avg*(1-cfg.sl/100);
+      if(c.high>=tp){const pr=coins*tp*(1-0.0002);const pnl=pr-inv;cash+=pr;trades.push(pnl);coins=0;inv=0;so=0;}
+      else if(c.close<=sl){const pr=coins*sl*(1-0.0005);const pnl=pr-inv;cash+=pr;trades.push(pnl);coins=0;inv=0;so=0;}
+      else if(so<cfg.soCount&&c.low<=avg*(1-cfg.dev*Math.pow(1.3,so)/100)){const cost=cfg.so*Math.pow(1.5,so);if(cash>=cost){cash-=cost;const q=cost/(c.low);avg=(avg*coins+c.low*q)/(coins+q);coins+=q;inv+=cost;so++;}}
+    }else if(cash>=cfg.bo){cash-=cfg.bo;coins=cfg.bo/c.close;avg=c.close;inv=cfg.bo;so=0;}
+    const e=cash+coins*c.close;eq.push(e);if(e>peak)peak=e;const dd=peak>0?(peak-e)/peak:0;if(dd>maxDD)maxDD=dd;
+  }
+  return metrics(eq,trades);
+}
+function runGrid(candles,cfg){
+  let cash=1000,coins=0;const eq=[];const trades=[];let peak=-1e18,maxDD=0;let base=null;
+  const step=cfg.dev/100;
+  for(const c of candles){
+    if(base===null){base=c.close;coins=(cash*0.5)/c.close;cash*=0.5;}
+    else{
+      if(c.high>=base*(1+step)){const sell=coins*0.1;const pr=sell*c.high*(1-0.0002);cash+=pr;coins-=sell;trades.push(pr*step);}
+      else if(c.low<=base*(1-step)){const cost=cash*0.1;const q=cost/c.low;coins+=q;cash-=cost;base=c.low;}
+    }
+    const e=cash+coins*c.close;eq.push(e);if(e>peak)peak=e;const dd=peak>0?(peak-e)/peak:0;if(dd>maxDD)maxDD=dd;
+  }
+  return metrics(eq,trades);
+}
+function runHybrid(candles,cfg){
+  const a=runDCA(candles,cfg),b=runGrid(candles,cfg);
+  const eq=a.equity.map((v,i)=>(v+b.equity[i])/2);
+  return metrics(eq,a.trades.concat(b.trades));
+}
+function metrics(eq,trades){
+  const net=eq.length?eq[eq.length-1]-1000:0;
+  const roi=net/1000*100;
+  const wins=trades.filter(t=>t>0).length;
+  const wr=trades.length?wins/trades.length*100:0;
+  const rets=[];for(let i=1;i<eq.length;i++)rets.push(eq[i]/eq[i-1]-1);
+  const mean=rets.length?rets.reduce((a,b)=>a+b,0)/rets.length:0;
+  const sd=rets.length?Math.sqrt(rets.reduce((a,b)=>a+(b-mean)*(b-mean),0)/rets.length):0;
+  const sharpe=sd>0?mean/sd*Math.sqrt(525600):0;
+  let peak=-1e18,maxDD=0;for(const e of eq){if(e>peak)peak=e;const dd=peak>0?(peak-e)/peak:0;if(dd>maxDD)maxDD=dd;}
+  return{equity:eq,trades,net,roi,wr,sharpe,maxDD:maxDD*100,count:trades.length};
+}
+
+/* ---------- çizim ---------- */
+function prepCanvas(cv){const dpr=window.devicePixelRatio||1,r=cv.getBoundingClientRect();cv.width=r.width*dpr;cv.height=r.height*dpr;const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);return{ctx,w:r.width,h:r.height};}
+function drawLines(cv,series){
+  const{ctx,w,h}=prepCanvas(cv);ctx.clearRect(0,0,w,h);
+  let mn=1e18,mx=-1e18;
+  series.forEach(s=>s.data.forEach(v=>{if(v<mn)mn=v;if(v>mx)mx=v;}));
+  const pad=10;
+  const px=i=>pad+(w-pad*2)*i/(series[0].data.length-1);
+  const py=v=>pad+(h-pad*2)*(1-(v-mn)/((mx-mn)||1));
+  ctx.strokeStyle='rgba(148,163,184,.1)';
+  for(let g=0;g<=3;g++){const y=pad+(h-pad*2)*g/3;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-pad,y);ctx.stroke();}
+  series.forEach(s=>{
+    ctx.beginPath();ctx.moveTo(px(0),py(s.data[0]));
+    for(let i=1;i<s.data.length;i++)ctx.lineTo(px(i),py(s.data[i]));
+    ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.stroke();
+  });
+}
+function drawDonut(cv,parts){
+  const{ctx,w,h}=prepCanvas(cv);ctx.clearRect(0,0,w,h);
+  const total=parts.reduce((a,p)=>a+p.value,0)||1;
+  let a0=-Math.PI/2;const cx=w/2,cy=h/2,R=Math.min(w,h)/2-8,r=R*0.62;
+  parts.forEach(p=>{
+    const a1=a0+(p.value/total)*Math.PI*2;
+    ctx.beginPath();ctx.arc(cx,cy,R,a0,a1);ctx.arc(cx,cy,r,a1,a0,true);ctx.closePath();
+    ctx.fillStyle=p.color;ctx.fill();a0=a1;
+  });
+  ctx.fillStyle='#e2e8f0';ctx.font='bold 16px "JetBrains Mono"';ctx.textAlign='center';
+  ctx.fillText('$'+Math.round(total).toLocaleString('tr-TR'),cx,cy+6);
+}
+
+/* ---------- portföy ---------- */
+const bots=[
+ {name:'BTCUSDC · Hybrid',type:'HYBRID',alloc:30,pnl:1240.55,color:'#34d399'},
+ {name:'ETHUSDC · DCA Long',type:'DCA',alloc:20,pnl:684.2,color:'#22d3ee'},
+ {name:'SOLUSDC · Grid',type:'GRID',alloc:20,pnl:458.1,color:'#fbbf24'},
+ {name:'XRPUSDC · DCA',type:'DCA',alloc:15,pnl:96.4,color:'#a78bfa'},
+ {name:'ETHUSDC · Hybrid Short',type:'HYBRID',alloc:15,pnl:-42.7,color:'#fb7185'}
+];
+function renderPortfolio(){
+  const total=bots.reduce((a,b)=>a+b.pnl,0);
+  $('#hBots').textContent=bots.length;
+  $('#hPnl').textContent=fmtUsd(total);
+  $('#hPnl').className='text-xl font-bold font-mono '+(total>=0?'text-emerald-400':'text-rose-400');
+  drawDonut($('#allocDonut'),bots.map(b=>({value:Math.max(1,b.alloc),color:b.color})));
+  $('#allocLegend').innerHTML=bots.map(b=>'<div class="flex items-center gap-2 text-xs"><span class="w-3 h-3 rounded" style="background:'+b.color+'"></span><span class="text-slate-300 flex-1">'+b.name+'</span><span class="font-mono text-slate-400">%'+b.alloc+'</span></div>').join('');
+  $('#portSummary').innerHTML=[
+    ['Toplam PnL',fmtUsd(total),total>=0?'text-emerald-400':'text-rose-400'],
+    ['Aktif Bot',String(bots.length),'text-slate-200'],
+    ['Kazançlı Bot',String(bots.filter(b=>b.pnl>0).length),'text-emerald-400'],
+    ['Zararlı Bot',String(bots.filter(b=>b.pnl<0).length),'text-rose-400']
+  ].map(r=>'<div class="flex justify-between lgbox"><span class="text-slate-400 text-xs">'+r[0]+'</span><span class="font-mono text-sm font-bold '+r[2]+'">'+r[1]+'</span></div>').join('');
+  $('#botRows').innerHTML=bots.map(b=>{
+    const maxAbs=Math.max.apply(null,bots.map(x=>Math.abs(x.pnl)))||1;
+    const w=Math.abs(b.pnl)/maxAbs*100;
+    return '<div class="bg-slate-800/40 rounded-xl p-3"><div class="flex justify-between text-xs mb-1"><span class="text-slate-200 font-semibold">'+b.name+'</span><span class="font-mono '+(b.pnl>=0?'text-emerald-400':'text-rose-400')+'">'+fmtUsd(b.pnl)+'</span></div><div class="bar"><div style="width:'+w+'%;background:'+b.color+'"></div></div></div>';
+  }).join('');
+}
+
+/* ---------- karşılaştırma ---------- */
+function runCompare(){
+  const sym=$('#cmpSym').value;
+  let candles=market.candles[sym];
+  if(!candles||!candles.length){seedSim(sym);candles=market.candles[sym];}
+  const cfg={bo:50,so:25,soCount:8,dev:1.0,tp:1.2,sl:8};
+  const dca=runDCA(candles,cfg),grid=runGrid(candles,cfg),hyb=runHybrid(candles,cfg);
+  drawLines($('#cmpChart'),[
+    {data:dca.equity,color:'#34d399'},
+    {data:grid.equity,color:'#22d3ee'},
+    {data:hyb.equity,color:'#fbbf24'}
+  ]);
+  const rows=[['DCA',dca],['Grid',grid],['Hybrid',hyb]];
+  $('#cmpTable').innerHTML=rows.map(r=>{
+    const m=r[1];
+    return '<tr class="border-b border-slate-800/40"><td class="py-2 pr-3 text-slate-200 font-semibold">'+r[0]+'</td>'
+    +'<td class="py-2 pr-3 '+(m.net>=0?'text-emerald-400':'text-rose-400')+'">'+fmtUsd(m.net)+'</td>'
+    +'<td class="py-2 pr-3">'+fmtPct(m.roi)+'</td>'
+    +'<td class="py-2 pr-3">%'+m.wr.toFixed(0)+'</td>'
+    +'<td class="py-2 pr-3 text-rose-300">-%'+m.maxDD.toFixed(1)+'</td>'
+    +'<td class="py-2 pr-3 text-cyan-300">'+m.sharpe.toFixed(2)+'</td>'
+    +'<td class="py-2">'+m.count+'</td></tr>';
+  }).join('');
+  const best=rows.sort((a,b)=>b[1].sharpe-a[1].sharpe)[0][0];
+  showToast('Karşılaştırma tamamlandı · en iyi Sharpe: '+best);
+}
+$('#cmpRun').addEventListener('click',runCompare);
+
+/* ---------- konfigüratör ---------- */
+const launched=[];
+function renderLaunched(){
+  $('#launchedList').innerHTML=launched.length?launched.map(l=>'<div class="bg-slate-800/40 rounded-xl p-3 flex items-center justify-between"><div><div class="text-xs font-semibold text-slate-200">'+l.sym+' · '+l.type+' · '+l.dir+'</div><div class="text-[9px] font-mono text-slate-500 mt-0.5">BO '+l.bo+' · SO '+l.so+' · MaxSO '+l.soC+' · TP %'+l.tp+' · SL %'+l.sl+'</div></div><span class="chip livebadge">PAPER</span></div>').join(''):'<div class="text-xs text-slate-500 bg-slate-800/30 rounded-xl px-4 py-4">Henüz strateji fırlatılmadı.</div>';
+}
+$('#cfgLaunch').addEventListener('click',()=>{
+  launched.unshift({sym:$('#cfgSym').value,type:$('#cfgType').value,dir:$('#cfgDir').value,bo:+$('#cfgBo').value,so:+$('#cfgSo').value,soC:+$('#cfgSoC').value,tp:+$('#cfgTp').value,sl:+$('#cfgSl').value});
+  renderLaunched();
+  showToast('Strateji paper modunda fırlatıldı 🚀');
+});
+$('#cfgParity').addEventListener('click',()=>showToast('Önce Parite Analizi çalıştırın (Backtest Studio)'));
+
+/* ---------- AI önerileri ---------- */
+function renderAI(){
+  const recs=[
+    {t:' Hybrid ağırlığını artır',d:'Karşılaştırmada Hybrid, tekil DCA/Grid\'e göre daha yüksek Sharpe üretti. Portföyde Hybrid payını +%10 artırmayı değerlendirin.',c:'text-emerald-300'},
+    {t:'⚠️ XRP DCA\'da SL sıkılaştır',d:'XRPUSDC DCA maxDD\'si portföy ortalamasının üzerinde. SL %8 → %6 ve MaxSO 8 → 6 önerilir.',c:'text-amber-300'},
+    {t:'🔬 Parite eşiği kontrolü',d:'Faz 8\'e geçmeden önce her strateji için parite skorunun %70 eşiğini geçtiğini doğrulayın.',c:'text-cyan-300'}
+  ];
+  $('#aiRecs').innerHTML=recs.map(r=>'<div class="bg-slate-800/40 rounded-xl p-4"><div class="'+r.c+' font-semibold text-sm mb-1">'+r.t+'</div><div class="text-xs text-slate-400 leading-relaxed">'+r.d+'</div></div>').join('');
+}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));
+  document.querySelectorAll('.tab-section').forEach(s=>s.classList.remove('active'));
+  $('#sec-'+b.dataset.tab).classList.add('active');
+  if(b.dataset.tab==='portfolio')renderPortfolio();
+  if(b.dataset.tab==='compare')runCompare();
+  if(b.dataset.tab==='config')renderLaunched();
+  if(b.dataset.tab==='ai')renderAI();
+}));
+window.addEventListener('resize',()=>{renderPortfolio();});
+
+/* ---------- init ---------- */
+loadAll();
+renderPortfolio();
+renderLaunched();
+renderAI();
+</script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+{"datasets":[{"dataset_id":"binance-spot-klines-v1-btcusdt-1h-2025-01-01","dataset_type":"kline_csv_zip","instrument":"BTCUSDT","interval":"1h","period_start":"2025-01-01","period_end":"2025-01-02","status":"VERIFIED","artifact":{"sha256":"8077644eb5088200969b135d7046ba777281be303fa32aceff28fe3baeaa5873","byte_size":1591}}],"count":1}

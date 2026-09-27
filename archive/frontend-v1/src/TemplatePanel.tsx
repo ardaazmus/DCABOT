@@ -178,21 +178,30 @@ export function TemplatePanel({
       )}
 
       <h3 className="paper-subheading">Kayıtlı şablonlar</h3>
+      <p className="helper-text">Yerel preset galerisi — harici market yok; sürüm = SHA-256.</p>
       {templates.length === 0 ? (
         <div className="empty-state">Henüz şablon yok; aşağıdan içe aktarın.</div>
       ) : (
-        <div className="template-list">
-          {templates.map((item) => (
-            <button
-              key={item.template_id}
-              type="button"
-              className={`catalog-secondary-button template-item${detail?.template_id === item.template_id ? " active" : ""}`}
-              disabled={busy}
-              onClick={() => onSelect(item.template_id)}
-            >
-              {item.template_id} · {item.declared_capabilities.join(",") || "—"}
-            </button>
-          ))}
+        <div className="botcard-grid">
+          {templates.map((item) => {
+            const active = detail?.template_id === item.template_id;
+            return (
+              <button
+                key={item.template_id}
+                type="button"
+                className="panel botcard"
+                aria-pressed={active}
+                disabled={busy}
+                onClick={() => onSelect(item.template_id)}
+              >
+                <span className="botcard-title">{item.template_id}</span>
+                <span className="botcard-name">{item.declared_capabilities.join(", ") || "—"}</span>
+                <span className="botcard-meta">
+                  <span className="state-label">v{item.payload_sha256.slice(0, 8)}</span>
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
 

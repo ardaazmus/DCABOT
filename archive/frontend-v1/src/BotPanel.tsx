@@ -64,6 +64,58 @@ export function isBotCheckView(value: unknown): value is BotCheckView {
   );
 }
 
+/* Faz 17 AA.3a: bot↔DCA-oturum okuma uçları (salt-okunur testnet toplamları,
+ * exact-Fraction; bot-bağlantısı oturum-açılışında kurulan çağrışımsal bağ). */
+export type BotDcaDealCountView = {
+  bot_id: string;
+  total: number;
+  active: number;
+  completed: number;
+};
+
+export type BotDcaPerformanceView = {
+  bot_id: string;
+  deal_count: number;
+  completed_deal_count: number;
+  win_count: number;
+  win_rate: string | null;
+  total_realized_net: string;
+  max_drawdown: string;
+};
+
+function isCount(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value);
+}
+
+export function isBotDcaDealCountResponse(value: unknown): value is { data: BotDcaDealCountView } {
+  if (typeof value !== "object" || value === null) return false;
+  const data = (value as Record<string, unknown>).data;
+  if (typeof data !== "object" || data === null) return false;
+  const body = data as Record<string, unknown>;
+  return (
+    typeof body.bot_id === "string" &&
+    isCount(body.total) &&
+    isCount(body.active) &&
+    isCount(body.completed)
+  );
+}
+
+export function isBotDcaPerformanceResponse(value: unknown): value is { data: BotDcaPerformanceView } {
+  if (typeof value !== "object" || value === null) return false;
+  const data = (value as Record<string, unknown>).data;
+  if (typeof data !== "object" || data === null) return false;
+  const body = data as Record<string, unknown>;
+  return (
+    typeof body.bot_id === "string" &&
+    isCount(body.deal_count) &&
+    isCount(body.completed_deal_count) &&
+    isCount(body.win_count) &&
+    (typeof body.win_rate === "string" || body.win_rate === null) &&
+    typeof body.total_realized_net === "string" &&
+    typeof body.max_drawdown === "string"
+  );
+}
+
 function parseCsv(raw: string): string[] {
   return raw
     .split(",")

@@ -155,6 +155,19 @@ export type HistoricalSimulationResult = {
     position_status: "CLOSED" | "OPEN_AT_END";
     funding_status: "NOT_MODELED";
     mark_status: "NOT_AVAILABLE";
+    /* AA.7a-v1: ohlcv_v1'de wire-garantili; fixed-slice modelinde yok
+     * ("no deal concept") — o yüzden opsiyonel, UI "—" düşürür. */
+    deal_pnls?: string[];
+    win_count?: number;
+    win_rate?: string | null;
+    profit_factor?: string | null;
+    roi?: string | null;
+    safety_order_fill_count?: number;
+    safety_order_fill_rate?: string | null;
+    /* AA.7a-2: canlı + kayıtlı özetlerde wire-garantili; eski kayıtlarda
+     * alan hiç yok — UI "—"/dürüst-boş düşürür. */
+    equity_curve?: string[];
+    sharpe_ratio?: string | null;
   };
   final_economic_summary?: {
     symbol: string;
@@ -172,6 +185,15 @@ export type HistoricalSimulationResult = {
     position_status: "CLOSED" | "OPEN_AT_END";
     funding_status: "NOT_MODELED";
     mark_status: "NOT_AVAILABLE";
+    deal_pnls?: string[];
+    win_count?: number;
+    win_rate?: string | null;
+    profit_factor?: string | null;
+    roi?: string | null;
+    safety_order_fill_count?: number;
+    safety_order_fill_rate?: string | null;
+    equity_curve?: string[];
+    sharpe_ratio?: string | null;
   } | null;
   ambiguity: { bar_index: number; open_time_us?: number; code: "AMBIGUOUS_OHLC_PATH" } | null;
   explanations: ReadOnlyExplanation[];
@@ -244,6 +266,10 @@ export function formatDatasetBytes(bytes: number): string {
 
 export function shortSha256(sha256: string): string {
   return `${sha256.slice(0, 12)}…${sha256.slice(-8)}`;
+}
+
+export function isEquityCurve(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 
 export function isActiveDownloadJob(status: DownloadJobStatus): boolean {

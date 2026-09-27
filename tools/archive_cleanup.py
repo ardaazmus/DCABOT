@@ -48,7 +48,6 @@ KEEP_DOCS = {
     "MATEMATIK.md",
     "MIMARI.md",
     "OZELLIK_MATRISI.md",
-    "UI_UX.md",
     "URUN_KAPSAMI.md",
     "VERI_VE_SIMULASYON.md",
     "YEDEKTEN_AKTARIM.md",

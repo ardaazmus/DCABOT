@@ -70,6 +70,7 @@ def _config() -> Config:
             "fee_rate": "0.001",
             "fee_quantum": "0.00000001",
             "slippage": "0",
+            "margin_mode": "ISOLATED",
         }
     )
 

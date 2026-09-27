@@ -5,8 +5,8 @@ import type { HistoricalChartBar } from "./datasetCatalog";
 import { HeroChartPanel } from "./HeroChartPanel";
 
 const BARS: HistoricalChartBar[] = [
-  { bar_index: 1, open_time_us: 1, close_time_us: 2, open: "100", high: "105", low: "99", close: "104", base_volume: "10" },
-  { bar_index: 2, open_time_us: 3, close_time_us: 4, open: "104", high: "106", low: "102", close: "103", base_volume: "12" },
+  { bar_index: 1, open_time_us: 1_700_000_000_000_000, close_time_us: 1_700_000_003_600_000_000, open: "100", high: "105", low: "99", close: "104", base_volume: "10" },
+  { bar_index: 2, open_time_us: 1_700_000_003_600_000_000, close_time_us: 1_700_000_007_200_000_000, open: "104", high: "106", low: "102", close: "103", base_volume: "12" },
 ];
 
 describe("HeroChartPanel (15.1)", () => {
@@ -25,28 +25,31 @@ describe("HeroChartPanel (15.1)", () => {
       <HeroChartPanel bars={[]} status="idle" error="" livePrice={null} symbolLabel="—" canLoad={false} loadBusy={false} onLoad={() => {}} />,
     );
     expect(screen.getByRole("button", { name: /Grafiği yükle/ })).toBeDisabled();
-    expect(screen.getByText(/Piyasa & Veri/)).toBeInTheDocument();
+    expect(screen.getByText(/Backtest bölümünden/)).toBeInTheDocument();
   });
 
-  it("hazır veriyi mum grafiği olarak gösterir", () => {
+  it("hazır veriyi TradingView grafiği olarak gösterir", async () => {
     render(
       <HeroChartPanel bars={BARS} status="ready" error="" livePrice={null} symbolLabel="BTCUSDT" canLoad={true} loadBusy={false} onLoad={() => {}} />,
     );
-    expect(screen.getByRole("img", { name: /Mum grafiği/ })).toBeInTheDocument();
+    // TradingChart lazy-yüklenir (Faz 16.1, bkz. HeroChartPanel.tsx) -- Suspense çözümü async.
+    expect(await screen.findByRole("img", { name: /TradingView grafiği/ })).toBeInTheDocument();
     expect(screen.getByText(/BTCUSDT/)).toBeInTheDocument();
+    expect(screen.getByText(/2 bar · 1 yükselen · 1 düşen · 0 yatay/)).toBeInTheDocument();
   });
 
-  it("canlı baskı fiyatını grafiğe işler", () => {
+  it("canlı baskı fiyatını grafiğe işler", async () => {
     render(
       <HeroChartPanel bars={BARS} status="ready" error="" livePrice="103.5" symbolLabel="BTCUSDT" canLoad={true} loadBusy={false} onLoad={() => {}} />,
     );
+    await screen.findByRole("img", { name: /TradingView grafiği/ });
     expect(screen.getByText(/canlı: 103\.5/)).toBeInTheDocument();
   });
 
-  it("hata durumunda alert gösterir", () => {
+  it("hata durumunda alert gösterir", async () => {
     render(
       <HeroChartPanel bars={[]} status="error" error="Grafik alınamadı." livePrice={null} symbolLabel="BTCUSDT" canLoad={true} loadBusy={false} onLoad={() => {}} />,
     );
-    expect(screen.getByRole("alert")).toHaveTextContent("Grafik alınamadı.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Grafik alınamadı.");
   });
 });

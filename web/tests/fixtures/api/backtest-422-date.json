@@ -1,0 +1,1 @@
+{"type":"urn:local-api:problem:BACKTEST-DATE-INVALID","title":"Backtest ayarları geçersiz","status":422,"detail":"Tarih geçersiz.","code":"BACKTEST_DATE_INVALID","errors":[{"field":"start_date","code":"BACKTEST_DATE_INVALID"}]}

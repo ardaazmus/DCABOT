@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { Badge } from "./Badge";
+import { EquityCurveChart } from "./EquityCurveChart";
+import { isEquityCurve } from "./datasetCatalog";
 import {
   SavedRunDetail,
   SavedRunListItem,
@@ -39,13 +42,73 @@ const COMPARE_SUMMARY_ROWS: Array<{ key: string; label: string }> = [
   { key: "completed_deal_count", label: "Tamamlanan deal" },
   { key: "average_entry_price", label: "Ortalama giriş" },
   { key: "time_in_position_us", label: "Pozisyonda kalma (µs)" },
+  { key: "win_count", label: "Kazanan deal" },
+  { key: "win_rate", label: "Win rate" },
+  { key: "profit_factor", label: "Profit factor" },
+  { key: "roi", label: "ROI" },
+  { key: "safety_order_fill_count", label: "SO dolum" },
+  { key: "safety_order_fill_rate", label: "SO dolum oranı" },
 ];
 
+/* Faz 17 AA.7a-v1: kayıtlı-özetteki türetilmiş metrikler. Hepsi exact-Fraction
+ * oranıdır (sunucu); null = dejenere payda, eski kayıtlarda alan hiç yok —
+ * ikisi de "—" olur, uydurma-0 asla. Tamsayı sayaçlar String() ile dizilir
+ * (ondalık metinlere Number() YOK — finansal hesap yasağı). */
+const PERFORMANCE_ROWS: Array<{ key: string; label: string }> = [
+  { key: "win_count", label: "Kazanan deal" },
+  { key: "win_rate", label: "Win rate (kazanan/tamamlanan)" },
+  { key: "profit_factor", label: "Profit factor (brüt-kazanç/brüt-kayıp)" },
+  { key: "roi", label: "ROI (net/tepe-equity)" },
+  { key: "sharpe_ratio", label: "Sharpe oranı" },
+  { key: "safety_order_fill_count", label: "SO dolum" },
+  { key: "safety_order_fill_rate", label: "SO dolum oranı (dolum/deal×kapasite)" },
+];
+
+const DEAL_PNL_DISPLAY_CAP = 60;
+
+function metricText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" && Number.isInteger(value)) return String(value);
+  return "—";
+}
+
+function summaryOf(detail: SavedRunDetail): Record<string, unknown> | null {
+  const snapshot = detail.result_snapshot as Record<string, unknown> | null | undefined;
+  const summary = snapshot?.["summary"];
+  if (typeof summary !== "object" || summary === null || Array.isArray(summary)) return null;
+  return summary as Record<string, unknown>;
+}
+
+type DealPnlView =
+  | { state: "absent" }
+  | { state: "invalid" }
+  | { state: "ready"; rows: string[] };
+
+function dealPnlsOf(detail: SavedRunDetail): DealPnlView {
+  const summary = summaryOf(detail);
+  const raw = summary?.["deal_pnls"];
+  if (raw === undefined) return { state: "absent" };
+  if (!Array.isArray(raw) || !raw.every((entry) => typeof entry === "string")) return { state: "invalid" };
+  return { state: "ready", rows: raw as string[] };
+}
+
 function compareCellValue(detail: SavedRunDetail, key: string): string {
-  const summary = detail.result_snapshot?.["summary"] as Record<string, unknown> | undefined;
-  const value = summary?.[key];
-  if (value === null || value === undefined) return "—";
-  return String(value);
+  const summary = summaryOf(detail);
+  return metricText(summary?.[key]);
+}
+
+function datasetIdentity(detail: SavedRunDetail): { id: string; artifact: string } | null {
+  const dataset = detail.dataset as Record<string, unknown> | null | undefined;
+  const id = dataset?.["dataset_id"];
+  const artifact = dataset?.["artifact_sha256"];
+  if (typeof id !== "string" || id === "" || typeof artifact !== "string" || artifact === "") return null;
+  return { id, artifact };
+}
+
+function configHashOf(detail: SavedRunDetail): string | null {
+  const config = detail.config as Record<string, unknown> | null | undefined;
+  const hash = config?.["config_hash"];
+  return typeof hash === "string" && hash !== "" ? hash : null;
 }
 
 function statusMeta(status: SavedRunListItem["execution_status"]): { icon: string; label: string; className: string } {
@@ -131,10 +194,16 @@ function SavedRunComparePanel({ compareDetails, compareStatus, compareError, onB
 
   const [first, second] = compareDetails;
   const resultMatches = first.result_sha256 === second.result_sha256;
+  const firstDataset = datasetIdentity(first);
+  const secondDataset = datasetIdentity(second);
+  const datasetKnown = firstDataset !== null && secondDataset !== null;
+  const datasetMatches = firstDataset !== null && secondDataset !== null && firstDataset.id === secondDataset.id && firstDataset.artifact === secondDataset.artifact;
   return <section className="panel saved-runs-panel saved-run-detail-panel" aria-labelledby="saved-run-compare-title">
     <button className="saved-run-back-button" type="button" onClick={onBackToList}>← Saved Runs’a dön</button>
     <div className="saved-run-detail-heading"><div><p className="eyebrow">READ-ONLY COMPARE</p><h2 id="saved-run-compare-title">İki koşuyu karşılaştır</h2><p className="saved-run-created">Değerler kayıtlı snapshot’lardan okunur; yeniden hesaplanmaz.</p></div></div>
     {resultMatches && <div className="saved-run-warning" role="note"><strong>✓ Aynı sonuç</strong><p>İki koşunun result hash’i birebir aynı — aynı hesaplamanın tekrar kaydıdır.</p></div>}
+    {!datasetKnown && <div className="saved-run-warning" role="note"><strong>! Dataset bilinmiyor</strong><p>Koşulardan birinin dataset kimliği okunamadı — karşılaştırma yorumu riskli.</p></div>}
+    {datasetKnown && !datasetMatches && <div className="saved-run-warning" role="note"><strong>! Farklı dataset</strong><p>İki koşu farklı dataset/dönemlere ait — metrik karşılaştırması yanıltıcı olabilir.</p></div>}
     <div className="saved-runs-table-wrap"><table className="saved-runs-table saved-runs-compare-table"><caption className="sr-only">Koşu karşılaştırma tablosu</caption>
       <thead><tr><th scope="col">Alan</th><th scope="col"><ShortId value={first.run_id} /><br /><time dateTime={first.created_at}>{formatCreatedAt(first.created_at)}</time></th><th scope="col"><ShortId value={second.run_id} /><br /><time dateTime={second.created_at}>{formatCreatedAt(second.created_at)}</time></th></tr></thead>
       <tbody>
@@ -143,6 +212,8 @@ function SavedRunComparePanel({ compareDetails, compareStatus, compareError, onB
           const b = compareCellValue(second, key);
           return <tr key={key} className={a !== b ? "saved-run-compare-diff" : undefined}><td data-label="Alan">{label}</td><td data-label="Koşu 1"><code>{a}</code></td><td data-label="Koşu 2"><code>{b}</code></td></tr>;
         })}
+        <tr><td data-label="Alan">Dataset</td><td data-label="Koşu 1"><code title={firstDataset?.artifact ?? ""}>{firstDataset ? `${firstDataset.id} · ${firstDataset.artifact.slice(0, 8)}…` : "—"}</code></td><td data-label="Koşu 2"><code title={secondDataset?.artifact ?? ""}>{secondDataset ? `${secondDataset.id} · ${secondDataset.artifact.slice(0, 8)}…` : "—"}</code></td></tr>
+        <tr><td data-label="Alan">Config hash</td><td data-label="Koşu 1">{configHashOf(first) ? <ShortId value={configHashOf(first) as string} /> : "—"}</td><td data-label="Koşu 2">{configHashOf(second) ? <ShortId value={configHashOf(second) as string} /> : "—"}</td></tr>
         <tr><td data-label="Alan">Result SHA-256</td><td data-label="Koşu 1"><ShortId value={first.result_sha256} /></td><td data-label="Koşu 2"><ShortId value={second.result_sha256} /></td></tr>
       </tbody>
     </table></div>
@@ -155,6 +226,11 @@ function SavedRunDetailPanel({ detail, detailStatus, detailError, onBackToList, 
   if (detailStatus === "error" || !detail) return <section className="panel saved-runs-panel" aria-labelledby="saved-run-detail-title"><button className="saved-run-back-button" type="button" onClick={onBackToList}>← Saved Runs’a dön</button><div className="form-error" role="alert">{detailError || "Koşu ayrıntısı gösterilemedi."}</div></section>;
 
   const status = statusMeta(detail.execution_status);
+  const summary = summaryOf(detail);
+  const dealPnls = dealPnlsOf(detail);
+  const shownDeals = dealPnls.state === "ready" ? dealPnls.rows.slice(-DEAL_PNL_DISPLAY_CAP) : [];
+  const hiddenDealCount = dealPnls.state === "ready" ? dealPnls.rows.length - shownDeals.length : 0;
+  const firstShownDealNo = hiddenDealCount + 1;
   return <section className="panel saved-runs-panel saved-run-detail-panel" aria-labelledby="saved-run-detail-title">
     <button className="saved-run-back-button" type="button" onClick={onBackToList}>← Saved Runs’a dön</button>
     <div className="saved-run-detail-heading"><div><p className="eyebrow">READ-ONLY HISTORICAL RUN</p><h2 id="saved-run-detail-title">Koşu ayrıntısı</h2><p className="saved-run-created">{formatCreatedAt(detail.created_at)} · <code>{detail.run_id}</code></p></div><div className="saved-run-detail-status"><span className={`saved-run-status ${status.className}`}><span aria-hidden="true">{status.icon}</span>{status.label}</span><span className="saved-run-storage"><span aria-hidden="true">✓</span> Yerel kayıt saklandı</span></div></div>
@@ -163,6 +239,34 @@ function SavedRunDetailPanel({ detail, detailStatus, detailError, onBackToList, 
       <div className="saved-run-detail-card"><p className="preflight-section-label">DATASET EVIDENCE</p><dl className="saved-run-facts">{Object.entries(detail.dataset).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{typeof value === "object" ? JSON.stringify(value) : String(value)}</dd></div>)}</dl></div>
       <div className="saved-run-detail-card"><p className="preflight-section-label">EXECUTION IDENTITY</p><dl className="saved-run-facts">{Object.entries(detail.execution).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{typeof value === "object" ? JSON.stringify(value) : String(value)}</dd></div>)}</dl></div>
     </div>
+    <div className="saved-run-detail-card">
+      <p className="preflight-section-label">PERFORMANS METRİKLERİ <Badge tone="ok" label="EXACT" title="Sunucu exact-Fraction oranlarıdır; istemci hesaplamaz" /></p>
+      {summary === null && <div className="catalog-empty" role="status">Kayıt özeti okunamadı — metrikler yok.</div>}
+      {summary !== null && <dl className="saved-run-facts">{PERFORMANCE_ROWS.map(({ key, label }) => <div key={key}><dt>{label}</dt><dd>{metricText(summary[key])}</dd></div>)}</dl>}
+      <p className="helper-text">“—” = dejenere payda (kayıp yok, deal yok vb.) ya da eski kayıt (alan yok); uydurma 0 yazılmaz.</p>
+    </div>
+    {summary !== null && (
+      <div className="saved-run-detail-card">
+        <p className="preflight-section-label">EQUITY EĞRİSİ</p>
+        {isEquityCurve(summary["equity_curve"]) ? <EquityCurveChart points={summary["equity_curve"]} /> : <div className="catalog-empty" role="status">Equity eğrisi yok (eski kayıt).</div>}
+      </div>
+    )}
+    {dealPnls.state !== "absent" && (
+      <div className="saved-run-detail-card">
+        <p className="preflight-section-label">DEAL PNL’LERİ (KAPANIŞ SIRASI)</p>
+        {dealPnls.state === "invalid" && <div className="catalog-empty" role="status">Deal listesi okunamadı — kayıt bozuk olabilir.</div>}
+        {dealPnls.state === "ready" && dealPnls.rows.length === 0 && <div className="catalog-empty" role="status">Tamamlanan deal yok — açık-kalan deal net’e girmez.</div>}
+        {dealPnls.state === "ready" && shownDeals.length > 0 && (
+          <>
+            {hiddenDealCount > 0 && <p className="helper-text" role="status">Önceki {hiddenDealCount} deal gizli — son {shownDeals.length} gösteriliyor.</p>}
+            <div className="saved-runs-table-wrap"><table className="saved-runs-table"><caption className="sr-only">Kapanan deal net sonuçları</caption>
+              <thead><tr><th scope="col">Deal</th><th scope="col">Net</th></tr></thead>
+              <tbody>{shownDeals.map((net, index) => <tr key={firstShownDealNo + index}><td><code>{firstShownDealNo + index}</code></td><td><code>{net}</code></td></tr>)}</tbody>
+            </table></div>
+          </>
+        )}
+      </div>
+    )}
     <div className="saved-run-detail-sections">
       <JsonEvidence label="Girdi snapshot’ı" value={detail.input_snapshot} />
       <JsonEvidence label="Config snapshot’ı" value={detail.config} />

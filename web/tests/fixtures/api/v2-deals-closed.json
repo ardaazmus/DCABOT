@@ -1,0 +1,17 @@
+{
+  "data": [
+    {
+      "bot_id": "bot_65ca1f6fd849",
+      "bot_name": "W-F6 fixture",
+      "symbol": "BTCUSDT",
+      "mode": "PAPER",
+      "deal": 1,
+      "started_at_us": 1790459940000000,
+      "closed_at_us": 1790460014366804,
+      "safety_orders_filled": 0,
+      "manual_orders_filled": 1,
+      "profit": "-0.09762125",
+      "close_reason": "MANUAL_CLOSE"
+    }
+  ]
+}

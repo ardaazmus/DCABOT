@@ -43,6 +43,22 @@ def _full_imports_of(path: Path) -> set[str]:
 ANALYTICS_BRIDGE_ALLOWLIST = {
     "src/dcabot/application/combinatorial_purged_cv.py",
     "src/dcabot/application/overfitting_probability.py",
+    # Faz 17 F.1: BB-Width needs stdev (sqrt) -> analytics/regime_scores.py;
+    # this module is the only bridge, converting at the float boundary only.
+    "src/dcabot/application/regime_detection.py",
+    # Faz 17 F.2: log-return covariance/variance/implied-correlation (sqrt)
+    # -> analytics/correlation_scores.py; the breach DECISION itself stays
+    # integer-only (see correlation_risk.py's module docstring).
+    "src/dcabot/application/correlation_risk.py",
+    # Faz 17 G.4: Bollinger upper/lower/%B need stdev (sqrt) ->
+    # analytics/bollinger_scores.py; middle band/variance stay exact
+    # Fraction in this module, only the stdev crosses the float boundary.
+    "src/dcabot/application/bollinger_bands.py",
+    # Faz 17 AA.7a-2: per-bar Sharpe ratio over an exact equity curve needs
+    # stdev (sqrt) -> analytics/scores.py's sharpe_ratio; bar-over-bar
+    # returns stay exact Fraction in this module, only the final Sharpe
+    # statistic crosses the float boundary.
+    "src/dcabot/application/equity_curve_scores.py",
 }
 
 

@@ -1,49 +1,97 @@
-export type AppSectionId = "overview" | "bots" | "market" | "events" | "settings";
+export type AppSectionId =
+  | "overview"
+  | "bots"
+  | "create"
+  | "deals"
+  | "backtest"
+  | "lab"
+  | "risk"
+  | "market"
+  | "system";
 
 export type AppSection = {
   id: AppSectionId;
   label: string;
   heading: string;
   icon: string;
+  /** Sidebar grup başlığı; boşsa grupsuz (en üst) gösterilir. */
+  group: string;
   intent: string;
 };
 
-/** Faz 11 tasarım kararı madde 1-2: kalıcı 5-bölüm sol nav (M3 sınırı). */
+/** Faz AB.1: 9-öğe nav — Faz 11'in "kalıcı 5-bölüm" kararı geçersiz kılındı. */
 export const APP_SECTIONS: AppSection[] = [
   {
     id: "overview",
     label: "Genel Bakış",
     heading: "Genel Bakış",
-    icon: "▦",
-    intent: "Botların ve portföyün özet görünümü (Faz 10/F28'de bağlanacak).",
+    icon: "📊",
+    group: "",
+    intent: "Portföy/bot özeti, canlı grafik ve durum akışı.",
   },
   {
     id: "bots",
-    label: "Botlar & Stratejiler",
-    heading: "Botlar & Stratejiler",
-    icon: "▣",
-    intent: "Bot stüdyosu: kurulum, ladder planı, ekonomik özet.",
+    label: "Botlarım",
+    heading: "Botlarım",
+    icon: "🤖",
+    group: "Botlar",
+    intent: "Bot tablosu, bot bağlamı ve motor-detay şeridi.",
+  },
+  {
+    id: "create",
+    label: "Bot Kur",
+    heading: "Bot Kur",
+    icon: "➕",
+    group: "Botlar",
+    intent: "Tek oluşturma yolu: stüdyo + Bot Oluştur görünümü.",
+  },
+  {
+    id: "deals",
+    label: "Aktif İşlemler",
+    heading: "Aktif İşlemler",
+    icon: "💼",
+    group: "Botlar",
+    intent: "Deal paneli, DCA seansları, exit, zaman çizgisi, paper.",
+  },
+  {
+    id: "backtest",
+    label: "Backtest",
+    heading: "Backtest",
+    icon: "⚙️",
+    group: "Analiz",
+    intent: "Dataset kataloğu, optimizasyon, overfitting, kayıtlı koşular.",
+  },
+  {
+    id: "lab",
+    label: "Strateji Lab",
+    heading: "Strateji Lab",
+    icon: "🧪",
+    group: "Analiz",
+    intent: "Preset karşılaştırma, şablonlar, portföy, rebalance, sinyal, futures.",
+  },
+  {
+    id: "risk",
+    label: "Risk",
+    heading: "Risk",
+    icon: "🛡️",
+    group: "Analiz",
+    intent: "Kill-switch/canary, işlem-engeli açıklaması, korelasyon, rejim.",
   },
   {
     id: "market",
     label: "Piyasa & Veri",
     heading: "Piyasa & Veri",
-    icon: "◫",
-    intent: "Veri katalogu, kalite merkezi ve public snapshot (taşınma Faz 11'de).",
+    icon: "📈",
+    group: "Veri & Sistem",
+    intent: "Sembol grafiği, venue snapshot, order book, veri merkezi.",
   },
   {
-    id: "events",
-    label: "Olaylar & Denetim",
-    heading: "Olaylar & Denetim",
-    icon: "◷",
-    intent: "Kaydedilmiş koşular, karşılaştırma ve denetim izi.",
-  },
-  {
-    id: "settings",
-    label: "Ayarlar",
-    heading: "Ayarlar",
-    icon: "⚙",
-    intent: "Bağlantı sihirbazı ve uygulama ayarları (Faz 10/F37'de bağlanacak).",
+    id: "system",
+    label: "Sistem",
+    heading: "Sistem",
+    icon: "🧰",
+    group: "Veri & Sistem",
+    intent: "Olay merkezi, yedek, sağlık, kayıt defteri, testnet hesabı.",
   },
 ];
 

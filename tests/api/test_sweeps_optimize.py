@@ -8,7 +8,9 @@ from dcabot.data_adapters.historical import (
 )
 from dcabot.server.api import (
     _sweep_optimize_compute,
+    _sweep_overfitting_compute,
     _validate_sweep_optimize_payload,
+    _validate_sweep_overfitting_payload,
 )
 
 
@@ -44,6 +46,7 @@ BASE_CONFIG = {
     "fee_rate": "0.001",
     "fee_quantum": "0.00000001",
     "slippage": "0",
+    "margin_mode": "ISOLATED",
 }
 
 
@@ -132,3 +135,69 @@ class SweepOptimizeApiTests(unittest.TestCase):
         self.assertIn("best_overrides", result)
         self.assertIn("best_metric", result)
         self.assertTrue(all("config_hash" in t for t in result["trials"]))
+
+
+def _make_overfitting_dataset() -> HistoricalDatasetInput:
+    """A flat-price, 61-bar dataset -- large enough for a non-trivial
+    bar-return series (T=60, divisible by several valid block_counts)."""
+    metadata = HistoricalDatasetMetadata(
+        dataset_id="overfitting-fixture",
+        source_id="fixture",
+        symbol="BTCUSDT",
+        interval="1h",
+        period_start="2024-01-01",
+        period_end="2024-01-05",
+        artifact_sha256="e" * 64,
+        artifact_bytes=64,
+        timestamp_unit="microseconds",
+        timezone="UTC",
+    )
+    bars = tuple(
+        CanonicalBar(
+            open_time_us=i * 3_600_000_000,
+            close_time_us=(i + 1) * 3_600_000_000 - 1,
+            open="100.50",
+            high="101.00",
+            low="100.00",
+            close="100.50",
+            base_volume="1",
+            is_closed=True,
+        )
+        for i in range(61)
+    )
+    return HistoricalDatasetInput(metadata=metadata, bars=bars)
+
+
+class SweepOverfittingApiTests(unittest.TestCase):
+    """AA.7c (WF/MC): thin route over `sweep_overfitting.assess_sweep_
+    overfitting` -- math already proven in tests/test_sweep_overfitting.py."""
+
+    def test_validate_ok_with_defaults(self):
+        validated, fields = _validate_sweep_overfitting_payload(
+            {"dataset_id": "d1", "profile_id": "p1", "space": SPACE, "max_trials": 4, "block_count": 4}
+        )
+        self.assertEqual(fields, {})
+        assert validated is not None
+        self.assertEqual(validated["sampler"], "grid")
+        self.assertEqual(validated["seed"], 0)
+
+    def test_validate_rejects_bad_block_count(self):
+        for bad in (1, 3, 0, -2):
+            validated, fields = _validate_sweep_overfitting_payload(
+                {"dataset_id": "d1", "profile_id": "p1", "space": SPACE, "max_trials": 4, "block_count": bad}
+            )
+            self.assertIsNone(validated)
+            self.assertIn("block_count", fields)
+
+    def test_compute_returns_pbo_and_dsr(self):
+        validated, fields = _validate_sweep_overfitting_payload(
+            {
+                "dataset_id": "d1", "profile_id": "p1", "space": SPACE,
+                "max_trials": 4, "block_count": 4, "sampler": "grid", "seed": 0,
+            }
+        )
+        assert validated is not None
+        result = _sweep_overfitting_compute(validated, _make_overfitting_dataset(), dict(BASE_CONFIG))
+        self.assertGreaterEqual(result["succeeded_count"], 2)
+        self.assertIsNotNone(result["pbo"])
+        self.assertEqual(len(result["dsr_by_trial"]), result["succeeded_count"])

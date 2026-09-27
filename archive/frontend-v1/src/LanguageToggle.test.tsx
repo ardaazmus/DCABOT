@@ -21,9 +21,9 @@ describe("shell language toggle (Faz 12.5)", () => {
       </I18nProvider>,
     );
     const nav = await screen.findByRole("navigation", { name: "Ana menü" });
-    expect(within(nav).getByRole("link", { name: /Botlar & Stratejiler/ })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: /Botlarım/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "TR" }));
-    expect(within(nav).getByRole("link", { name: /Bots & Strategies/ })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: /My Bots/ })).toBeInTheDocument();
     expect(window.localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe("en");
   });
 
@@ -33,6 +33,8 @@ describe("shell language toggle (Faz 12.5)", () => {
         <App />
       </I18nProvider>,
     );
+    const nav = await screen.findByRole("navigation", { name: "Ana menü" });
+    fireEvent.click(within(nav).getByRole("link", { name: /Bot Kur/ }));
     expect((await screen.findAllByText("Baz Emir")).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Güvenlik Emri Sayısı").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Fiyat Sapması").length).toBeGreaterThanOrEqual(1);

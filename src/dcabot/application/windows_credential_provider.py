@@ -14,6 +14,7 @@ from dcabot.application.signed_request import ApiKeyType, SignedRequestError
 _CRED_TYPE_GENERIC = 1
 _CRED_PERSIST_LOCAL = 2
 _TARGET_PREFIX = "DCABOT:BINANCE_SPOT_TESTNET:"
+_NOTIFY_TARGET_PREFIX = "DCABOT:NOTIFY:"
 _CREDENTIAL_ID_PATTERN = re.compile(r"[A-Za-z0-9_.:-]+\Z")
 
 
@@ -37,9 +38,9 @@ class _Credential(Structure):
 class WindowsCredentialManagerProvider(CredentialProvider):
     """Load and store HMAC material in the current Windows user vault."""
 
-    __slots__ = ("_key_type",)
+    __slots__ = ("_key_type", "_target_prefix")
 
-    def __init__(self, *, key_type: ApiKeyType = ApiKeyType.HMAC) -> None:
+    def __init__(self, *, key_type: ApiKeyType = ApiKeyType.HMAC, namespace: str = "venue") -> None:
         if sys.platform != "win32":
             raise SignedRequestError("WINDOWS_CREDENTIALS_UNSUPPORTED", "Windows Credential Manager yalnız Windows’ta kullanılabilir.")
         try:
@@ -50,7 +51,14 @@ class WindowsCredentialManagerProvider(CredentialProvider):
             raise SignedRequestError("CREDENTIAL_KEY_TYPE_INVALID", "Bilinmeyen credential key türü reddedildi.")
         if parsed_key_type is not ApiKeyType.HMAC:
             raise SignedRequestError("CREDENTIAL_KEY_TYPE_UNSUPPORTED", "Windows sağlayıcı bu dilimde yalnız HMAC destekler.")
+        if namespace == "venue":
+            target_prefix = _TARGET_PREFIX
+        elif namespace == "notify":
+            target_prefix = _NOTIFY_TARGET_PREFIX
+        else:
+            raise SignedRequestError("CREDENTIAL_NAMESPACE_INVALID", "Credential ad alanı geçersiz.")
         self._key_type = parsed_key_type
+        self._target_prefix = target_prefix
 
     def put(self, material: CredentialMaterial) -> None:
         """Persist material as a user-scoped generic credential."""
@@ -63,7 +71,7 @@ class WindowsCredentialManagerProvider(CredentialProvider):
         blob = create_string_buffer(material.secret)
         credential = _Credential(
             credential_type=_CRED_TYPE_GENERIC,
-            target_name=_target_name(material.credential_id),
+            target_name=_target_name(material.credential_id, prefix=self._target_prefix),
             credential_blob_size=len(material.secret),
             credential_blob=c_void_p(addressof(blob)),
             persist=_CRED_PERSIST_LOCAL,
@@ -75,7 +83,7 @@ class WindowsCredentialManagerProvider(CredentialProvider):
     def load(self, credential_id: str) -> CredentialMaterial:
         """Read one user-scoped credential and copy its blob before freeing it."""
 
-        target = _target_name(credential_id)
+        target = _target_name(credential_id, prefix=self._target_prefix)
         wincred = _wincred()
         credential_pointer = POINTER(_Credential)()
         if not wincred.CredReadW(target, _CRED_TYPE_GENERIC, 0, byref(credential_pointer)):
@@ -100,14 +108,14 @@ class WindowsCredentialManagerProvider(CredentialProvider):
         """Delete one credential target for local setup cleanup."""
 
         wincred = _wincred()
-        if not wincred.CredDeleteW(_target_name(credential_id), _CRED_TYPE_GENERIC, 0):
+        if not wincred.CredDeleteW(_target_name(credential_id, prefix=self._target_prefix), _CRED_TYPE_GENERIC, 0):
             _raise_last_error("CREDENTIAL_DELETE_FAILED", "Windows credential silme işlemi başarısız.")
 
     def __repr__(self) -> str:
         return "WindowsCredentialManagerProvider(<redacted>)"
 
 
-def _target_name(credential_id: str) -> str:
+def _target_name(credential_id: str, *, prefix: str = _TARGET_PREFIX) -> str:
     if (
         not isinstance(credential_id, str)
         or not 1 <= len(credential_id) <= 128
@@ -115,7 +123,7 @@ def _target_name(credential_id: str) -> str:
         or any(ord(char) < 0x20 or ord(char) == 0x7F for char in credential_id)
     ):
         raise SignedRequestError("CREDENTIAL_ID_INVALID", "Credential az ve güvenli bir kimlik olmalıdır.")
-    return f"{_TARGET_PREFIX}{credential_id}"
+    return f"{prefix}{credential_id}"
 
 
 def _copy_blob(pointer: c_void_p, size: int) -> bytes:

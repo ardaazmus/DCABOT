@@ -111,6 +111,26 @@ class CredentialBoundaryTests(unittest.TestCase):
         with self.assertRaisesRegex(SignedRequestError, "CREDENTIAL_KEY_TYPE_UNSUPPORTED"):
             WindowsCredentialManagerProvider(key_type=ApiKeyType.ED25519)
 
+    @unittest.skipUnless(sys.platform == "win32", "Windows Credential Manager yalnız Windows’ta çalışır.")
+    def test_windows_provider_notify_namespace_isolated(self):
+        credential_id = f"test-{uuid4().hex}"
+        notify = WindowsCredentialManagerProvider(namespace="notify")
+        venue = WindowsCredentialManagerProvider()
+        self.addCleanup(notify.delete, credential_id)
+        notify.put(
+            CredentialMaterial(
+                credential_id=credential_id,
+                api_key="telegram-bot-token",
+                key_type=ApiKeyType.HMAC,
+                secret=b"dummy-telegram-token",
+            )
+        )
+        self.assertEqual(notify.load(credential_id).secret, b"dummy-telegram-token")
+        with self.assertRaisesRegex(SignedRequestError, "CREDENTIAL_NOT_FOUND"):
+            venue.load(credential_id)
+        with self.assertRaisesRegex(SignedRequestError, "CREDENTIAL_NAMESPACE_INVALID"):
+            WindowsCredentialManagerProvider(namespace="vault")
+
 
 if __name__ == "__main__":
     unittest.main()

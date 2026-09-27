@@ -1,0 +1,1 @@
+{"type":"urn:local-api:problem:BACKTEST-RANGE-INVALID","title":"Backtest ayarları geçersiz","status":422,"detail":"Bitiş tarihi başlangıçtan sonra olmalıdır.","code":"BACKTEST_RANGE_INVALID","errors":[{"field":"end_date","code":"BACKTEST_RANGE_INVALID"}]}

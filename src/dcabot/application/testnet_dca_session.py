@@ -15,6 +15,7 @@ invented in this first slice (docs/KARARLAR.md, 2026-09-21).
 """
 
 from dataclasses import dataclass, field, replace
+import re
 
 from dcabot.application.credential_boundary import CredentialProvider
 from dcabot.application.instrument_filters import InstrumentFilterProfile
@@ -29,7 +30,7 @@ from dcabot.data_adapters.binance_testnet_order_execution import WebSocketFactor
 from dcabot.data_adapters.binance_testnet_user_stream import query_binance_testnet_order_status
 from dcabot.domain.config import Config
 from dcabot.domain.engine import State, apply, decision
-from dcabot.domain.numbers import Q, exact_text, number
+from dcabot.domain.numbers import Q, exact_text, number, round_quantum
 from dcabot.persistence.attempt_store import AttemptStore
 
 
@@ -37,6 +38,26 @@ class TestnetDcaSessionError(RuntimeError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(f"{code}: {message}")
         self.code = code
+
+
+_LADDER_EXIT_ROLE = re.compile(r"EXIT:[1-9][0-9]*")
+
+
+def order_side(role: str, direction: str) -> str:
+    """The exact side `engine.py`'s own INTENT handler derives for `role`
+    under `direction` (engine.py:228-232 -- "side flips with direction").
+    A FILL's `side` must match the order's `o.side`, set at INTENT time by
+    that same logic; re-derived here identically so a FILL is never sent/
+    applied with the wrong side (found 2026-09-23: the previous hardcoded
+    `"SELL" if role in ("EXIT","STOP") else "BUY"` was wrong for BOTH a
+    SHORT-direction config (whole ladder inverted) AND a LONG config with a
+    take-profit ladder configured -- `role="EXIT:1"` is not in
+    `("EXIT","STOP")`, so it silently fell through to the OPENING side)."""
+
+    closing = role in ("EXIT", "STOP") or bool(_LADDER_EXIT_ROLE.fullmatch(role))
+    if direction == "SHORT":
+        return "BUY" if closing else "SELL"
+    return "SELL" if closing else "BUY"
 
 
 def build_live_config(
@@ -53,6 +74,7 @@ def build_live_config(
     initial_equity: str,
     max_entry_notional: str,
     minimum_equity: str,
+    margin_mode: str,
     fee_rate: str = "0.001",
     fee_quantum: str = "0.00000001",
 ) -> Config:
@@ -91,6 +113,7 @@ def build_live_config(
         "fee_rate": fee_rate,
         "fee_quantum": fee_quantum,
         "slippage": "0",
+        "margin_mode": margin_mode,
     }
     try:
         return Config.parse(raw)
@@ -160,8 +183,8 @@ async def place_next_action(
     other callers already rely on.
     """
 
-    side = "SELL" if role in ("EXIT", "STOP") else "BUY"
-    price = _role_price(session, role)
+    side = order_side(role, session.config.direction)
+    price = role_price(session, role)
     intent_state = apply(
         session.state,
         {
@@ -209,6 +232,62 @@ async def place_next_action(
         session, state=intent_state, bindings=(*session.bindings, binding)
     )
     return next_session, result
+
+
+def paper_fill_next_action(session: DcaSession, *, role: str, qty: Q, attempt_id: str) -> DcaSession:
+    """"Paper" mode: fill an order LOCALLY at the exact same price
+    `place_next_action` would send to a real venue (`role_price`) -- no
+    venue call, no credential, no real money moves. This is
+    `historical_simulation.py`'s own INTENT-then-FILL pattern (engine.py's
+    `apply()`, reused verbatim, zero new economic logic), just driven by a
+    live mark (already applied via `apply_mark` from real market data)
+    instead of a stored historical bar -- the real engine, real market
+    data, no real order API (2026-09-23 design decision, docs/KARARLAR.md).
+    """
+
+    side = order_side(role, session.config.direction)
+    price = role_price(session, role)
+    intent_state = apply(
+        session.state,
+        {
+            "type": "INTENT",
+            "order_id": attempt_id,
+            "role": role,
+            "qty": exact_text(qty),
+            "limit_price": exact_text(price),
+        },
+        session.config,
+    )
+    fee = round_quantum(qty * price * session.config.fee_rate, session.config.fee_quantum)
+    filled_state = apply(
+        intent_state,
+        {
+            "type": "FILL",
+            "execution_id": f"paper:{attempt_id}",
+            "order_id": attempt_id,
+            "side": side,
+            "qty": exact_text(qty),
+            "price": exact_text(price),
+            "fee": exact_text(fee),
+            "fee_asset": session.config.quote_asset,
+        },
+        session.config,
+    )
+    # A paper fill is always a full, one-shot fill (no partial-fill
+    # simulation) -- coverage is complete by construction, same as
+    # historical_simulation.py's own INTENT+FILL+ORDER_FINAL sequence.
+    final_state = apply(
+        filled_state,
+        {
+            "type": "ORDER_FINAL",
+            "order_id": attempt_id,
+            "status": "FILLED",
+            "filled_qty": exact_text(qty),
+            "coverage_complete": True,
+        },
+        session.config,
+    )
+    return replace(session, state=final_state)
 
 
 async def sync_order_fills(
@@ -313,7 +392,10 @@ def _fee_in_quote_asset(trade, config: Config) -> Q:
     )
 
 
-def _role_price(session: DcaSession, role: str) -> Q:
+def role_price(session: DcaSession, role: str) -> Q:
+    """The exact limit price `place_next_action` would use for `role`, computed
+    the same way for both the real send and a read-only preview (`/decision`)."""
+
     if role == "BASE":
         if session.state.mark is None:
             raise TestnetDcaSessionError("DCA_MARK_REQUIRED", "BASE için önce mark fiyatı uygulanmalı.")

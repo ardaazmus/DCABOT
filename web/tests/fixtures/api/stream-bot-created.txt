@@ -1,0 +1,6 @@
+: connected
+
+event: landmark
+id: 1
+data: {"seq": 1, "kind": "BOT_CREATED", "ref": "bot_0d114e2a7f03", "summary": "Bot oluşturuldu (akis fikstur).", "time_us": 1790478282652800}
+

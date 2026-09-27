@@ -1,0 +1,1 @@
+{"type":"urn:local-api:problem:BACKTEST-RANGE-TOO-LARGE","title":"Backtest ayarları geçersiz","status":422,"detail":"Bu aralık 20000 mumdan fazla; tarih aralığını kısaltın ya da daha büyük zaman dilimi seçin.","code":"BACKTEST_RANGE_TOO_LARGE","errors":[{"field":"start_date","code":"BACKTEST_RANGE_TOO_LARGE"}]}

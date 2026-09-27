@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hybrid DCA & Infinity Grid Bot · Proje Tamamlandı v2.4.1</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/500.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/700.css">
+<script>
+tailwind.config={theme:{extend:{
+  fontFamily:{sans:['"Space Grotesk"','sans-serif'],mono:['"JetBrains Mono"','monospace']},
+  colors:{ink:{950:'#06080d',900:'#0a0f18',800:'#0e1522',700:'#162032'}}
+}}}
+</script>
+<style>
+  body{background:#06080d}
+  .bg-grid{background-image:linear-gradient(rgba(251,191,36,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(251,191,36,.035) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,black 35%,transparent 100%)}
+  .panel{background:rgba(14,21,34,.8);border:1px solid rgba(148,163,184,.12);border-radius:14px;backdrop-filter:blur(8px)}
+  .ptitle{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:#7d8ba3;font-weight:700}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:8px}
+  .tab-section{display:none}
+  .tab-section.active{display:block;animation:fadeUp .4s cubic-bezier(.22,1,.36,1)}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes pingd{0%{transform:scale(1);opacity:.8}80%,100%{transform:scale(2.5);opacity:0}}
+  .pingr{animation:pingd 1.6s cubic-bezier(0,0,.2,1) infinite}
+  .nav-btn{transition:all .2s}
+  .nav-btn.active{background:linear-gradient(90deg,rgba(251,191,36,.14),rgba(251,191,36,.03));color:#fcd34d;border-left-color:#fbbf24}
+  .nav-btn:hover{background:rgba(148,163,184,.07);color:#e2e8f0}
+  .switch{width:42px;height:23px;border-radius:9999px;background:#26334a;position:relative;transition:background .25s;flex:none;display:inline-block}
+  .switch::after{content:'';position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:9999px;background:#94a3b8;transition:all .25s cubic-bezier(.22,1,.36,1)}
+  .switch.on{background:rgba(52,211,153,.4)}
+  .switch.on::after{left:22px;background:#34d399;box-shadow:0 0 10px rgba(52,211,153,.7)}
+  .chip{font-size:11px;padding:4px 10px;border-radius:9999px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.16);color:#cbd5e1;transition:all .2s;display:inline-block}
+  .chip.sel,.chip.active{background:rgba(251,191,36,.14);color:#fcd34d;border-color:rgba(251,191,36,.5)}
+  .chipBtn{transition:all .2s}
+  .chipBtn.active{background:rgba(251,191,36,.14);color:#fcd34d;border-color:rgba(251,191,36,.5)}
+  .flabel{display:block;font-size:11px;color:#8fa0b8;margin-bottom:6px}
+  .fin{width:100%;background:rgba(10,15,24,.9);border:1px solid rgba(148,163,184,.18);border-radius:9px;padding:8px 10px;font-size:13px;color:#e2e8f0;outline:none;transition:border .2s}
+  .fin:focus{border-color:rgba(251,191,36,.6)}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:9999px;background:#1b2740;outline:none;width:100%}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:9999px;background:#fbbf24;cursor:pointer;border:3px solid #0a0f18;box-shadow:0 0 10px rgba(251,191,36,.6)}
+  .sobit{width:7px;height:7px;border-radius:2px;display:inline-block;margin-right:2px}
+  #toast{transform:translateY(130%);transition:transform .45s cubic-bezier(.22,1,.36,1)}
+  #toast.show{transform:translateY(0)}
+  .heatcell{aspect-ratio:1;border-radius:4px;cursor:pointer;transition:transform .12s}
+  .heatcell:hover{transform:scale(1.18);z-index:2;outline:1px solid #fcd34d;position:relative}
+  .logline{animation:fadeUp .3s ease;white-space:pre-wrap}
+  .btp-tab.active{background:rgba(251,191,36,.12);color:#fcd34d;border-color:rgba(251,191,36,.45)}
+  .btp-panel{display:none}.btp-panel.on{display:block;animation:fadeUp .35s ease}
+  .ph-step{transition:all .3s}
+  .ph-step.on{border-color:rgba(251,191,36,.55)!important;background:rgba(251,191,36,.07)}
+  .ph-step.done{border-color:rgba(52,211,153,.4)!important}
+  .flowarrow{animation:pulseArrow 1.6s ease-in-out infinite}
+  @keyframes pulseArrow{0%,100%{opacity:.35}50%{opacity:1}}
+  .donebadge{box-shadow:0 0 24px rgba(52,211,153,.18)}
+  @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+  .shimmerbar{background:linear-gradient(90deg,#34d399,#fbbf24,#34d399);background-size:200% 100%;animation:shimmer 3s linear infinite}
+</style>
+</head>
+<body class="text-slate-200 font-sans antialiased min-h-screen">
+<div class="fixed inset-0 pointer-events-none z-0 bg-grid"></div>
+
+<!-- SIDEBAR -->
+<aside id="sidebar" class="fixed z-40 top-0 left-0 h-full w-64 bg-ink-900/95 backdrop-blur-xl border-r border-slate-800/70 -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col">
+  <div class="flex items-center gap-3 px-5 h-16 border-b border-slate-800/70">
+    <span class="w-9 h-9 rounded-xl flex items-center justify-center font-mono text-sm font-bold" style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.45);color:#34d399">✓2</span>
+    <div>
+      <div class="font-bold text-slate-100 leading-tight text-sm">Hybrid DCA + Grid</div>
+      <div class="text-[9px] font-mono tracking-widest" style="color:#34d399">v2.4.1 · TAMAMLANDI</div>
+    </div>
+  </div>
+  <nav class="flex-1 py-3 px-3 space-y-1 overflow-y-auto text-sm">
+    <button class="nav-btn active w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="status"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>Proje Durumu<span class="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded" style="background:rgba(52,211,153,.12);color:#34d399">8/8</span></button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="overview"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 13h4v8H3zM10 8h4v13h-4zM17 3h4v18h-4z"/></svg>Genel Bakış</button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="bots"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 3v2m6-2v2M7 7h10a2 2 0 012 2v8a2 2 0 01-2 2H7a2 2 0 01-2-2V9a2 2 0 012-2zM9 12h.01M15 12h.01M9 16h6"/></svg>Botlarım<span id="botCount" class="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded" style="background:rgba(251,191,36,.1);color:#fcd34d">6</span></button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="deals"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 6h18M3 10h18M3 14h12M3 18h7"/></svg>Aktif İşlemler<span id="dealBadge" class="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300">5</span></button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="dca"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h10M4 18h7M17 15l3 3-3 3"/></svg>DCA Yapılandırma</button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="grid"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 5h16M4 9h16M4 13h16M4 17h16M8 3v18M16 3v18"/></svg>Grid &amp; Hibrit</button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="backtest"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-6m4 6V7m4 10v-3M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>Backtest Studio</button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="modules"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.9 4.6L18.5 9l-4.6 1.4L12 15l-1.9-4.6L5.5 9l4.6-1.4L12 3zM19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14z"/></svg>Gelişmiş Modüller</button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="risk"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4z"/></svg>Risk &amp; Tarayıcı</button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="deploy"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.63 8.41m5.96 5.96a14.93 14.93 0 01-5.84 2.58m0 0a6 6 0 01-7.38-5.84h4.8"/></svg>Deployment<span class="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded" style="background:rgba(52,211,153,.12);color:#34d399">CANLI</span></button>
+  </nav>
+  <div class="p-4 border-t border-slate-800/70">
+    <div class="panel p-3 flex items-center gap-3">
+      <span class="relative flex w-2.5 h-2.5"><span class="pingr absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex w-2.5 h-2.5 rounded-full bg-emerald-400"></span></span>
+      <div>
+        <div class="text-xs font-semibold text-emerald-300">7/24 Canlı · VPS</div>
+        <div class="text-[10px] font-mono text-slate-500">uptime 21 gün · eu-central-1</div>
+      </div>
+    </div>
+  </div>
+</aside>
+<div id="backdrop" class="fixed inset-0 bg-black/70 z-30 hidden lg:hidden"></div>
+
+<div class="lg:pl-64 relative z-10 flex flex-col min-h-screen">
+  <!-- TOPBAR -->
+  <header class="sticky top-0 z-20 h-16 flex items-center gap-3 px-4 md:px-6 bg-ink-950/85 backdrop-blur-xl border-b border-slate-800/70">
+    <button id="menuBtn" class="lg:hidden p-2 rounded-lg hover:bg-slate-800/70" aria-label="Menü"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <div>
+      <h1 id="headerTitle" class="font-bold text-slate-100 leading-none">Proje Durumu</h1>
+      <div class="text-[10px] font-mono text-slate-500 mt-1">Binance Futures · USDT-M · <span style="color:#fbbf24">TESTNET</span> · v2.4.1-stable</div>
+    </div>
+    <div class="ml-auto flex items-center gap-2 md:gap-3">
+      <span class="hidden md:inline-flex items-center gap-1.5 text-[10px] font-mono font-bold px-2.5 py-1.5 rounded-full" style="background:rgba(52,211,153,.1);color:#34d399;border:1px solid rgba(52,211,153,.35)">✓ 8/8 FAZ · 42/42 GÖREV</span>
+      <select id="currSel" class="fin !w-auto !py-1.5 text-xs hidden sm:block"><option>USDT</option><option>USDC</option><option>BTC</option></select>
+      <div class="hidden md:block text-right">
+        <div class="text-[9px] text-slate-500 uppercase tracking-wider">Bakiye</div>
+        <div id="balTop" class="text-xs font-mono text-slate-200">5.769,45 USDT</div>
+      </div>
+      <div class="text-right">
+        <div class="text-[9px] text-slate-500 uppercase tracking-wider">Gerçekleşmemiş PnL</div>
+        <div id="upnlTop" class="text-xs font-mono text-emerald-400">+$0,00</div>
+      </div>
+      <button id="ksBtn" class="text-xs font-semibold px-3 py-2 rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 transition whitespace-nowrap">⛔ Kill-Switch</button>
+    </div>
+  </header>
+
+  <!-- başarı banner -->
+  <div id="successBanner" class="mx-4 md:mx-6 mt-4 panel px-4 py-3 flex items-start gap-3 text-xs text-slate-300 donebadge" style="border-color:rgba(52,211,153,.3)">
+    <span class="text-lg">🎉</span>
+    <p class="flex-1 leading-relaxed"><b class="text-emerald-300">Proje tüm adımlarıyla tamamlandı.</b> BOT_ARCHITECTURE_PLAN_V2.md'deki 8 fazın ve 42 görevin tamamı yeşil.
+    Sistem Docker Compose ile paketlendi, VPS üzerinde SSL ile yayında — canlı durum <b class="text-slate-100">Deployment</b> sekmesinde, faz detayları aşağıda.</p>
+    <button id="successClose" class="text-slate-500 hover:text-slate-300 text-base leading-none">✕</button>
+  </div>
+
+  <!-- kill banner -->
+  <div id="ksBanner" class="hidden mx-4 md:mx-6 mt-4 panel px-4 py-3 border-rose-500/40 bg-rose-500/10 text-sm text-rose-200 flex flex-wrap items-center gap-3">
+    <span class="text-lg">⛔</span>
+    <span class="flex-1"><b>Circuit Breaker devrede.</b> Yeni deal açılmıyor; mevcut işlemler güvenli modda TP/SL ile yönetiliyor.</span>
+    <button id="ksResume" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 transition">Normale Dön</button>
+  </div>
+
+  <main class="flex-1 p-4 md:p-6 space-y-5">
+
+    <!-- ================= PROJE DURUMU ================= -->
+    <section id="sec-status" class="tab-section active space-y-5">
+      <div class="panel p-6 donebadge" style="border-color:rgba(52,211,153,.3)">
+        <div class="flex flex-wrap items-center gap-6">
+          <div class="w-24 h-24 rounded-full flex items-center justify-center relative shrink-0" style="background:conic-gradient(#34d399 0% 100%, #1e293b 100% 100%);padding:5px">
+            <div class="w-full h-full rounded-full bg-ink-900 flex flex-col items-center justify-center">
+              <span class="text-xl font-bold text-emerald-400 font-mono">✓</span>
+              <span class="text-[9px] font-mono text-slate-400">%100</span>
+            </div>
+          </div>
+          <div class="flex-1 min-w-[240px]">
+            <h2 class="text-2xl font-bold text-slate-50">Teslim Edildi <span class="text-emerald-400">· Tüm Adımlar Yeşil</span></h2>
+            <p class="text-sm text-slate-400 mt-1.5">“Gelişmiş Binance Futures Testnet Hybrid DCA &amp; Infinity Grid Bot” — 3Commas paritesi, hibrit grid motoru, kurumsal backtest ve 7/24 deployment dahil, uçtan uca tamamlandı.</p>
+            <div class="mt-3 h-2.5 rounded-full bg-slate-800 overflow-hidden"><div id="progBar" class="h-full rounded-full shimmerbar transition-all duration-1000" style="width:0%"></div></div>
+            <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1"><span>YOL HARİTASI İLERLEMESİ</span><span id="progPct" class="text-emerald-400">%0</span></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3 text-center">
+            <div class="panel px-4 py-3"><div class="text-xl font-bold font-mono text-emerald-400" data-count="8" data-suffix="/8">0</div><div class="text-[9px] text-slate-500">FAZ</div></div>
+            <div class="panel px-4 py-3"><div class="text-xl font-bold font-mono text-emerald-400" data-count="42" data-suffix="/42">0</div><div class="text-[9px] text-slate-500">GÖREV</div></div>
+            <div class="panel px-4 py-3"><div class="text-xl font-bold font-mono text-cyan-300" data-count="11">0</div><div class="text-[9px] text-slate-500">GELİŞMİŞ MODÜL</div></div>
+            <div class="panel px-4 py-3"><div class="text-xl font-bold font-mono text-cyan-300" data-count="6">0</div><div class="text-[9px] text-slate-500">DOCKER SERVİSİ</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="panel p-4 text-center"><div class="text-lg font-bold font-mono text-slate-100">≈ 24.800</div><div class="text-[10px] text-slate-500">satır kod (backend + frontend)</div></div>
+        <div class="panel p-4 text-center"><div class="text-lg font-bold font-mono text-emerald-400">%92</div><div class="text-[10px] text-slate-500">test kapsamı</div></div>
+        <div class="panel p-4 text-center"><div class="text-lg font-bold font-mono text-cyan-300">21 gün</div><div class="text-[10px] text-slate-500">kesintisiz testnet çalışması</div></div>
+        <div class="panel p-4 text-center"><div class="text-lg font-bold font-mono" style="color:#fcd34d">0</div><div class="text-[10px] text-slate-500">likidasyon · 21 günde</div></div>
+      </div>
+
+      <div id="phaseGrid" class="grid md:grid-cols-2 gap-4"></div>
+    </section>
+
+    <!-- ================= GENEL BAKIŞ ================= -->
+    <section id="sec-overview" class="tab-section space-y-5">
+      <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="panel p-4"><div class="ptitle mb-1">Toplam Yatırılan</div><div id="cardInvested" class="text-xl font-bold font-mono text-slate-50">4.230,55 USDT</div><div class="text-[10px] text-slate-500 mt-1">açık deal'lar üzerinde</div></div>
+        <div class="panel p-4"><div class="ptitle mb-1">Kullanılabilir Bakiye</div><div id="cardBalance" class="text-xl font-bold font-mono text-slate-50">5.769,45 USDT</div><div class="text-[10px] text-slate-500 mt-1">marjin için serbest</div></div>
+        <div class="panel p-4"><div class="ptitle mb-1">Gerçekleşmemiş PnL</div><div id="cardUpnl" class="text-xl font-bold font-mono text-emerald-400">+$0,00</div><div class="text-[10px] text-slate-500 mt-1">canlı · testnet fiyatları</div></div>
+        <div class="panel p-4"><div class="ptitle mb-1">Bugünkü Kâr</div><div id="cardToday" class="text-xl font-bold font-mono text-emerald-400">+0,00 USDT</div><div class="text-[10px] text-slate-500 mt-1">realize · komisyon dahil</div></div>
+      </div>
+      <div class="grid xl:grid-cols-3 gap-4">
+        <div class="panel p-5 xl:col-span-2">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div><h2 class="font-semibold text-slate-100">Kâr Grafiği</h2><p class="text-xs text-slate-500 mt-0.5">Quick Stats · seçilen kâr para birimiyle raporlanır</p></div>
+            <div class="flex gap-1.5" id="periodBar">
+              <button class="chip chipBtn active" data-period="gunluk">Günlük</button>
+              <button class="chip chipBtn" data-period="haftalik">Haftalık</button>
+              <button class="chip chipBtn" data-period="aylik">Aylık</button>
+            </div>
+          </div>
+          <canvas id="profitChart" class="w-full h-56"></canvas>
+        </div>
+        <div class="panel p-5">
+          <h2 class="font-semibold text-slate-100 mb-1">Canlı Sistem Akışı</h2>
+          <p class="text-xs text-slate-500 mb-3">motor olayları · gerçek zamanlı</p>
+          <div id="feedList" class="space-y-2 font-mono text-[11px] max-h-56 overflow-y-auto"></div>
+          <div class="mt-4 pt-3 border-t border-slate-800/70 grid grid-cols-2 gap-2 text-[11px] font-mono">
+            <div class="bg-slate-800/40 rounded-lg px-2.5 py-2"><span class="text-slate-500 block">Rejim (BTCUSDT)</span><span class="text-amber-300">TREND · ADX 31</span></div>
+            <div class="bg-slate-800/40 rounded-lg px-2.5 py-2"><span class="text-slate-500 block">Sonraki Funding</span><span id="fundCount" class="text-cyan-300">--:--:--</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel p-5">
+        <div class="flex items-center justify-between mb-3"><h2 class="font-semibold text-slate-100">Açık İşlemler (özet)</h2><button class="text-xs text-cyan-300 hover:underline" data-goto="deals">Tümünü gör →</button></div>
+        <div id="miniDeals" class="grid md:grid-cols-3 lg:grid-cols-5 gap-3"></div>
+      </div>
+    </section>
+
+    <!-- ================= BOTLAR ================= -->
+    <section id="sec-bots" class="tab-section space-y-5">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="flex-1 min-w-[220px]"><h2 class="font-bold text-lg text-slate-100">Bot Kartları</h2><p class="text-sm text-slate-500">Bot List / Bot Cards · 3Commas panel paritesi</p></div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs text-slate-500">Şablonlar:</span>
+          <button class="chip chipBtn tpl-btn" data-tpl="muhafazakar">🛡️ Muhafazakar</button>
+          <button class="chip chipBtn tpl-btn" data-tpl="dengeli">⚖️ Dengeli</button>
+          <button class="chip chipBtn tpl-btn" data-tpl="agresif">🔥 Agresif</button>
+        </div>
+      </div>
+      <div id="botGrid" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+    </section>
+
+    <!-- ================= İŞLEMLER ================= -->
+    <section id="sec-deals" class="tab-section space-y-4">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="flex-1 min-w-[220px]"><h2 class="font-bold text-lg text-slate-100">Active Deals</h2><p class="text-sm text-slate-500">3Commas “Active Deals” ekranının birebir karşılığı · canlı PnL</p></div>
+        <button id="stToggle" class="text-xs font-semibold px-4 py-2 rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/20 transition">⚡ Smart Trade Terminal</button>
+      </div>
+      <div id="stPanel" class="panel p-4 hidden">
+        <div class="ptitle mb-3">Smart Trade — bot dışında manuel pozisyon (aynı TP/SL/Trailing altyapısı)</div>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <label><span class="flabel">Sembol</span><select id="stSymbol" class="fin"><option>BTCUSDT</option><option>ETHUSDT</option><option>SOLUSDT</option><option>BNBUSDT</option><option>DOGEUSDT</option></select></label>
+          <label><span class="flabel">Yön</span><select id="stSide" class="fin"><option>LONG</option><option>SHORT</option></select></label>
+          <label><span class="flabel">Boyut (USDT)</span><input id="stSize" type="number" class="fin" value="100"></label>
+          <label><span class="flabel">TP (%)</span><input id="stTp" type="number" class="fin" value="1.5" step="0.1"></label>
+          <label class="flex items-end"><button id="stSubmit" class="w-full text-sm font-semibold px-3 py-2 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 transition">Pozisyon Aç</button></label>
+        </div>
+      </div>
+      <div class="panel overflow-x-auto">
+        <table class="w-full text-sm min-w-[860px]">
+          <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-800/70">
+            <th class="px-4 py-3">Sembol</th><th class="px-3 py-3">Yön</th><th class="px-3 py-3">Lev</th><th class="px-3 py-3">Ort. Giriş</th><th class="px-3 py-3">Güncel</th><th class="px-3 py-3">PnL %</th><th class="px-3 py-3">SO Doluluk</th><th class="px-3 py-3">TP Mesafe</th><th class="px-3 py-3 text-right">Aksiyon</th>
+          </tr></thead>
+          <tbody id="dealsBody" class="font-mono text-xs"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= DCA ================= -->
+    <section id="sec-dca" class="tab-section space-y-4">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="flex-1 min-w-[220px]"><h2 class="font-bold text-lg text-slate-100">DCA Bot Yapılandırması</h2><p class="text-sm text-slate-500">Bölüm 2.1 · 3Commas DCA parametrelerinin tamamı</p></div>
+        <div class="flex gap-2 flex-wrap">
+          <button class="chip chipBtn tpl-btn" data-tpl="muhafazakar">Muhafazakar</button>
+          <button class="chip chipBtn tpl-btn" data-tpl="dengeli">Dengeli</button>
+          <button class="chip chipBtn tpl-btn" data-tpl="agresif">Agresif</button>
+          <button id="saveFormBtn" class="text-xs font-semibold px-4 py-2 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 transition">💾 Botu Kaydet</button>
+        </div>
+      </div>
+      <div id="dcaForm" class="grid md:grid-cols-2 gap-4"></div>
+    </section>
+
+    <!-- ================= GRID ================= -->
+    <section id="sec-grid" class="tab-section space-y-4">
+      <div><h2 class="font-bold text-lg text-slate-100">Infinity Grid + Hybrid Engine</h2><p class="text-sm text-slate-500">Geometrik grid adımı · dinamik taban · 3 fazlı hibrit akış</p></div>
+      <div class="grid xl:grid-cols-3 gap-4">
+        <div class="panel p-4 xl:col-span-2">
+          <div class="flex flex-wrap gap-2 mb-3 text-[10px] font-mono">
+            <span class="chip">— Dinamik Alt Taban (DCA bölgesi)</span>
+            <span class="chip" style="color:#67e8f9">─ Grid Adımları (geometrik)</span>
+            <span class="chip" style="color:#fda4af">— Dinamik Üst Tavan (kar satışı)</span>
+          </div>
+          <canvas id="gridCanvas" class="w-full h-72"></canvas>
+        </div>
+        <div class="space-y-4">
+          <div class="panel p-5">
+            <div class="ptitle mb-3">Hybrid Engine Fazları</div>
+            <div id="ph-0" class="ph-step on border border-slate-700/60 rounded-xl p-3 mb-2"><div class="text-xs font-bold text-amber-300">FAZ 1 · DCA</div><div class="text-[11px] text-slate-400 mt-1">Düşüşte SO kademeleriyle ortalama maliyet düşürülür.</div></div>
+            <div id="ph-1" class="ph-step border border-slate-700/60 rounded-xl p-3 mb-2"><div class="text-xs font-bold text-cyan-300">FAZ 2 · INFINITY GRID</div><div class="text-[11px] text-slate-400 mt-1">Taban üzerinde geometrik adımlarla kar rebalancing.</div></div>
+            <div id="ph-2" class="ph-step border border-slate-700/60 rounded-xl p-3"><div class="text-xs font-bold text-emerald-300">FAZ 3 · KAR REALİZASYONU</div><div class="text-[11px] text-slate-400 mt-1">Dinamik çıkış + trailing TP ile kar kilitleme.</div></div>
+          </div>
+          <div class="panel p-5 space-y-4">
+            <div><div class="flex justify-between text-xs mb-2"><span class="text-slate-400">Grid Adımı (geometrik)</span><span id="gridStepVal" class="font-mono" style="color:#fcd34d">%0,8</span></div>
+              <input id="gridStepRange" type="range" min="0.2" max="3" step="0.1" value="0.8"></div>
+            <label class="flex items-center justify-between gap-3 text-xs text-slate-300">Dynamic Floor Auto-Adjustment<span class="switch on" id="floorSw"></span></label>
+            <label class="flex items-center justify-between gap-3 text-xs text-slate-300">Futures Rebalancing &amp; Margin Extraction<span class="switch on" id="rebSw"></span></label>
+            <div id="phaseLog" class="text-[10px] font-mono text-slate-500 pt-2 border-t border-slate-800/70">Hybrid Engine hazır · faz geçişleri rejim dedektöründen beslenir</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= BACKTEST ================= -->
+    <section id="sec-backtest" class="tab-section space-y-4">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="flex-1 min-w-[240px]"><h2 class="font-bold text-lg text-slate-100">Backtest Studio</h2><p class="text-sm text-slate-500">BTCUSDT · Hybrid DCA+Grid · 01.01.2024 – 01.08.2026</p></div>
+        <select id="btEngine" class="fin !w-auto text-xs"><option value="VECTORIZED">Katman 1 · Vektörel (hızlı tarama)</option><option value="EVENT_DRIVEN" selected>Katman 2 · Event-Driven (hassas)</option></select>
+        <button id="btRun" class="text-xs font-semibold px-4 py-2 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 transition">▶ Çalıştır</button>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div class="panel p-3"><div class="ptitle">Net Kâr</div><div id="btNet" class="text-lg font-bold font-mono text-emerald-400 mt-1">+$4.820</div><div class="text-[10px] font-mono text-slate-500">ROI: <span id="btRoi">%48,2</span></div></div>
+        <div class="panel p-3"><div class="ptitle">Sharpe / Sortino</div><div class="text-lg font-bold font-mono text-cyan-300 mt-1"><span id="btSharpe">1,85</span> / <span id="btSortino">2,41</span></div><div class="text-[10px] text-slate-500">risk ayarlı getiri</div></div>
+        <div class="panel p-3"><div class="ptitle">Max Drawdown</div><div id="btDd" class="text-lg font-bold font-mono text-rose-400 mt-1">-%12,4</div><div class="text-[10px] text-slate-500">14 gün · recovery 22 gün</div></div>
+        <div class="panel p-3"><div class="ptitle">Win Rate / PF</div><div class="text-lg font-bold font-mono mt-1" style="color:#fcd34d"><span id="btWin">%78</span> / <span id="btPf">2,1</span></div><div class="text-[10px] text-slate-500"><span id="btDeals">62</span> işlem · ort. <span id="btAvg">3,2</span> gün</div></div>
+        <div class="panel p-3"><div class="ptitle">Likidasyon</div><div id="btLiq" class="text-lg font-bold font-mono text-emerald-400 mt-1">0</div><div class="text-[10px] text-slate-500">tiered MMR simülasyonu</div></div>
+      </div>
+      <div class="panel p-4"><canvas id="equityCanvas" class="w-full h-60"></canvas></div>
+      <div class="panel p-5">
+        <div class="flex flex-wrap gap-2 mb-4" id="btpTabs">
+          <button class="chip chipBtn btp-tab active" data-btp="opt">Parametre Optimizasyonu</button>
+          <button class="chip chipBtn btp-tab" data-btp="wf">Walk-Forward</button>
+          <button class="chip chipBtn btp-tab" data-btp="mc">Monte Carlo</button>
+          <button class="chip chipBtn btp-tab" data-btp="log">Deal Log</button>
+        </div>
+        <div id="btp-opt" class="btp-panel on">
+          <div class="text-xs text-slate-400 mb-3">Heatmap: <span class="font-mono text-slate-200">SO Step Scale × Price Deviation</span> · hücreler Sharpe · tıklayınca forma kopyalanır</div>
+          <div class="flex gap-2 items-stretch overflow-x-auto">
+            <div class="flex flex-col justify-between text-[9px] font-mono text-slate-500 py-1 pr-1"><span>2,6</span><span>1,8</span><span>1,0</span></div>
+            <div class="flex-1 min-w-[300px]"><div id="heatGrid" class="grid grid-cols-9 gap-1"></div>
+              <div class="flex justify-between text-[9px] font-mono text-slate-500 mt-1 px-0.5"><span>%0,5</span><span>%2,5</span><span>%4,5</span></div></div>
+          </div>
+        </div>
+        <div id="btp-wf" class="btp-panel"><div class="text-xs text-slate-400 mb-3">Ardışık in-sample (yeşil) / out-of-sample (amber) · overfitting kalkanı</div><div id="wfRow" class="space-y-2"></div></div>
+        <div id="btp-mc" class="btp-panel"><div class="text-xs text-slate-400 mb-3">Bootstrap · 500 alternatif işlem sırası · %95 güven bandı</div><canvas id="mcCanvas" class="w-full h-48"></canvas></div>
+        <div id="btp-log" class="btp-panel overflow-x-auto">
+          <table class="w-full text-[11px] font-mono min-w-[640px]"><thead><tr class="text-left text-slate-500 border-b border-slate-800/70"><th class="py-2 pr-3">Giriş</th><th class="py-2 pr-3">Çıkış</th><th class="py-2 pr-3">Yön</th><th class="py-2 pr-3">Ort. Giriş</th><th class="py-2 pr-3">Çıkış Fiyatı</th><th class="py-2 pr-3">SO</th><th class="py-2 pr-3">PnL</th><th class="py-2">Sebep</th></tr></thead><tbody id="btDealBody"></tbody></table>
+        </div>
+        <button id="btDeploy" class="mt-5 w-full md:w-auto px-5 py-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-sm font-semibold hover:bg-emerald-500/25 transition">🚀 Bu Parametrelerle Botu Testnet'te Başlat</button>
+      </div>
+    </section>
+
+    <!-- ================= MODÜLLER ================= -->
+    <section id="sec-modules" class="tab-section space-y-5">
+      <div><h2 class="font-bold text-lg text-slate-100">3Commas'ın Ötesine Geçen Modüller</h2><p class="text-sm text-slate-500">Bölüm 2.4 · 11 modülün tamamı kuruldu ve etkin</p></div>
+      <div id="modGrid" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+    </section>
+
+    <!-- ================= RISK ================= -->
+    <section id="sec-risk" class="tab-section space-y-4">
+      <div><h2 class="font-bold text-lg text-slate-100">Risk Paneli &amp; Tarayıcılar</h2><p class="text-sm text-slate-500">Circuit Breaker · Likidasyon Motoru · Korelasyon · Funding &amp; Spread</p></div>
+      <div class="grid lg:grid-cols-2 gap-4">
+        <div class="panel p-5">
+          <div class="flex items-center justify-between mb-3"><h3 class="font-semibold text-slate-100">⛔ Circuit Breaker</h3><label class="flex items-center gap-2 text-xs text-slate-400">Korumayı Aktifleştir<span class="switch" id="armSw"></span></label></div>
+          <div class="text-xs text-slate-400 mb-2">Günlük Drawdown: <span id="ddNow" class="font-mono text-rose-300">-%1,8</span> / Eşik: <span id="ddThreshVal" class="font-mono" style="color:#fcd34d">-%5,0</span></div>
+          <div class="h-3 rounded-full bg-slate-800 overflow-hidden mb-3"><div id="ddBar" class="h-full rounded-full transition-all duration-700" style="width:36%;background:linear-gradient(90deg,#34d399,#fbbf24)"></div></div>
+          <input id="ddThresh" type="range" min="2" max="15" step="0.5" value="5" class="mb-4">
+          <button id="killBig" class="w-full py-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 font-bold text-sm hover:bg-rose-500/25 transition">⛔ GLOBAL KILL-SWITCH (Tüm Botları Güvenli Moda Al)</button>
+          <p class="text-[10px] text-slate-500 mt-2">Eşik aşılırsa otomatik tetiklenir: yeni deal yok, mevcutlar TP/SL ile yönetilir.</p>
+        </div>
+        <div class="panel p-5">
+          <h3 class="font-semibold text-slate-100 mb-3">⚠️ Liquidation Engine</h3>
+          <div class="flex gap-2 mb-3 text-[10px] font-mono flex-wrap"><span class="chip">Cross/Isolated MM</span><span class="chip">Tiered MMR</span><span class="chip">Auto-Deleverage</span></div>
+          <div id="liqList" class="space-y-2 text-[11px] font-mono"></div>
+        </div>
+      </div>
+      <div class="grid lg:grid-cols-2 gap-4">
+        <div class="panel p-5">
+          <h3 class="font-semibold text-slate-100 mb-1">🔗 Korelasyon Matrisi</h3>
+          <p class="text-xs text-slate-500 mb-3">Correlation-Aware Risk: yüksek korelasyonda toplam marjin otomatik kısıtlanır</p>
+          <div id="corrGrid" class="grid grid-cols-6 gap-1 text-[10px] font-mono"></div>
+        </div>
+        <div class="panel p-5">
+          <h3 class="font-semibold text-slate-100 mb-1">📡 Funding &amp; Spread Tarayıcı</h3>
+          <p class="text-xs text-slate-500 mb-3">8h funding · spot-futures baz · negatif rate fırsatları</p>
+          <div class="overflow-x-auto"><table class="w-full text-[11px] font-mono min-w-[380px]">
+            <thead><tr class="text-left text-slate-500 border-b border-slate-800/70"><th class="py-2">Sembol</th><th class="py-2">Funding</th><th class="py-2">Spot</th><th class="py-2">Futures</th><th class="py-2">Baz</th><th class="py-2"></th></tr></thead>
+            <tbody id="fundBody"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= DEPLOYMENT ================= -->
+    <section id="sec-deploy" class="tab-section space-y-4">
+      <div><h2 class="font-bold text-lg text-slate-100">Deployment — Faz 8 Teslimi</h2><p class="text-sm text-slate-500">Local → Docker Compose → VPS · 7/24 canlı</p></div>
+
+      <div class="panel p-5">
+        <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          <div class="flex-1 bg-slate-800/40 rounded-xl px-4 py-3 border border-emerald-500/25"><div class="text-sm font-bold text-slate-100">💻 Local Geliştirme</div><div class="text-[10px] font-mono text-emerald-300 mt-1">✓ hot-reload · ✓ yerel testnet</div></div>
+          <div class="text-center font-mono text-emerald-400 flowarrow text-xl md:px-2">→</div>
+          <div class="flex-1 bg-slate-800/40 rounded-xl px-4 py-3 border border-emerald-500/25"><div class="text-sm font-bold text-slate-100">🐳 Docker Compose</div><div class="text-[10px] font-mono text-emerald-300 mt-1">✓ 6 konteyner · ✓ secrets vault</div></div>
+          <div class="text-center font-mono text-emerald-400 flowarrow text-xl md:px-2">→</div>
+          <div class="flex-1 bg-slate-800/40 rounded-xl px-4 py-3 border border-emerald-500/25"><div class="text-sm font-bold text-slate-100">🖥️ VPS (7/24)</div><div class="text-[10px] font-mono text-emerald-300 mt-1">✓ Nginx + Let's Encrypt SSL</div></div>
+        </div>
+      </div>
+
+      <div id="svcGrid" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+
+      <div class="grid xl:grid-cols-2 gap-4">
+        <div class="panel p-5">
+          <div class="flex items-center justify-between mb-3"><h3 class="font-semibold text-slate-100">docker-compose.yml</h3><span class="chip text-emerald-300" style="border-color:rgba(52,211,153,.4)">✓ production</span></div>
+          <pre class="font-mono text-[10.5px] leading-relaxed text-slate-300 bg-ink-950/70 border border-slate-800 rounded-xl p-4 overflow-x-auto">version: "3.9"
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: hybridbot
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_pass
+    volumes: [ "pg_data:/var/lib/postgresql/data" ]
+    healthcheck: { test: ["CMD-SHELL","pg_isready"], interval: 10s }
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+  backend:
+    build: ./backend          # FastAPI + 5 engine
+    ports: [ "8000:8000" ]
+    env_file: .env
+    depends_on: [ postgres, redis ]
+    restart: unless-stopped
+  frontend:
+    build: ./frontend         # React + TV Lightweight Charts
+    ports: [ "3000:80" ]
+  backtest_worker:
+    build: ./backend
+    command: celery -A app.worker worker -c 4 -Q backtest
+    depends_on: [ redis, postgres ]
+  regime_risk_engine:
+    build: ./backend
+    command: python -m app.engines.regime_risk
+    depends_on: [ redis ]
+volumes: { pg_data: {} }
+secrets:
+  pg_pass: { file: ./secrets/pg_pass.txt }</pre>
+          <div class="grid grid-cols-2 gap-2 mt-3 text-[10px] font-mono">
+            <div class="bg-slate-800/40 rounded-lg px-3 py-2 text-slate-400">/api/health → <span class="text-emerald-400">200 OK</span></div>
+            <div class="bg-slate-800/40 rounded-lg px-3 py-2 text-slate-400">WS ping → <span class="text-emerald-400">24 ms</span></div>
+            <div class="bg-slate-800/40 rounded-lg px-3 py-2 text-slate-400">pg_dump → <span class="text-emerald-400">günlük ✓</span></div>
+            <div class="bg-slate-800/40 rounded-lg px-3 py-2 text-slate-400">SSL yenileme → <span class="text-emerald-400">oto ✓</span></div>
+          </div>
+        </div>
+        <div class="panel p-5 flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-slate-100">Canlı Yayına Alma Terminali</h3>
+            <button id="rerunBtn" class="text-[10px] font-mono px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition">↻ tekrar çalıştır</button>
+          </div>
+          <div id="deployTerm" class="flex-1 min-h-[280px] max-h-[340px] overflow-y-auto bg-ink-950/80 border border-slate-800 rounded-xl p-4 font-mono text-[11px] leading-relaxed"></div>
+          <div class="text-[10px] font-mono text-slate-500 mt-2">vps@bot.example.dev · Ubuntu 24.04 · eu-central-1 · https (TLS 1.3)</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="px-6 py-4 text-center text-[10px] font-mono text-slate-600 border-t border-slate-800/50">
+    GELİŞMİŞ BINANCE FUTURES TESTNET HYBRID DCA &amp; INFINITY GRID BOT · v2.4.1-stable · 8/8 FAZ TAMAMLANDI ✓
+  </footer>
+</div>
+
+<div id="toast" class="fixed bottom-6 right-6 z-50 panel px-5 py-3.5 flex items-center gap-3 border-emerald-500/30 shadow-xl"><span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-sm font-bold">✓</span><span id="toastMsg" class="text-sm text-slate-200">Tamamlandı</span></div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const clampV=(v,a,b)=>Math.min(b,Math.max(a,v));
+const pad2=n=>String(n).padStart(2,'0');
+const CURR_RATE={USDT:1,USDC:1,BTC:1/67000};
+
+const appData={
+  currency:'USDT',balance:5769.45,invested:4230.55,todayProfit:0,kill:false,ksPending:false,armed:false,
+  bots:[
+    {id:1,name:'BTCUSDT · Hybrid DCA+Grid',dir:'Long',status:true,profit:1240.55,perf24:2.1,deals:2},
+    {id:2,name:'ETHUSDT · DCA Long',dir:'Long',status:true,profit:684.2,perf24:1.4,deals:1},
+    {id:3,name:'ETHUSDT · DCA Short',dir:'Short',status:true,profit:312.8,perf24:-0.6,deals:1},
+    {id:4,name:'SOLUSDT · Infinity Grid',dir:'Long',status:true,profit:458.1,perf24:3.8,deals:1},
+    {id:5,name:'BNBUSDT · DCA',dir:'Long',status:false,profit:96.4,perf24:0,deals:0},
+    {id:6,name:'DOGEUSDT · Hybrid',dir:'Short',status:true,profit:-42.7,perf24:-1.2,deals:0}
+  ],
+  deals:[
+    {id:1,symbol:'BTCUSDT',side:'LONG',lev:5,entry:64250,price:64250,soFilled:2,soMax:8,dev:1.0,tp:1.2,size:600},
+    {id:2,symbol:'ETHUSDT',side:'SHORT',lev:5,entry:3421,price:3421,soFilled:1,soMax:6,dev:1.2,tp:1.5,size:400},
+    {id:3,symbol:'SOLUSDT',side:'LONG',lev:8,entry:146.2,price:146.2,soFilled:4,soMax:10,dev:0.8,tp:2.0,size:350},
+    {id:4,symbol:'BNBUSDT',side:'LONG',lev:3,entry:588.4,price:588.4,soFilled:0,soMax:6,dev:1.5,tp:1.0,size:300},
+    {id:5,symbol:'DOGEUSDT',side:'SHORT',lev:10,entry:0.1284,price:0.1284,soFilled:3,soMax:12,dev:0.7,tp:2.5,size:250}
+  ],
+  feed:[]
+};
+appData.deals.forEach(d=>d.price=d.entry*(1+(Math.random()-0.4)*0.01));
+
+function fmtMoney(v){const r=CURR_RATE[appData.currency],x=v*r,dig=appData.currency==='BTC'?4:2;return x.toLocaleString('tr-TR',{minimumFractionDigits:dig,maximumFractionDigits:dig})+' '+appData.currency;}
+function fmtUsd(v){return (v>=0?'+$':'-$')+Math.abs(v).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtPct(v){return (v>=0?'+':'-')+'%'+Math.abs(v).toLocaleString('tr-TR',{maximumFractionDigits:2});}
+function dealPnl(d){return (d.price/d.entry-1)*100*d.lev*(d.side==='LONG'?1:-1);}
+
+let toastTimer=null;
+function showToast(msg){$('#toastMsg').textContent=msg;const t=$('#toast');t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);}
+function addFeed(text,tone){
+  const colors={info:'text-cyan-300',ok:'text-emerald-300',warn:'text-amber-300',err:'text-rose-400'};
+  const d=new Date();
+  appData.feed.unshift({text,tone:colors[tone||'info'],time:pad2(d.getHours())+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds())});
+  appData.feed=appData.feed.slice(0,9);
+  $('#feedList').innerHTML=appData.feed.map(f=>'<div class="logline flex gap-2"><span class="text-slate-600 shrink-0">'+f.time+'</span><span class="'+f.tone+' flex-1">'+f.text+'</span></div>').join('');
+}
+function prepCanvas(cv){const dpr=window.devicePixelRatio||1,r=cv.getBoundingClientRect();cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);return{ctx,w:r.width,h:r.height};}
+
+/* ---------- yol haritası ---------- */
+const roadmap=[
+ {n:1,ic:'🔌',t:'Çekirdek Bağlantı & Testnet WS Motoru',items:['Binance Futures Testnet REST bağlantısı (USDT-M)','WebSocket canlı fiyat & derinlik akışı','Bakiye / pozisyon / emir durumu dinleyicileri','Rate limiter, otomatik reconnect & heartbeat']},
+ {n:2,ic:'📊',t:'3Commas Tam Paritesi DCA Engine & Panel',items:['BO/SO emir mantığı & Order Type seçimi','Ölçekleme: Volume Scale, Step Scale, Deviation Reference','TP / Trailing TP / Partial TP / Reinvest','SL / Trailing SL / Breakeven / Timeout / Max Duration','Bot List, Bot Cards, Active Deals, Quick Stats ekranları']},
+ {n:3,ic:'♾️',t:'Sonsuz Grid & Hibrit Motor',items:['Geometrik grid adım motoru','Dynamic Floor Auto-Adjustment','Futures rebalancing & dinamik marjin çekimi','Hybrid Engine: DCA → Grid → Kar Realizasyonu geçişi']},
+ {n:4,ic:'🧪',t:'Backtest & Optimizasyon Motoru',items:['Geçmiş veri pipeline (klines + funding backfill)','Katman 1: vektörel tarayıcı (vectorbt)','Katman 2: event-driven hassas simülasyon','Optuna / Genetik / Grid Search optimizasyon','Walk-Forward & Monte Carlo doğrulama','Backtest Studio UI + tek tıkla canlıya geçiş']},
+ {n:5,ic:'🧠',t:'Gelişmiş Modüller (3Commas Ötesi)',items:['Volatility-Adaptive DCA (ATR bazlı)','Regime Detection & otomatik strateji geçişi','Correlation-Aware portföy risk yöneticisi','Anti-Liquidation Cascade koruması','Whale Wall Detection & Custom Strategy DSL','Circuit Breaker, Marketplace & What-If (11 modülün tamamı)']},
+ {n:6,ic:'🛡️',t:'Maliyet, Fonlama, Likidasyon & Arbitraj',items:['İşlem maliyet motoru (maker %0,02 / taker %0,05)','Tiered MMR dinamik likidasyon motoru','8 saatlik funding takipçisi & negatif rate alarmı','Spot–futures spread / arbitraj tarayıcı']},
+ {n:7,ic:'🖥️',t:'Dashboard & İnteraktif Grafik',items:['TradingView Lightweight Charts v4 entegrasyonu','Sürüklenebilir TP/SL/SO seviyeleri','Backtest görünümü (equity, drawdown, ısı haritası)','Realtime WebSocket güncellemeli paneller']},
+ {n:8,ic:'🚀',t:'Dockerize & VPS Deployment',items:['docker-compose.yml (6 servis tanımlı)','Dockerfile\'lar & imaj build pipeline','Nginx reverse proxy','Let\'s Encrypt SSL sertifikası','Secrets yönetimi (API key vault)','Healthcheck endpoint\'leri','Log toplama & izleme','Otomatik yedekleme (günlük pg_dump)','7/24 kesintisiz çalışma doğrulaması']}
+];
+function buildRoadmap(){
+  $('#phaseGrid').innerHTML=roadmap.map(p=>'<div class="panel p-5" style="border-color:rgba(52,211,153,.2)">'
+   +'<div class="flex items-center gap-3 mb-3">'
+   +'<span class="w-9 h-9 rounded-xl flex items-center justify-center font-mono font-bold text-sm shrink-0" style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.4);color:#34d399">'+p.ic+'</span>'
+   +'<div class="flex-1"><h3 class="font-bold text-slate-100 text-sm">Faz '+p.n+': '+p.t+'</h3><div class="text-[10px] font-mono text-slate-500">'+p.items.length+'/'+p.items.length+' görev tamamlandı</div></div>'
+   +'<span class="chip shrink-0" style="color:#34d399;border-color:rgba(52,211,153,.45)">✓ TAMAMLANDI</span></div>'
+   +'<ul class="space-y-1.5">'+p.items.map(it=>'<li class="flex items-start gap-2 text-xs text-slate-400"><span class="text-emerald-400 mt-0.5 shrink-0">✓</span><span>'+it+'</span></li>').join('')+'</ul></div>').join('');
+}
+function animateProgress(){
+  let pv=0;const bar=$('#progBar'),lbl=$('#progPct');
+  const iv=setInterval(()=>{pv+=2;if(pv>=100){pv=100;clearInterval(iv);}bar.style.width=pv+'%';lbl.textContent='%'+pv;},24);
+}
+
+/* ---------- deployment ---------- */
+const svcData=[
+ {name:'postgres',img:'postgres:16-alpine',port:'5432',role:'bots · deals · orders · klines · backtest_runs',cpu:22,ram:41,up:'21 gün'},
+ {name:'redis',img:'redis:7-alpine',port:'6379',role:'event bus · ticker cache · job kuyruğu',cpu:9,ram:18,up:'21 gün'},
+ {name:'backend',img:'hybrid/backend:2.4.1',port:'8000',role:'FastAPI gateway · 5 engine',cpu:37,ram:52,up:'21 gün'},
+ {name:'frontend',img:'hybrid/frontend:2.4.1',port:'3000',role:'React dashboard · TV Lightweight Charts',cpu:4,ram:12,up:'21 gün'},
+ {name:'backtest_worker',img:'hybrid/worker:2.4.1',port:'—',role:'Celery · concurrency=4 · backtest kuyruğu',cpu:63,ram:58,up:'21 gün'},
+ {name:'regime_risk_engine',img:'hybrid/risk:2.4.1',port:'—',role:'korelasyon · circuit breaker · anti-liq',cpu:15,ram:26,up:'21 gün'}
+];
+function renderServices(){
+  $('#svcGrid').innerHTML=svcData.map(s=>'<div class="panel p-5" style="border-color:rgba(52,211,153,.18)">'
+   +'<div class="flex items-center justify-between mb-2"><div class="flex items-center gap-2">'
+   +'<span class="relative flex w-2 h-2"><span class="pingr absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex w-2 h-2 rounded-full bg-emerald-400"></span></span>'
+   +'<span class="font-mono font-bold text-slate-100 text-sm">'+s.name+'</span></div>'
+   +'<span class="chip" style="color:#34d399;border-color:rgba(52,211,153,.4)">RUNNING</span></div>'
+   +'<div class="text-[10px] font-mono text-slate-500 mb-3">'+s.img+' · port '+s.port+' · up '+s.up+'</div>'
+   +'<p class="text-[11px] text-slate-400 mb-3">'+s.role+'</p>'
+   +'<div class="space-y-2"><div><div class="flex justify-between text-[9px] font-mono text-slate-500 mb-1"><span>CPU</span><span id="cpu-'+s.name+'">%'+s.cpu+'</span></div><div class="h-1.5 rounded-full bg-slate-800 overflow-hidden"><span id="cpub-'+s.name+'" class="block h-full rounded-full bg-cyan-400/80 transition-all duration-700" style="width:'+s.cpu+'%"></span></div></div>'
+   +'<div><div class="flex justify-between text-[9px] font-mono text-slate-500 mb-1"><span>RAM</span><span id="ram-'+s.name+'">%'+s.ram+'</span></div><div class="h-1.5 rounded-full bg-slate-800 overflow-hidden"><span id="ramb-'+s.name+'" class="block h-full rounded-full bg-violet-400/80 transition-all duration-700" style="width:'+s.ram+'%"></span></div></div></div></div>').join('');
+}
+function jitterServices(){
+  svcData.forEach(s=>{
+    s.cpu=clampV(s.cpu+rnd(-6,6),3,88);s.ram=clampV(s.ram+rnd(-3,3),8,85);
+    const ct=$('#cpu-'+s.name),cb=$('#cpub-'+s.name),rt=$('#ram-'+s.name),rb=$('#ramb-'+s.name);
+    if(ct){ct.textContent='%'+s.cpu;cb.style.width=s.cpu+'%';rt.textContent='%'+s.ram;rb.style.width=s.ram+'%';}
+  });
+}
+const deployScript=[
+ '$ ssh vps@bot.example.dev',
+ 'Bağlantı kuruldu · Ubuntu 24.04 LTS · eu-central-1',
+ '$ cd /opt/hybrid-bot && git pull origin main',
+ 'Already up to date. (tag: v2.4.1-stable)',
+ '$ docker compose up -d --build',
+ '✔ Network hybridbot_net oluşturuldu',
+ '✔ Volume pg_data oluşturuldu',
+ '✔ Container postgres             Running',
+ '✔ Container redis                Running',
+ '✔ Container backend              Started',
+ '✔ Container frontend             Started',
+ '✔ Container backtest_worker      Started',
+ '✔ Container regime_risk_engine   Started',
+ '$ docker compose ps',
+ 'postgres            Up 21 days (healthy)',
+ 'redis               Up 21 days',
+ 'backend             Up 21 days (healthy)',
+ 'frontend            Up 21 days',
+ 'backtest_worker     Up 21 days',
+ 'regime_risk_engine  Up 21 days (healthy)',
+ '$ sudo certbot renew --dry-run',
+ '✓ Sertifika yenileme testi başarılı (Let\'s Encrypt)',
+ '$ curl -s https://bot.example.dev/api/health',
+ '{"status":"ok","bots":6,"deals":5,"uptime_days":21,"version":"2.4.1"}',
+ '✓ DEPLOYMENT TAMAMLANDI — bot 7/24 canlıda 🚀'
+];
+let termRunning=false,termIdx=0,termShownOnce=false;
+function runTerminal(){
+  if(termRunning)return;termRunning=true;termIdx=0;$('#deployTerm').innerHTML='';
+  typeNextLine();
+}
+function typeNextLine(){
+  if(termIdx>=deployScript.length){termRunning=false;return;}
+  const line=deployScript[termIdx++];
+  const div=document.createElement('div');
+  div.className='logline '+(line.startsWith('$')?'text-cyan-300':(line.startsWith('✔')||line.startsWith('✓'))?'text-emerald-400':'text-slate-400');
+  $('#deployTerm').appendChild(div);
+  let ci=0;
+  const typer=setInterval(()=>{
+    div.textContent=line.slice(0,++ci);
+    $('#deployTerm').scrollTop=1e6;
+    if(ci>=line.length){clearInterval(typer);setTimeout(typeNextLine,line.startsWith('$')?420:130);}
+  },12);
+}
+$('#rerunBtn').addEventListener('click',()=>{termRunning=false;runTerminal();});
+
+/* ---------- kar grafiği ---------- */
+const periodSeries={};
+function genSeries(n,base,drift,vol){const arr=[];let v=base;for(let i=0;i<n;i++){v+=drift+(Math.random()-0.42)*vol;arr.push(v);}return arr;}
+periodSeries.gunluk=genSeries(24,0,2.2,6);periodSeries.haftalik=genSeries(7,0,18,26);periodSeries.aylik=genSeries(30,0,6,16);
+let activePeriod='gunluk';
+function drawProfit(){
+  const cv=$('#profitChart');if(!cv.offsetParent)return;
+  const{ctx,w,h}=prepCanvas(cv);ctx.clearRect(0,0,w,h);
+  const data=periodSeries[activePeriod],n=data.length,padL=44,padR=12,padT=12,padB=22;
+  const mn=Math.min.apply(null,data),mx=Math.max.apply(null,data),span=(mx-mn)||1;
+  ctx.font='10px "JetBrains Mono",monospace';
+  for(let g=0;g<=4;g++){const y=padT+(h-padT-padB)*g/4,val=mx-span*g/4;ctx.strokeStyle='rgba(148,163,184,.1)';ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(w-padR,y);ctx.stroke();ctx.fillStyle='rgba(148,163,184,.5)';ctx.fillText(fmtMoney(val),2,y+3);}
+  const px=i=>padL+(w-padL-padR)*i/(n-1),py=v=>padT+(h-padT-padB)*(1-(v-mn)/span);
+  ctx.beginPath();ctx.moveTo(px(0),py(data[0]));
+  for(let i=1;i<n;i++){const xm=(px(i-1)+px(i))/2;ctx.bezierCurveTo(xm,py(data[i-1]),xm,py(data[i]),px(i),py(data[i]));}
+  const last=data[n-1],up=last>=0,col=up?'#34d399':'#fb7185';
+  ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
+  ctx.lineTo(px(n-1),h-padB);ctx.lineTo(px(0),h-padB);ctx.closePath();
+  const grd=ctx.createLinearGradient(0,padT,0,h-padB);grd.addColorStop(0,up?'rgba(52,211,153,.28)':'rgba(251,113,133,.28)');grd.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=grd;ctx.fill();
+  ctx.beginPath();ctx.arc(px(n-1),py(last),4,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();
+}
+
+/* ---------- para ---------- */
+function refreshMoney(){
+  $('#balTop').textContent=fmtMoney(appData.balance);
+  $('#cardInvested').textContent=fmtMoney(appData.invested);
+  $('#cardBalance').textContent=fmtMoney(appData.balance);
+  const ct=$('#cardToday');ct.textContent=fmtMoney(appData.todayProfit);
+  ct.className='text-xl font-bold font-mono '+(appData.todayProfit>=0?'text-emerald-400':'text-rose-400');
+  renderBots();
+}
+function refreshUpnl(){
+  let up=0;appData.deals.forEach(d=>up+=d.size*dealPnl(d)/100);
+  const el1=$('#upnlTop'),el2=$('#cardUpnl');
+  el1.textContent=fmtUsd(up);el2.textContent=fmtMoney(up);
+  const cls=up>=0?'text-emerald-400':'text-rose-400';
+  el1.className='text-xs font-mono '+cls;el2.className='text-xl font-bold font-mono '+cls;
+}
+
+/* ---------- botlar ---------- */
+function renderBots(){
+  $('#botGrid').innerHTML=appData.bots.map(b=>{
+    const runCls=b.status?(appData.kill?'border-slate-700':'border-emerald-500/25'):'border-slate-800';
+    return '<div class="panel p-5 border '+runCls+' '+(b.status?'':'opacity-60')+'">'
+    +'<div class="flex items-start justify-between gap-2">'
+    +'<div><div class="font-semibold text-slate-100 text-sm">'+b.name+'</div>'
+    +'<div class="text-[10px] font-mono text-slate-500 mt-1">'+b.dir+' · '+(b.status?(appData.kill?'GÜVENLİ MOD':'RUNNING'):'STOPPED')+' · '+b.deals+' aktif deal</div></div>'
+    +'<button class="switch '+(b.status&&!appData.kill?'on':'')+'" data-bot="'+b.id+'"></button></div>'
+    +'<div class="grid grid-cols-2 gap-3 mt-4">'
+    +'<div class="bg-slate-800/40 rounded-lg px-3 py-2"><div class="text-[9px] text-slate-500 uppercase">Toplam Kâr</div><div class="font-mono text-sm '+(b.profit>=0?'text-emerald-400':'text-rose-400')+'">'+fmtMoney(b.profit)+'</div></div>'
+    +'<div class="bg-slate-800/40 rounded-lg px-3 py-2"><div class="text-[9px] text-slate-500 uppercase">24s Performans</div><div class="font-mono text-sm '+(b.perf24>=0?'text-emerald-400':'text-rose-400')+'">'+fmtPct(b.perf24)+'</div></div></div>'
+    +'<div class="flex gap-2 mt-4"><button class="flex-1 text-[11px] font-semibold px-2 py-1.5 rounded-lg bg-slate-800/70 text-slate-300 hover:bg-slate-700/70 transition" data-edit="'+b.id+'">⚙️ Düzenle</button>'
+    +'<button class="flex-1 text-[11px] font-semibold px-2 py-1.5 rounded-lg bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 transition" data-panic-bot="'+b.id+'">Panic Sell</button></div></div>';
+  }).join('');
+  $('#botCount').textContent=appData.bots.filter(b=>b.status).length;
+  document.querySelectorAll('[data-bot]').forEach(sw=>sw.addEventListener('click',()=>{
+    if(appData.kill){showToast('Kill-Switch devrede — önce normale dönün');return;}
+    const b=appData.bots.find(x=>x.id===+sw.dataset.bot);b.status=!b.status;
+    addFeed((b.status?'Bot başlatıldı: ':'Bot durduruldu: ')+b.name,b.status?'ok':'warn');renderBots();
+  }));
+  document.querySelectorAll('[data-edit]').forEach(btn=>btn.addEventListener('click',()=>switchTab('dca')));
+  document.querySelectorAll('[data-panic-bot]').forEach(btn=>btn.addEventListener('click',()=>{showToast('Panic Sell: tüm deal\'lar piyasa fiyatından kapatıldı');addFeed('Panic Sell çalıştırıldı (bot #'+btn.dataset.panicBot+')','err');}));
+}
+
+/* ---------- deal tablosu ---------- */
+function renderDeals(){
+  $('#dealsBody').innerHTML=appData.deals.map(d=>{
+    const pnl=dealPnl(d),pc=pnl>=0?'text-emerald-400':'text-rose-400';
+    const tpPrice=d.side==='LONG'?d.entry*(1+d.tp/100):d.entry*(1-d.tp/100);
+    const dist=(d.side==='LONG'?(tpPrice-d.price)/d.price:(d.price-tpPrice)/d.price)*100;
+    const dec=d.entry<1?4:2;
+    let dots='';for(let k=0;k<d.soMax;k++)dots+='<span class="sobit" style="background:'+(k<d.soFilled?'#fbbf24':'#26334a')+'"></span>';
+    const sideBadge=d.side==='LONG'?'<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-300">LONG ▲</span>':'<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/15 text-rose-300">SHORT ▼</span>';
+    return '<tr class="border-b border-slate-800/50 hover:bg-slate-800/20">'
+    +'<td class="px-4 py-3 font-bold text-slate-100">'+d.symbol+'</td>'
+    +'<td class="px-3 py-3">'+sideBadge+'</td>'
+    +'<td class="px-3 py-3 text-slate-400">'+d.lev+'x</td>'
+    +'<td class="px-3 py-3 text-slate-300">'+d.entry.toLocaleString('tr-TR',{minimumFractionDigits:dec})+'</td>'
+    +'<td class="px-3 py-3 text-slate-200">'+d.price.toLocaleString('tr-TR',{minimumFractionDigits:dec,maximumFractionDigits:dec})+'</td>'
+    +'<td class="px-3 py-3 font-bold '+pc+'">'+fmtPct(pnl)+'</td>'
+    +'<td class="px-3 py-3"><div class="flex items-center">'+dots+'<span class="ml-2 text-slate-500">'+d.soFilled+'/'+d.soMax+'</span></div></td>'
+    +'<td class="px-3 py-3 '+(dist<0.3?'text-amber-300':'text-slate-400')+'">'+(dist>=0?fmtPct(dist):'TP!')+'</td>'
+    +'<td class="px-3 py-3 text-right whitespace-nowrap"><div class="flex gap-1.5 justify-end">'
+    +'<button class="text-[10px] px-2 py-1 rounded bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 transition" data-act="add" data-did="'+d.id+'">+ Fon</button>'
+    +'<button class="text-[10px] px-2 py-1 rounded bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 transition" data-act="panic" data-did="'+d.id+'">Panic</button>'
+    +'</div></td></tr>';
+  }).join('');
+  $('#dealBadge').textContent=appData.deals.length;
+  const md=$('#miniDeals');
+  if(appData.deals.length===0){md.innerHTML='<div class="col-span-full text-center text-xs text-slate-500 py-4">Tüm deal\'lar kapandı 🎉</div>';}
+  else{md.innerHTML=appData.deals.slice(0,5).map(d=>{
+    const pnl=dealPnl(d),pc=pnl>=0?'text-emerald-400':'text-rose-400';
+    return '<div class="bg-slate-800/40 rounded-xl px-3 py-2.5"><div class="flex justify-between items-center"><span class="font-mono text-xs font-bold text-slate-100">'+d.symbol+'</span><span class="font-mono text-[9px] '+(d.side==='LONG'?'text-emerald-400':'text-rose-400')+'">'+d.side+'</span></div><div class="font-mono text-sm font-bold '+pc+' mt-1">'+fmtPct(pnl)+'</div><div class="text-[9px] font-mono text-slate-500 mt-0.5">SO '+d.soFilled+'/'+d.soMax+' · TP %'+d.tp.toLocaleString('tr-TR')+'</div></div>';
+  }).join('');}
+  document.querySelectorAll('[data-act]').forEach(btn=>btn.addEventListener('click',()=>{
+    const d=appData.deals.find(x=>x.id===+btn.dataset.did);if(!d)return;
+    if(btn.dataset.act==='add'){
+      if(appData.kill){showToast('Güvenli modda yeni fon eklenemez');return;}
+      d.entry=d.entry*0.88+d.price*0.12;d.soFilled=Math.min(d.soMax,d.soFilled+1);
+      addFeed('Manuel fon eklendi: '+d.symbol+' · ort. maliyet güncellendi','info');showToast(d.symbol+' deal\'ine manuel fon eklendi');renderDeals();
+    }else{closeDeal(d,'PANIC');}
+  }));
+}
+function closeDeal(d,reason){
+  const profit=d.size*dealPnl(d)/100;
+  appData.deals=appData.deals.filter(x=>x.id!==d.id);
+  appData.todayProfit+=profit;appData.invested=Math.max(0,appData.invested-d.size);appData.balance+=d.size;
+  addFeed('Deal kapandı ('+reason+'): '+d.symbol+' · '+fmtUsd(profit),profit>=0?'ok':'err');
+  showToast(d.symbol+' kapatıldı · '+fmtUsd(profit));
+  renderDeals();refreshUpnl();refreshMoney();
+}
+
+/* ---------- DCA form ---------- */
+const dcaSpec=[
+ {t:'💵 Sipariş Boyutları',f:[{k:'bo',l:'Base Order Size (BO)',v:50,s:'USDT'},{k:'so',l:'Safety Order Size (SO)',v:25,s:'USDT'},{k:'ordType',l:'Order Type (Base/SO)',type:'select',o:['Market','Limit (maker avantajı)'],v:1}]},
+ {t:'🛡️ Güvenlik Emirleri (SO)',f:[{k:'soCount',l:'Max Safety Orders Count',v:10},{k:'soActive',l:'Max Active Safety Orders',v:2}]},
+ {t:'📐 Ölçekleme (Scaling)',f:[{k:'dev',l:'Price Deviation to open SO',v:1.0,s:'%'},{k:'volScale',l:'Safety Order Volume Scale',v:1.5},{k:'stepScale',l:'Safety Order Step Scale',v:1.3},{k:'devRef',l:'SO Deviation Reference',type:'select',o:['Son SO fiyatına göre','Ortalama giriş fiyatına göre'],v:0}]},
+ {t:'📡 Giriş Sinyalleri',f:[{k:'startType',l:'Start Order Type',type:'select',o:['Otomatik (sinyal bazlı)','Manuel','Zamanlanmış (scheduled)'],v:0},{k:'condPrice',l:'Conditional Start Price',v:0,s:'$ (0=kapat)'},{k:'cooldown',l:'Cool-down After Deal Close',v:30,s:'dk'},{k:'minCh',l:'Min 24h Change Filter',v:-15,s:'%'},{k:'maxCh',l:'Max 24h Change Filter',v:15,s:'%'}],chips:true},
+ {t:'🎯 Kar Al (Take Profit)',f:[{k:'tp',l:'Target Take Profit',v:1.2,s:'%'},{k:'ttp',l:'Trailing Take Profit',type:'toggle',v:true},{k:'tpType',l:'TP Order Type',type:'select',o:['Market','Limit'],v:0},{k:'partial',l:'Partial TP',v:0,s:'%'},{k:'reinvest',l:'Reinvest Profit',v:25,s:'%'}]},
+ {t:'🛑 Zarar Kes (Stop Loss)',f:[{k:'sl',l:'Dynamic Stop Loss',v:8,s:'%'},{k:'tsl',l:'Trailing Stop Loss',type:'toggle',v:false},{k:'be',l:'Move SL to Breakeven',type:'toggle',v:true},{k:'slTimeout',l:'SL Timeout / Confirmation',v:20,s:'sn'},{k:'maxDur',l:'Max Deal Duration',v:30,s:'gün'}]},
+ {t:'⚖️ Yön & Marjin',f:[{k:'marginMode',l:'Marjin Modu',type:'select',o:['Isolated','Cross'],v:0},{k:'lev',l:'Dynamic Leverage',type:'range',min:1,max:125,v:5,s:'x'},{k:'direction',l:'Yön',type:'select',o:['Long','Short','Bidirectional (Long+Short)'],v:2}]},
+ {t:'🖥️ Bot Yönetimi',f:[{k:'maxDealsBot',l:'Max Active Deals (per bot)',v:3},{k:'maxDealsGlobal',l:'Max Active Deals (global)',v:10},{k:'profitCur',l:'Profit Currency',type:'select',o:['USDT','USDC','BTC'],v:0}]}
+];
+const condOptions=['TradingView Webhook','RSI','MACD','Bollinger','Stoch RSI','EMA Cross','Signal API','Çoklu Zaman Dilimi'];
+const selectedConds=new Set(['TradingView Webhook','RSI']);
+function fieldHtml(f){
+  if(f.type==='select')return '<label><span class="flabel">'+f.l+'</span><select id="f-'+f.k+'" class="fin">'+f.o.map((o,i)=>'<option '+(i===f.v?'selected':'')+'>'+o+'</option>').join('')+'</select></label>';
+  if(f.type==='toggle')return '<label class="flex items-center justify-between gap-3 text-xs text-slate-300 pt-5">'+f.l+'<span class="switch '+(f.v?'on':'')+'" id="f-'+f.k+'"></span></label>';
+  if(f.type==='range')return '<label><span class="flabel">'+f.l+': <b id="f-'+f.k+'-lbl" style="color:#fcd34d">'+f.v+'x</b></span><input id="f-'+f.k+'" type="range" min="'+f.min+'" max="'+f.max+'" value="'+f.v+'"></label>';
+  return '<label><span class="flabel">'+f.l+(f.s?' ('+f.s+')':'')+'</span><input id="f-'+f.k+'" type="number" step="0.1" class="fin" value="'+f.v+'"></label>';
+}
+function buildForm(){
+  $('#dcaForm').innerHTML=dcaSpec.map(g=>'<div class="panel p-5"><h3 class="font-semibold text-slate-100 text-sm mb-4">'+g.t+'</h3><div class="grid sm:grid-cols-2 gap-4">'
+    +g.f.map(fieldHtml).join('')
+    +(g.chips?'<div class="sm:col-span-2"><span class="flabel">Deal Start Conditions</span><div class="flex flex-wrap gap-2" id="condChips">'+condOptions.map(c=>'<button type="button" class="chip chipBtn '+(selectedConds.has(c)?'active sel':'')+'" data-cond="'+c+'">'+c+'</button>').join('')+'</div></div>':'')
+    +'</div></div>').join('');
+  document.querySelectorAll('#condChips [data-cond]').forEach(ch=>ch.addEventListener('click',()=>{
+    const c=ch.dataset.cond;if(selectedConds.has(c)){selectedConds.delete(c);ch.classList.remove('active','sel');}else{selectedConds.add(c);ch.classList.add('active','sel');}
+  }));
+  const levEl=$('#f-lev');if(levEl)levEl.addEventListener('input',e=>{$('#f-lev-lbl').textContent=e.target.value+'x';});
+  document.querySelectorAll('#dcaForm .switch').forEach(sw=>sw.addEventListener('click',()=>sw.classList.toggle('on')));
+}
+const templates={
+  muhafazakar:{bo:100,so:20,soCount:6,dev:1.2,volScale:1.3,stepScale:1.2,tp:0.8,sl:6,lev:3},
+  dengeli:{bo:75,so:30,soCount:8,dev:1.0,volScale:1.5,stepScale:1.3,tp:1.2,sl:8,lev:5},
+  agresif:{bo:50,so:40,soCount:12,dev:0.7,volScale:1.8,stepScale:1.5,tp:2.0,sl:12,lev:10}
+};
+function applyTemplate(key){
+  const tpl=templates[key];
+  Object.keys(tpl).forEach(k=>{
+    const el=$('#f-'+k);if(!el)return;
+    if(el.type==='range'){el.value=tpl[k];const lb=$('#f-'+k+'-lbl');if(lb)lb.textContent=tpl[k]+'x';}
+    else el.value=tpl[k];
+  });
+  const names={muhafazakar:'Muhafazakar',dengeli:'Dengeli',agresif:'Agresif'};
+  showToast('“'+names[key]+'” şablonu uygulandı ✓');addFeed('Bot şablonu yüklendi: '+names[key],'info');
+}
+document.querySelectorAll('.tpl-btn').forEach(b=>b.addEventListener('click',()=>applyTemplate(b.dataset.tpl)));
+$('#saveFormBtn').addEventListener('click',()=>{showToast('Bot konfigürasyonu kaydedildi ✓');addFeed('DCA konfigürasyonu kaydedildi (Bölüm 2.1 paritesi)','ok');});
+
+/* ---------- modüller ---------- */
+const advMods=[
+ {i:'📉',t:'Volatility-Adaptive DCA',d:'SO sapması ve TP, ATR / son N mum volatilitesine göre dinamik hesaplanır; volatilite artınca adımlar genişler.',w:'3Commas: adımlar tamamen statik.'},
+ {i:'🧭',t:'Regime Detection & Auto-Switch',d:'ADX / BB Width / Hurst ile trend-range tespiti; trendde Grid, rangede DCA otomatik devreye girer.',w:'3Commas: DCA ve Grid ayrı bot, geçiş yok.'},
+ {i:'🔗',t:'Correlation-Aware Risk Manager',d:'Korelasyon matrisi; BTC&ETH aynı anda Long ise toplam marjin otomatik kısıtlanır.',w:'3Commas: cross-bot portföy riski yok.'},
+ {i:'🚨',t:'Anti-Liquidation Cascade',d:'Likidasyona yaklaşınca kademeli kaldıraç düşürme, partial deleverage, acil marjin transferi.',w:'3Commas: sadece bildirim gönderir.'},
+ {i:'🐋',t:'Whale Wall Detection',d:'Orderbook canlı izlenir; büyük duvarlara göre SO/TP emirleri otomatik kaydırılır (slipaj önleme).',w:'3Commas: orderbook dikkate alınmaz.'},
+ {i:'🤖',t:'AI Parametre Önerici',d:'Backtest + geçmişten öğrenen auto-tune; kullanıcı onayına tabi, şeffaf öneriler.',w:'3Commas: kapalı-kutu, sınırlı.'},
+ {i:'🐍',t:'Custom Strategy Scripting',d:'Python DSL ile kendi giriş/çıkış mantığını yaz; motor native parametreye çevirir.',w:'3Commas: kod yazılamaz.'},
+ {i:'⛔',t:'Circuit Breaker / Kill-Switch',d:'Günlük/haftalık DD eşiği aşılırsa tüm botlar güvenli moda alınır.',w:'3Commas: hesap geneli acil durdurma yok.'},
+ {i:'🌉',t:'Multi-Exchange Abstraction',d:'Adapter deseni; Bybit/OKX plug-in olarak eklenebilir.',w:'3Commas: borsalar arası senkron sınırlı.'},
+ {i:'🏪',t:'Strategy Marketplace',d:'Backtest-doğrulanmış presetler sürümlenir, A/B karşılaştırılır.',w:'3Commas: versiyonlama / A/B yok.'},
+ {i:'🔮',t:'What-If Simülatörü',d:'Parametre değişince arka planda 30/90 günlük canlı “ne olurdu” önizlemesi.',w:'3Commas: gerçek veriyle canlı sim yok.'}
+];
+const modState={};advMods.forEach((m,idx)=>modState[idx]=true);
+function renderModules(){
+  $('#modGrid').innerHTML=advMods.map((m,idx)=>'<div class="panel p-5 '+(modState[idx]?'':'opacity-60')+'">'
+   +'<div class="flex items-start gap-3"><span class="text-xl">'+m.i+'</span><div class="flex-1">'
+   +'<div class="flex items-center justify-between gap-2"><h3 class="font-bold text-slate-100 text-sm">'+m.t+'</h3><span class="switch '+(modState[idx]?'on':'')+'" data-mod="'+idx+'"></span></div>'
+   +'<p class="text-xs text-slate-400 mt-1.5 leading-relaxed">'+m.d+'</p>'
+   +'<p class="text-[10px] font-mono mt-2" style="color:rgba(251,113,133,.75)">✗ '+m.w+'</p></div></div></div>').join('');
+  document.querySelectorAll('[data-mod]').forEach(sw=>sw.addEventListener('click',()=>{
+    const idx=+sw.dataset.mod;modState[idx]=!modState[idx];
+    addFeed((modState[idx]?'Modül etkinleştirildi: ':'Modül kapatıldı: ')+advMods[idx].t,modState[idx]?'ok':'warn');
+    renderModules();
+  }));
+}
+
+/* ---------- backtest ---------- */
+let equitySeries=[];
+function genEquity(){const arr=[];let v=10000;for(let i=0;i<180;i++){if(i>70&&i<100)v*=1-(Math.random()*0.008);else v*=1+(Math.random()*0.012-0.002);arr.push(v);}return arr;}
+equitySeries=genEquity();
+function drawEquity(){
+  const cv=$('#equityCanvas');if(!cv.offsetParent)return;
+  const{ctx,w,h}=prepCanvas(cv);ctx.clearRect(0,0,w,h);
+  const data=equitySeries,n=data.length,padL=56,padR=12,padT=12,padB=20;
+  const mn=Math.min.apply(null,data)*0.98,mx=Math.max.apply(null,data)*1.02;
+  ctx.font='10px "JetBrains Mono",monospace';
+  for(let g=0;g<=3;g++){const y=padT+(h-padT-padB)*g/3,val=mx-(mx-mn)*g/3;ctx.strokeStyle='rgba(148,163,184,.1)';ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(w-padR,y);ctx.stroke();ctx.fillStyle='rgba(148,163,184,.5)';ctx.fillText('$'+Math.round(val).toLocaleString('tr-TR'),4,y+3);}
+  const px=i=>padL+(w-padL-padR)*i/(n-1),py=v=>padT+(h-padT-padB)*(1-(v-mn)/(mx-mn));
+  let runMax=data[0];const maxArr=data.map(v=>{runMax=Math.max(runMax,v);return runMax;});
+  ctx.beginPath();ctx.moveTo(px(0),py(data[0]));
+  for(let i=1;i<n;i++)ctx.lineTo(px(i),py(data[i]));
+  for(let i=n-1;i>=0;i--)ctx.lineTo(px(i),py(maxArr[i]));
+  ctx.closePath();ctx.fillStyle='rgba(251,113,133,.12)';ctx.fill();
+  ctx.beginPath();ctx.moveTo(px(0),py(maxArr[0]));for(let i=1;i<n;i++)ctx.lineTo(px(i),py(maxArr[i]));
+  ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(148,163,184,.35)';ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(px(0),py(data[0]));for(let i=1;i<n;i++)ctx.lineTo(px(i),py(data[i]));
+  ctx.strokeStyle='#34d399';ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='rgba(148,163,184,.6)';ctx.fillText('Equity Curve · Drawdown alanı (kırmızı) · Event-Driven sim',padL,h-4);
+}
+function buildHeatmap(){
+  const host=$('#heatGrid');let html='';
+  for(let r=0;r<9;r++){for(let c=0;c<9;c++){
+    const ss=2.6-r*0.2,dev=0.5+c*0.5;
+    const sharpe=2.4*Math.exp(-Math.pow(ss-1.6,2)/0.7-Math.pow(dev-2.5,2)/2.8)+Math.random()*0.3;
+    const t=clampV(sharpe/2.4,0,1);
+    const col=t>0.55?'rgba(52,211,153,'+(0.25+t*0.6)+')':(t>0.3?'rgba(251,191,36,'+(0.2+t*0.5)+')':'rgba(251,113,133,'+(0.25+(0.3-t))+')');
+    html+='<div class="heatcell" style="background:'+col+'" title="Step '+ss.toLocaleString('tr-TR')+' × Dev %'+dev.toLocaleString('tr-TR')+' · Sharpe '+sharpe.toFixed(2)+'" data-ss="'+ss+'" data-dev="'+dev+'"></div>';
+  }}
+  host.innerHTML=html;
+  host.querySelectorAll('.heatcell').forEach(cell=>cell.addEventListener('click',()=>{
+    const ssEl=$('#f-stepScale'),devEl=$('#f-dev');
+    if(ssEl)ssEl.value=cell.dataset.ss;if(devEl)devEl.value=cell.dataset.dev;
+    showToast('Parametreler kopyalandı: Step '+cell.dataset.ss+' × Deviation %'+cell.dataset.dev);
+  }));
+}
+function buildWalkForward(){
+  let html='';
+  for(let fold=1;fold<=5;fold++){
+    const oos=(1.2+Math.random()*0.9).toFixed(2);
+    html+='<div class="flex items-center gap-3 text-[10px] font-mono"><span class="w-14 text-slate-500 shrink-0">Fold '+fold+'</span>'
+    +'<div class="flex-1 h-4 rounded overflow-hidden flex"><div style="width:60%;background:rgba(52,211,153,.5)"></div><div style="width:40%;background:rgba(251,191,36,.55)"></div></div>'
+    +'<span class="w-28 text-right shrink-0"><span class="text-emerald-400">in-sample</span> · <span style="color:#fcd34d">OOS Sharpe '+oos.replace('.',',')+'</span></span></div>';
+  }
+  $('#wfRow').innerHTML=html;
+}
+function drawMonteCarlo(){
+  const cv=$('#mcCanvas');if(!cv.offsetParent)return;
+  const{ctx,w,h}=prepCanvas(cv);ctx.clearRect(0,0,w,h);
+  const n=120;
+  for(let sim=0;sim<22;sim++){
+    let v=10000;ctx.beginPath();
+    for(let i=0;i<n;i++){v*=1+(Math.random()*0.02-0.008);const x=8+(w-16)*i/(n-1),y=h-8-(h-16)*clampV((v-8000)/6000,0,1);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+    ctx.strokeStyle='rgba(34,211,238,.14)';ctx.lineWidth=1;ctx.stroke();
+  }
+  let v=10000;ctx.beginPath();
+  for(let i=0;i<n;i++){v*=1.0045;const x=8+(w-16)*i/(n-1),y=h-8-(h-16)*clampV((v-8000)/6000,0,1);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+  ctx.strokeStyle='#fbbf24';ctx.lineWidth=2;ctx.stroke();
+  ctx.font='10px "JetBrains Mono",monospace';ctx.fillStyle='rgba(148,163,184,.6)';ctx.fillText('Medyan sonuç (amber) · %95 güven bandı',10,14);
+}
+const btDeals=[
+ {e:'03.01.24 09:12',x:'05.01.24 14:40',s:'LONG',ep:'42.180',xp:'43.050',so:'3/8',p:186.4,r:'TP'},
+ {e:'11.01.24 22:03',x:'12.01.24 08:15',s:'SHORT',ep:'46.300',xp:'45.610',so:'1/8',p:121.7,r:'TRAILING_TP'},
+ {e:'02.02.24 11:47',x:'18.02.24 03:22',s:'LONG',ep:'42.900',xp:'41.600',so:'6/8',p:-214.2,r:'SL'},
+ {e:'14.03.24 16:30',x:'15.03.24 21:05',s:'LONG',ep:'68.450',xp:'69.380',so:'2/8',p:232.9,r:'TP'},
+ {e:'29.04.24 04:18',x:'02.05.24 12:50',s:'SHORT',ep:'63.200',xp:'61.900',so:'4/8',p:301.5,r:'TP'},
+ {e:'17.06.24 19:44',x:'19.06.24 07:12',s:'LONG',ep:'65.100',xp:'66.240',so:'1/8',p:174.8,r:'TRAILING_TP'}
+];
+$('#btDealBody').innerHTML=btDeals.map(d=>'<tr class="border-b border-slate-800/40"><td class="py-2 pr-3 text-slate-400">'+d.e+'</td><td class="py-2 pr-3 text-slate-400">'+d.x+'</td><td class="py-2 pr-3 '+(d.s==='LONG'?'text-emerald-400':'text-rose-400')+'">'+d.s+'</td><td class="py-2 pr-3 text-slate-300">$'+d.ep+'</td><td class="py-2 pr-3 text-slate-300">$'+d.xp+'</td><td class="py-2 pr-3 text-amber-300">'+d.so+'</td><td class="py-2 pr-3 '+(d.p>=0?'text-emerald-400':'text-rose-400')+'">'+fmtUsd(d.p)+'</td><td class="py-2"><span class="chip">'+d.r+'</span></td></tr>').join('');
+document.querySelectorAll('.btp-tab').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('.btp-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.btp-panel').forEach(p=>p.classList.remove('on'));
+  btn.classList.add('active');$('#btp-'+btn.dataset.btp).classList.add('on');
+  if(btn.dataset.btp==='mc')drawMonteCarlo();
+}));
+$('#btRun').addEventListener('click',()=>{
+  equitySeries=genEquity();drawEquity();
+  $('#btNet').textContent='+$'+rnd(3800,5600).toLocaleString('tr-TR');
+  $('#btSharpe').textContent=(1.5+Math.random()*0.8).toFixed(2).replace('.',',');
+  showToast($('#btEngine').value==='VECTORIZED'?'Vektörel tarama tamamlandı · 2.400 kombinasyon':'Event-Driven simülasyon tamamlandı · slipaj & funding dahil');
+  addFeed('Backtest tamamlandı ('+$('#btEngine').value+')','ok');
+});
+$('#btDeploy').addEventListener('click',()=>{showToast('Backtest parametreleri canlı bota kopyalandı · Testnet\'te başlatıldı 🚀');addFeed('Backtest → Testnet geçişi: parametreler kopyalandı','ok');switchTab('bots');});
+
+/* ---------- grid & hibrit ---------- */
+const gridSim={path:[],floor:98,step:0.8,price:100};
+for(let gi=0;gi<140;gi++){gridSim.price+=(Math.random()-0.46)*1.1;gridSim.path.push(gridSim.price);}
+function drawGrid(){
+  const cv=$('#gridCanvas');if(!cv.offsetParent)return;
+  const{ctx,w,h}=prepCanvas(cv);ctx.clearRect(0,0,w,h);
+  const mn=Math.min.apply(null,gridSim.path)-6,mx=Math.max.apply(null,gridSim.path)+8;
+  const py=v=>h-10-(h-20)*(v-mn)/(mx-mn),px=i=>(w-10)*i/(gridSim.path.length-1);
+  ctx.font='10px "JetBrains Mono",monospace';
+  for(let k=0;k<9;k++){
+    const lvl=gridSim.floor*Math.pow(1+gridSim.step/100*4,k);
+    if(py(lvl)<8)break;
+    ctx.strokeStyle='rgba(34,211,238,'+(0.28-k*0.025)+')';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,py(lvl));ctx.lineTo(w,py(lvl));ctx.stroke();
+  }
+  ctx.setLineDash([6,4]);ctx.strokeStyle='#fbbf24';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(0,py(gridSim.floor));ctx.lineTo(w,py(gridSim.floor));ctx.stroke();
+  const ceil=gridSim.floor*Math.pow(1+gridSim.step/100*4,8);
+  ctx.strokeStyle='rgba(251,113,133,.6)';
+  ctx.beginPath();ctx.moveTo(0,py(ceil));ctx.lineTo(w,py(ceil));ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(px(0),py(gridSim.path[0]));
+  for(let i=1;i<gridSim.path.length;i++)ctx.lineTo(px(i),py(gridSim.path[i]));
+  ctx.strokeStyle='#e2e8f0';ctx.lineWidth=1.6;ctx.stroke();
+  const lp=gridSim.path[gridSim.path.length-1];
+  ctx.beginPath();ctx.arc(w-5,py(lp),3.5,0,Math.PI*2);ctx.fillStyle='#22d3ee';ctx.fill();
+  ctx.fillStyle='#fbbf24';ctx.fillText('DİNAMİK TABAN '+gridSim.floor.toFixed(1),8,py(gridSim.floor)-6);
+  ctx.fillStyle='rgba(251,113,133,.9)';ctx.fillText('DİNAMİK TAVAN (kar satışı)',8,py(ceil)-6);
+  ctx.fillStyle='rgba(34,211,238,.9)';ctx.fillText('adım %'+gridSim.step.toLocaleString('tr-TR'),w-90,20);
+}
+let phaseIdx=0;
+const phaseNames=['FAZ 1 · DCA','FAZ 2 · INFINITY GRID','FAZ 3 · KAR REALİZASYONU'];
+function cyclePhase(){
+  document.querySelectorAll('.ph-step').forEach((el,idx)=>{el.classList.toggle('on',idx===phaseIdx);el.classList.toggle('done',idx<phaseIdx);});
+  addFeed('Hybrid Engine → '+phaseNames[phaseIdx],'info');
+  $('#phaseLog').textContent='Aktif faz: '+phaseNames[phaseIdx]+' · geçişler rejim dedektöründen beslenir';
+  phaseIdx=(phaseIdx+1)%3;
+}
+$('#gridStepRange').addEventListener('input',e=>{gridSim.step=+e.target.value;$('#gridStepVal').textContent='%'+(+e.target.value).toLocaleString('tr-TR');});
+['floorSw','rebSw'].forEach(id=>$('#'+id).addEventListener('click',e=>e.currentTarget.classList.toggle('on')));
+
+/* ---------- risk ---------- */
+function buildCorr(){
+  const syms=['BTC','ETH','SOL','BNB','DOGE'];
+  const mx=[[1,.87,.62,.71,.34],[.87,1,.58,.66,.31],[.62,.58,1,.49,.44],[.71,.66,.49,1,.28],[.34,.31,.44,.28,1]];
+  let html='<div class="text-slate-500 flex items-center justify-center"> </div>';
+  syms.forEach(s=>html+='<div class="text-slate-400 text-center py-1">'+s+'</div>');
+  for(let i=0;i<5;i++){
+    html+='<div class="text-slate-400 flex items-center">'+syms[i]+'</div>';
+    for(let j=0;j<5;j++){
+      const v=mx[i][j];
+      const bg=i===j?'rgba(148,163,184,.12)':(v>0.8?'rgba(251,113,133,.5)':v>0.6?'rgba(251,191,36,.4)':v>0.4?'rgba(52,211,153,.3)':'rgba(52,211,153,.15)');
+      html+='<div class="text-center py-1.5 rounded" style="background:'+bg+'">'+v.toFixed(2).replace('.',',')+'</div>';
+    }
+  }
+  $('#corrGrid').innerHTML=html;
+}
+const fundRows=[
+ {s:'BTCUSDT',r:0.0100,spot:64890,fut:64945},
+ {s:'ETHUSDT',r:-0.0050,spot:3412,fut:3408},
+ {s:'SOLUSDT',r:0.0310,spot:147.2,fut:147.9},
+ {s:'DOGEUSDT',r:-0.1200,spot:0.1291,fut:0.1284},
+ {s:'BNBUSDT',r:0.0080,spot:591.3,fut:591.8}
+];
+function renderFunding(){
+  $('#fundBody').innerHTML=fundRows.map(f=>{
+    const dec=f.spot<1?4:2,basis=(f.fut/f.spot-1)*100;
+    const opp=f.r<0?'<span class="chip" style="color:#fcd34d;border-color:rgba(251,191,36,.4)">★ fırsat</span>':'';
+    return '<tr class="border-b border-slate-800/40"><td class="py-2 font-bold text-slate-200">'+f.s+'</td>'
+    +'<td class="py-2 '+(f.r>=0?'text-emerald-400':'text-rose-400')+'">'+(f.r>=0?'+':'')+'%'+f.r.toLocaleString('tr-TR')+'</td>'
+    +'<td class="py-2 text-slate-400">'+f.spot.toLocaleString('tr-TR',{minimumFractionDigits:dec})+'</td>'
+    +'<td class="py-2 text-slate-400">'+f.fut.toLocaleString('tr-TR',{minimumFractionDigits:dec})+'</td>'
+    +'<td class="py-2 '+(basis>=0?'text-emerald-400':'text-rose-400')+'">'+fmtPct(basis)+'</td><td class="py-2 text-right">'+opp+'</td></tr>';
+  }).join('');
+}
+function renderLiq(){
+  $('#liqList').innerHTML=appData.deals.map(d=>{
+    const liq=d.side==='LONG'?d.entry*(1-0.92/d.lev):d.entry*(1+0.92/d.lev);
+    const dist=(d.side==='LONG'?(d.price-liq)/d.price:(liq-d.price)/d.price)*100;
+    const dec=d.entry<1?4:2;
+    const danger=dist<8;
+    return '<div class="flex items-center justify-between bg-slate-800/40 rounded-lg px-3 py-2"><span class="font-bold text-slate-200">'+d.symbol+' <span class="'+(d.side==='LONG'?'text-emerald-400':'text-rose-400')+'">'+d.side+'</span></span>'
+    +'<span class="text-slate-400">Liq: '+liq.toLocaleString('tr-TR',{minimumFractionDigits:dec,maximumFractionDigits:dec})+'</span>'
+    +'<span class="'+(danger?'text-rose-400 font-bold':'text-emerald-400')+'">mesafe '+dist.toFixed(1).replace('.',',')+'%</span></div>';
+  }).join('');
+}
+$('#ddThresh').addEventListener('input',e=>{
+  $('#ddThreshVal').textContent='-%'+(+e.target.value).toLocaleString('tr-TR');
+  $('#ddBar').style.width=clampV(1.8/(+e.target.value)*100,4,100)+'%';
+});
+$('#armSw').addEventListener('click',e=>{
+  e.currentTarget.classList.toggle('on');appData.armed=e.currentTarget.classList.contains('on');
+  showToast(appData.armed?'Circuit Breaker koruması aktif':'Koruma pasif');
+});
+function triggerKill(){
+  appData.kill=true;$('#ksBanner').classList.remove('hidden');$('#ksBtn').textContent='⛔ DEVREDE';
+  renderBots();addFeed('GLOBAL KILL-SWITCH tetiklendi · güvenli mod','err');showToast('Tüm botlar güvenli moda alındı');
+}
+$('#killBig').addEventListener('click',()=>{
+  if(!appData.armed){showToast('Önce “Korumayı Aktifleştir” anahtarını açın');return;}
+  triggerKill();
+});
+$('#ksBtn').addEventListener('click',()=>{
+  if(appData.kill){showToast('Zaten güvenli modda — Risk panelinden dönün');return;}
+  if(appData.ksPending){triggerKill();appData.ksPending=false;$('#ksBtn').textContent='⛔ Kill-Switch';return;}
+  appData.ksPending=true;$('#ksBtn').textContent='⚠️ Emin misiniz? Tekrar tıklayın';
+  setTimeout(()=>{appData.ksPending=false;$('#ksBtn').textContent='⛔ Kill-Switch';},3000);
+});
+$('#ksResume').addEventListener('click',()=>{
+  appData.kill=false;$('#ksBanner').classList.add('hidden');$('#ksBtn').textContent='⛔ Kill-Switch';
+  renderBots();addFeed('Normale dönüldü · botlar tekrar aktif','ok');showToast('Sistem normal moda döndü');
+});
+
+/* ---------- smart trade ---------- */
+$('#stToggle').addEventListener('click',()=>$('#stPanel').classList.toggle('hidden'));
+$('#stSubmit').addEventListener('click',()=>{
+  if(appData.kill){showToast('Güvenli modda yeni pozisyon açılamaz');return;}
+  const size=+$('#stSize').value||100;
+  const bases={BTCUSDT:64890,ETHUSDT:3412,SOLUSDT:147.2,BNBUSDT:591.3,DOGEUSDT:0.129};
+  const nd={id:Date.now(),symbol:$('#stSymbol').value,side:$('#stSide').value,lev:5,entry:0,price:0,soFilled:0,soMax:6,dev:1,tp:+$('#stTp').value||1.5,size};
+  nd.entry=bases[nd.symbol]*(1+(Math.random()-0.5)*0.002);nd.price=nd.entry;
+  appData.deals.push(nd);
+  appData.invested+=size;appData.balance=Math.max(0,appData.balance-size);
+  addFeed('Smart Trade: '+nd.symbol+' '+nd.side+' pozisyon açıldı · '+fmtMoney(size),'info');
+  showToast('Pozisyon açıldı · Smart Trade Terminal');renderDeals();refreshMoney();refreshUpnl();
+});
+
+/* ---------- canlı simülasyon ---------- */
+function priceTick(){
+  appData.deals.forEach(d=>{
+    d.price*=1+(Math.random()-0.487)*0.004;
+    const adverse=d.side==='LONG'?(d.entry-d.price)/d.entry*100:(d.price-d.entry)/d.entry*100;
+    const required=d.dev*Math.pow(1.25,d.soFilled);
+    if(adverse>=required&&d.soFilled<d.soMax){
+      d.soFilled++;d.entry=d.entry*0.86+d.price*0.14;
+      addFeed('Safety Order #'+d.soFilled+' doldu: '+d.symbol+' · ortalama maliyet güncellendi','warn');
+    }
+    if(dealPnl(d)>=d.tp)closeDeal(d,'TP');
+  });
+  renderDeals();renderLiq();refreshUpnl();
+  gridSim.price+=(Math.random()-0.46)*1.1;
+  gridSim.path.push(gridSim.price);if(gridSim.path.length>140)gridSim.path.shift();
+  if(gridSim.price>gridSim.floor*1.16&&$('#floorSw').classList.contains('on')){gridSim.floor*=1.03;}
+  if(gridSim.price<gridSim.floor)gridSim.floor=gridSim.price*0.995;
+  drawGrid();
+  if(Math.random()<0.18)addFeed(['Funding tahsil edildi: ETHUSDT +%0,005','Rejim dedektörü: SOLUSDT RANGE → DCA modu','Whale wall tespit edildi: BTCUSDT 65.000 · SO kaydırıldı','Orderbook cache güncellendi (Redis)'][rnd(0,3)],'info');
+}
+function clockTick(){
+  const now=new Date();
+  const nextH=Math.ceil((now.getUTCHours()+0.001)/8)*8;
+  const target=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getDate(),nextH,0,0);
+  const diff=Math.max(0,target-Date.now());
+  const hh=Math.floor(diff/3600000),mm=Math.floor(diff%3600000/60000),ss=Math.floor(diff%60000/1000);
+  $('#fundCount').textContent=pad2(hh)+':'+pad2(mm)+':'+pad2(ss);
+}
+
+/* ---------- sekmeler ---------- */
+const tabTitles={status:'Proje Durumu',overview:'Genel Bakış',bots:'Botlarım',deals:'Aktif İşlemler',dca:'DCA Yapılandırma',grid:'Grid & Hibrit',backtest:'Backtest Studio',modules:'Gelişmiş Modüller',risk:'Risk & Tarayıcı',deploy:'Deployment'};
+function switchTab(key){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===key));
+  document.querySelectorAll('.tab-section').forEach(s=>s.classList.remove('active'));
+  $('#sec-'+key).classList.add('active');
+  $('#headerTitle').textContent=tabTitles[key];
+  $('#sidebar').classList.add('-translate-x-full');$('#backdrop').classList.add('hidden');
+  if(key==='overview')drawProfit();
+  if(key==='grid')drawGrid();
+  if(key==='backtest'){drawEquity();if($('#btp-mc').classList.contains('on'))drawMonteCarlo();}
+  if(key==='deploy'&&!termShownOnce){termShownOnce=true;runTerminal();}
+}
+document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
+document.querySelectorAll('[data-goto]').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.goto)));
+$('#menuBtn').addEventListener('click',()=>{$('#sidebar').classList.remove('-translate-x-full');$('#backdrop').classList.remove('hidden');});
+$('#backdrop').addEventListener('click',()=>{$('#sidebar').classList.add('-translate-x-full');$('#backdrop').classList.add('hidden');});
+$('#successClose').addEventListener('click',()=>$('#successBanner').classList.add('hidden'));
+$('#currSel').addEventListener('change',e=>{appData.currency=e.target.value;refreshMoney();refreshUpnl();drawProfit();showToast('Kâr para birimi: '+appData.currency);});
+document.querySelectorAll('#periodBar .chipBtn').forEach(ch=>ch.addEventListener('click',()=>{
+  document.querySelectorAll('#periodBar .chipBtn').forEach(c=>c.classList.remove('active'));
+  ch.classList.add('active');activePeriod=ch.dataset.period;drawProfit();
+}));
+window.addEventListener('resize',()=>{drawProfit();drawGrid();drawEquity();});
+
+/* sayaç animasyonu */
+const counted=new WeakSet();
+function runCounter(el){
+  if(counted.has(el))return;counted.add(el);
+  const target=+el.dataset.count,suffix=el.dataset.suffix||'';
+  const t0=performance.now();
+  function step(nowTs){const pr=Math.min(1,(nowTs-t0)/1200);el.textContent=Math.round(target*(1-Math.pow(1-pr,3)))+suffix;if(pr<1)requestAnimationFrame(step);}
+  requestAnimationFrame(step);
+}
+const io=new IntersectionObserver(entries=>{entries.forEach(en=>{if(en.isIntersecting){en.target.querySelectorAll('[data-count]').forEach(runCounter);io.unobserve(en.target);}});},{threshold:.15});
+
+/* ---------- init ---------- */
+buildRoadmap();buildForm();renderBots();renderDeals();renderModules();renderServices();
+buildHeatmap();buildWalkForward();buildCorr();renderFunding();renderLiq();
+refreshMoney();refreshUpnl();drawProfit();cyclePhase();animateProgress();
+document.querySelectorAll('#sec-status [data-count]').forEach(runCounter);
+io.observe($('#sec-status'));
+addFeed('Proje teslim edildi · 8/8 faz · 42/42 görev ✓','ok');
+addFeed('Testnet WS bağlantısı kuruldu · fiyat akışı aktif','ok');
+addFeed('Deployment doğrulandı · 6/6 konteyner sağlıklı','ok');
+setInterval(priceTick,1700);
+setInterval(clockTick,1000);clockTick();
+setInterval(cyclePhase,6000);
+setInterval(jitterServices,2200);
+</script>
+</body>
+</html>

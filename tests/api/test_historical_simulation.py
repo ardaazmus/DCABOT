@@ -165,6 +165,16 @@ class HistoricalSimulationApiTests(unittest.TestCase):
         self.assertEqual(result.dataset.processed_bar_count, 2)
         self.assertEqual(result.actions[0].role, "BASE")
         self.assertEqual(result.summary.position_status, "OPEN_AT_END")
+        # AA.7a wire-finding #2 (2026-09-23): the live (unsaved) simulate
+        # response now carries the same derived-metrics fields a saved run
+        # does -- position stays open here, so deal_pnls is empty and the
+        # ratio fields are honest nulls (degenerate denominator), not 0.
+        self.assertEqual(result.summary.deal_pnls, [])
+        self.assertIsNone(result.summary.win_rate)
+        self.assertIsNone(result.summary.profit_factor)
+        self.assertEqual(result.summary.roi, "-0.0001")  # peak_equity > 0: fees paid, no exit yet
+        # AA.7a-2 (2026-09-23): one equity point per processed bar.
+        self.assertEqual(len(result.summary.equity_curve), result.dataset.processed_bar_count)
         serialized = json.dumps(result.model_dump(mode="json"))
         self.assertNotIn('"url"', serialized)
         self.assertNotIn('"path"', serialized)

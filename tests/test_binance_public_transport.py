@@ -6,8 +6,11 @@ from urllib.request import Request
 
 from dcabot.data_adapters.binance_public import BinanceTimeUnit
 from dcabot.data_adapters.binance_public_transport import (
+    MAX_EXCHANGE_INFO_RESPONSE_BYTES,
+    MAX_LISTED_SYMBOLS,
     BinancePublicTradeStream,
     BinancePublicTransportError,
+    fetch_binance_public_exchange_symbols,
     fetch_binance_public_trades,
 )
 
@@ -242,6 +245,118 @@ class BinancePublicTradeStreamTests(unittest.IsolatedAsyncioTestCase):
             await stream.connect()
         self.assertEqual(ctx.exception.code, "PUBLIC_STREAM_ALREADY_CONNECTED")
         await stream.close()
+
+
+EXCHANGE_INFO_BODY = {
+    "timezone": "UTC",
+    "symbols": [
+        {
+            "symbol": "BTCUSDT", "status": "TRADING",
+            "baseAsset": "BTC", "quoteAsset": "USDT",
+        },
+        {
+            "symbol": "ETHUSDT", "status": "BREAK",
+            "baseAsset": "ETH", "quoteAsset": "USDT",
+        },
+    ],
+}
+
+
+class FetchBinancePublicExchangeSymbolsTests(unittest.TestCase):
+    def test_entries_normalize_in_venue_order(self):
+        opener = _FakeOpener(_FakeResponse(200, json.dumps(EXCHANGE_INFO_BODY).encode()))
+        result = fetch_binance_public_exchange_symbols(opener=opener)
+        self.assertEqual(
+            [(item.symbol, item.status, item.base_asset, item.quote_asset) for item in result],
+            [("BTCUSDT", "TRADING", "BTC", "USDT"), ("ETHUSDT", "BREAK", "ETH", "USDT")],
+        )
+        self.assertIn("exchangeInfo", opener.requests[0][0])
+        self.assertNotIn("symbol=", opener.requests[0][0])
+
+    def test_non_200_is_http_error(self):
+        opener = _FakeOpener(_FakeResponse(429, b"{}"))
+        with self.assertRaises(BinancePublicTransportError) as ctx:
+            fetch_binance_public_exchange_symbols(opener=opener)
+        self.assertEqual(ctx.exception.code, "PUBLIC_UPSTREAM_HTTP_ERROR")
+
+    def test_network_error_is_unavailable(self):
+        opener = _FakeOpener(error=urllib.error.URLError("down"))
+        with self.assertRaises(BinancePublicTransportError) as ctx:
+            fetch_binance_public_exchange_symbols(opener=opener)
+        self.assertEqual(ctx.exception.code, "PUBLIC_UPSTREAM_UNAVAILABLE")
+
+    def test_malformed_json_is_invalid(self):
+        opener = _FakeOpener(_FakeResponse(200, b"{nope"))
+        with self.assertRaises(BinancePublicTransportError) as ctx:
+            fetch_binance_public_exchange_symbols(opener=opener)
+        self.assertEqual(ctx.exception.code, "PUBLIC_RESPONSE_INVALID")
+
+    def test_non_object_json_is_invalid(self):
+        opener = _FakeOpener(_FakeResponse(200, b"[]"))
+        with self.assertRaises(BinancePublicTransportError) as ctx:
+            fetch_binance_public_exchange_symbols(opener=opener)
+        self.assertEqual(ctx.exception.code, "PUBLIC_RESPONSE_INVALID")
+
+    def test_missing_symbols_list_is_invalid(self):
+        opener = _FakeOpener(_FakeResponse(200, b'{"timezone": "UTC"}'))
+        with self.assertRaises(BinancePublicTransportError) as ctx:
+            fetch_binance_public_exchange_symbols(opener=opener)
+        self.assertEqual(ctx.exception.code, "PUBLIC_RESPONSE_INVALID")
+
+    def test_bad_entry_fails_the_whole_batch(self):
+        bad = {"symbols": [dict(EXCHANGE_INFO_BODY["symbols"][0])]}
+        del bad["symbols"][0]["quoteAsset"]
+        opener = _FakeOpener(_FakeResponse(200, json.dumps(bad).encode()))
+        with self.assertRaises(BinancePublicTransportError) as ctx:
+            fetch_binance_public_exchange_symbols(opener=opener)
+        self.assertEqual(ctx.exception.code, "PUBLIC_UPSTREAM_RECORD_INVALID")
+
+    def test_whitespace_symbol_rejected(self):
+        bad = {"symbols": [dict(EXCHANGE_INFO_BODY["symbols"][0], symbol="BTC USDT")]}
+        opener = _FakeOpener(_FakeResponse(200, json.dumps(bad).encode()))
+        with self.assertRaises(BinancePublicTransportError) as ctx:
+            fetch_binance_public_exchange_symbols(opener=opener)
+        self.assertEqual(ctx.exception.code, "PUBLIC_UPSTREAM_RECORD_INVALID")
+
+    def test_oversized_response_rejected(self):
+        opener = _FakeOpener(
+            _FakeResponse(
+                200, b"x", headers={"Content-Length": str(MAX_EXCHANGE_INFO_RESPONSE_BYTES + 1)}
+            )
+        )
+        with self.assertRaises(BinancePublicTransportError) as ctx:
+            fetch_binance_public_exchange_symbols(opener=opener)
+        self.assertEqual(ctx.exception.code, "PUBLIC_RESPONSE_TOO_LARGE")
+
+    def test_declared_size_at_budget_still_reads(self):
+        # The real venue serves ~16.8 MB; the gate must accept anything up to
+        # the budget. Declared size is checked before the body is read, so a
+        # small body with a large-but-inside-budget declaration proves the
+        # boundary without allocating megabytes.
+        opener = _FakeOpener(
+            _FakeResponse(
+                200,
+                json.dumps(EXCHANGE_INFO_BODY).encode(),
+                headers={"Content-Length": str(MAX_EXCHANGE_INFO_RESPONSE_BYTES)},
+            )
+        )
+        result = fetch_binance_public_exchange_symbols(opener=opener)
+        self.assertEqual(len(result), 2)
+
+    def test_symbol_count_above_budget_rejected(self):
+        entry = EXCHANGE_INFO_BODY["symbols"][0]
+        big = {"symbols": [dict(entry, symbol=f"S{i:05d}USDT") for i in range(MAX_LISTED_SYMBOLS + 1)]}
+        opener = _FakeOpener(_FakeResponse(200, json.dumps(big).encode()))
+        with self.assertRaises(BinancePublicTransportError) as ctx:
+            fetch_binance_public_exchange_symbols(opener=opener)
+        self.assertEqual(ctx.exception.code, "PUBLIC_RESPONSE_INVALID")
+
+    def test_invalid_timeout_rejected(self):
+        opener = _FakeOpener(_FakeResponse(200, b"{}"))
+        for bad in (0, 31, "5"):
+            with self.assertRaises(BinancePublicTransportError) as ctx:
+                fetch_binance_public_exchange_symbols(opener=opener, timeout_seconds=bad)
+            self.assertEqual(ctx.exception.code, "PUBLIC_TIMEOUT_INVALID")
 
 
 if __name__ == "__main__":

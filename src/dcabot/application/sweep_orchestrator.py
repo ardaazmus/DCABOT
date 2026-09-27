@@ -17,7 +17,7 @@ import pickle
 from pathlib import Path
 import re
 
-from dcabot.application.historical_run_contract import canonical_json
+from dcabot.application.historical_run_contract import canonical_json, performance_metrics
 from dcabot.application.historical_simulation import simulate_historical_ohlcv
 from dcabot.data_adapters.historical import HistoricalDatasetInput
 from dcabot.domain.config import Config
@@ -186,6 +186,24 @@ def _execute_recipe(recipe_id: str, dataset: HistoricalDatasetInput, raw_config:
     summary = result.summary
     if not isinstance(summary, dict):
         raise SweepError("SWEEP_TASK_FAILED", f"Tarif başarısız: {recipe_id}: özet dict değil.")
+    summary = dict(summary)
+    deal_count = max((action.deal_sequence for action in result.actions), default=0)
+    completed_deal_count = max(deal_count - (1 if result.position_status == "OPEN_AT_END" else 0), 0)
+    deal_pnls = summary.get("deal_pnls", [])
+    if not isinstance(deal_pnls, list) or len(deal_pnls) != completed_deal_count:
+        raise SweepError("SWEEP_TASK_FAILED", f"Tarif başarısız: {recipe_id}: deal PnL listesi eşleşmiyor.")
+    summary["deal_count"] = deal_count
+    summary["completed_deal_count"] = completed_deal_count
+    summary.update(
+        performance_metrics(
+            deal_pnls,
+            peak_equity=summary["peak_equity"],
+            realized_net_after_all_costs=summary["realized_net_after_all_costs"],
+            roles=[action.role for action in result.actions],
+            max_active_safety_orders=config.effective_max_active_safety_orders,
+            deal_count=deal_count,
+        )
+    )
     return {
         "recipe_id": recipe_id,
         "config_hash": config_hash,
@@ -194,7 +212,7 @@ def _execute_recipe(recipe_id: str, dataset: HistoricalDatasetInput, raw_config:
         "position_status": result.position_status,
         "fee_amount": result.fee_amount,
         "action_count": len(result.actions),
-        "summary": dict(summary),
+        "summary": summary,
     }
 
 

@@ -1,0 +1,1 @@
+{"type":"urn:local-api:problem:SECTOR-BUDGET-TOO-LOW","title":"Bot ayarları geçersiz","status":422,"detail":"Gereken sermaye (541.6507206 USDT) bütçeyi aşıyor.","code":"SECTOR_BUDGET_TOO_LOW","errors":[{"field":"budget","code":"SECTOR_BUDGET_TOO_LOW"}]}

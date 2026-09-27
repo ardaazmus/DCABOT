@@ -5,10 +5,16 @@
      OLMAZ (takma-ad prensibi). -->
 <resources>
   <string key="nav.overview.label"><tr>Genel Bakış</tr><en>Overview</en></string>
-  <string key="nav.bots.label"><tr>Botlar &amp; Stratejiler</tr><en>Bots &amp; Strategies</en></string>
+  <string key="nav.bots.label"><tr>Botlarım</tr><en>My Bots</en></string>
+  <string key="nav.create.label"><tr>Bot Kur</tr><en>New Bot</en></string>
+  <string key="nav.deals.label"><tr>Aktif İşlemler</tr><en>Active Deals</en></string>
+  <string key="nav.backtest.label"><tr>Backtest</tr><en>Backtest</en></string>
+  <string key="nav.risk.label"><tr>Risk</tr><en>Risk</en></string>
+  <string key="nav.system.label"><tr>Sistem</tr><en>System</en></string>
   <string key="nav.market.label"><tr>Piyasa &amp; Veri</tr><en>Market &amp; Data</en></string>
   <string key="nav.events.label"><tr>Olaylar &amp; Denetim</tr><en>Events &amp; Audit</en></string>
   <string key="nav.settings.label"><tr>Ayarlar</tr><en>Settings</en></string>
+  <string key="nav.lab.label"><tr>Strateji Lab</tr><en>Strategy Lab</en></string>
   <string key="shell.theme.label"><tr>Tema: açık/koyu</tr><en>Theme: light/dark</en></string>
   <string key="shell.language.label"><tr>Dil: Türkçe/English</tr><en>Language: Türkçe/English</en></string>
   <string key="wizard.identity.label"><tr>Kimlik</tr><en>Identity</en></string>
@@ -22,12 +28,50 @@
   <string key="dca.baseOrder.label"><tr>Baz Emir</tr><en>Base Order</en></string>
   <string key="dca.safetyOrder.label"><tr>Güvenlik Emri</tr><en>Safety Order</en></string>
   <string key="dca.safetyCount.label"><tr>Güvenlik Emri Sayısı</tr><en>Safety Order Count</en></string>
+  <string key="dca.maxActiveSafetyOrders.label"><tr>Maks. Aktif Safety</tr><en>Max Active Safety Orders</en></string>
   <string key="dca.deviation.label"><tr>Fiyat Sapması</tr><en>Price Deviation</en></string>
   <string key="dca.volumeMultiplier.label"><tr>Hacim Çarpanı</tr><en>Volume Multiplier</en></string>
   <string key="dca.stepMultiplier.label"><tr>Adım Çarpanı</tr><en>Step Multiplier</en></string>
   <string key="exit.takeProfit.label"><tr>Kâr Al (TP)</tr><en>Take Profit (TP)</en></string>
   <string key="exit.stopLoss.label"><tr>Zararı Durdur (SL)</tr><en>Stop Loss (SL)</en></string>
   <string key="exit.trailingStop.label"><tr>İz Süren Zararı Durdur</tr><en>Trailing Stop</en></string>
+  <string key="orderType.group.label"><tr>Emir tipleri</tr><en>Order types</en></string>
+  <string key="orderType.base.label"><tr>Baz emir tipi</tr><en>Base order type</en></string>
+  <string key="orderType.safety.label"><tr>Safety emir tipi</tr><en>Safety order type</en></string>
+  <string key="orderType.exit.label"><tr>Çıkış emir tipi</tr><en>Exit order type</en></string>
+  <string key="orderType.stop.label"><tr>Stop emir tipi</tr><en>Stop order type</en></string>
+  <string key="orderType.limit.label"><tr>Limit</tr><en>Limit</en></string>
+  <string key="orderType.market.label"><tr>Market</tr><en>Market</en></string>
+  <string key="orderType.slippage.label"><tr>Maks. ters slippage (bps)</tr><en>Max adverse slippage (bps)</en></string>
+  <string key="orderType.slippage.required"><tr>En az bir rol Market ise zorunludur; 1-9999 tam sayı.</tr><en>Required when any role is Market; integer 1-9999.</en></string>
+  <string key="orderType.reference.note"><tr>Referans fiyat: MARK (sabit).</tr><en>Reference price: MARK (fixed).</en></string>
+  <string key="marginMode.label"><tr>Marjin modu</tr><en>Margin mode</en></string>
+  <string key="marginMode.isolated.label"><tr>Isolated</tr><en>Isolated</en></string>
+  <string key="marginMode.cross.label"><tr>Cross</tr><en>Cross</en></string>
+  <string key="marginMode.cross.warning"><tr>Cross modda bu botun zararı hesabınızdaki diğer pozisyonları etkileyebilir.</tr><en>In Cross mode, this bot's losses can affect your other positions.</en></string>
+  <string key="exit.ladder.group.label"><tr>Kademeli TP (opsiyonel)</tr><en>Staged TP (optional)</en></string>
+  <string key="exit.ladder.row.label"><tr>Kademe</tr><en>Level</en></string>
+  <string key="exit.ladder.weight.label"><tr>Ağırlık</tr><en>Weight</en></string>
+  <string key="exit.ladder.target.label"><tr>Hedef oran</tr><en>Target ratio</en></string>
+  <string key="exit.ladder.add"><tr>Kademe ekle</tr><en>Add level</en></string>
+  <string key="exit.ladder.remove"><tr>kaldır</tr><en>remove</en></string>
+  <string key="exit.ladder.note"><tr>Ağırlıklar toplamı=1 ve artan hedef sırası sunucuda doğrulanır.</tr><en>Weights summing to 1 and increasing targets are validated server-side.</en></string>
+  <string key="exit.reinvest.label"><tr>Reinvest oranı</tr><en>Reinvest ratio</en></string>
+  <string key="exit.reinvest.note"><tr>0..1; kârdan havuza düşen pay. Deal-kapanış bağlantısı ayrı iş.</tr><en>0..1; profit share to the pool. Deal-close wiring is separate work.</en></string>
+  <string key="exit.stopLoss.bars.label"><tr>SL onay barı</tr><en>SL confirmation bars</en></string>
+  <string key="exit.duration.label"><tr>Maks. deal süresi (sn)</tr><en>Max deal duration (s)</en></string>
+  <string key="exit.duration.action.label"><tr>Süre-dolumu aksiyonu</tr><en>Duration-expiry action</en></string>
+  <string key="exit.duration.action.placeholder"><tr>Seçin</tr><en>Select</en></string>
+  <string key="exit.profitAsset.label"><tr>Kâr para birimi</tr><en>Profit currency</en></string>
+  <string key="exit.profitAsset.quote.label"><tr>Quote (varsayılan)</tr><en>Quote (default)</en></string>
+  <string key="exit.profitAsset.base.label"><tr>Base</tr><en>Base</en></string>
+  <string key="exit.profitAsset.base.warning"><tr>Base kâr seçtiniz: bu coin'e uzun vadeli güveniyor olmalısınız.</tr><en>You chose base profit: you must trust this coin long-term.</en></string>
+  <string key="exit.profitAsset.base.ack.label"><tr>Base kâr riskini anladım, kabul ediyorum</tr><en>I understand and accept the base-profit risk</en></string>
+  <string key="deals.group.label"><tr>Aktif deal limitleri</tr><en>Active deal limits</en></string>
+  <string key="deals.account.label"><tr>Hesap-geneli maks.</tr><en>Account-wide max</en></string>
+  <string key="deals.perBot.label"><tr>Bot başına maks.</tr><en>Max per bot</en></string>
+  <string key="deals.samePair.label"><tr>Aynı paritede maks.</tr><en>Max on same pair</en></string>
+  <string key="deals.note"><tr>Boş = sınırsız. Aşımda reddedilir, kuyruğa alınmaz. Orkestrasyon bağlantısı ayrı iş.</tr><en>Empty = unlimited. Rejected when exceeded, never queued. Orchestration wiring is separate work.</en></string>
   <string key="bot.startCondition.label"><tr>Bot Başlatma Koşulu</tr><en>Bot Start Condition</en></string>
   <string key="bot.startCondition.immediate"><tr>Hemen</tr><en>Immediately</en></string>
   <string key="bot.startCondition.indicator"><tr>İndikatör</tr><en>Indicator</en></string>
@@ -60,6 +104,9 @@
   <string key="wizard.optimize.best.label"><tr>En iyi net</tr><en>Best net</en></string>
   <string key="wizard.optimize.apply"><tr>Öneriyi uygula</tr><en>Apply suggestion</en></string>
   <string key="wizard.optimize.applied"><tr>Öneri forma yazıldı.</tr><en>Suggestion applied.</en></string>
+  <string key="wizard.airecommender.title"><tr>AI Önerici</tr><en>AI Recommender</en></string>
+  <string key="wizard.airecommender.engine"><tr>Motor: ızgara araması + backtest sıralaması · çevrimdışı, salt okunur</tr><en>Engine: grid search + backtest ranking · offline, read-only</en></string>
+  <string key="wizard.airecommender.badge"><tr>AI önerisi</tr><en>AI suggestion</en></string>
   <string key="signal.maxCapital.label"><tr>Maks. Sermaye</tr><en>Max Capital</en></string>
   <string key="signal.maxCapital.echo"><tr>Maks. sermaye</tr><en>Max capital</en></string>
   <string key="signal.maxCapital.invalid"><tr>Maks. sermaye boş ya da exact decimal olmalı.</tr><en>Max capital must be empty or an exact decimal.</en></string>
@@ -162,6 +209,9 @@
   <string key="create.datarange.label"><tr>Veri aralığı</tr><en>Data range</en></string>
   <string key="create.ready.label"><tr>Çalışmaya hazır</tr><en>Ready to run</en></string>
   <string key="create.notready.label"><tr>Veri bekleniyor</tr><en>Waiting for data</en></string>
+  <string key="create.overlay.nodata"><tr>Grafik yüklendiğinde seviyeler çizilecek</tr><en>Levels will draw once the chart loads</en></string>
+  <string key="create.overlay.error"><tr>Seviye önizlemesi alınamadı</tr><en>Could not load level preview</en></string>
+  <string key="create.overlay.nodraft"><tr>Bu botun istemci taslağı yok; seviyeler çizilemiyor</tr><en>No client draft for this bot; levels unavailable</en></string>
   <string key="wizard.pairs.label"><tr>Pariteler</tr><en>Pairs</en></string>
   <string key="wizard.pairs.row"><tr>Parite</tr><en>Pair</en></string>
   <string key="wizard.pairs.add"><tr>+ Pair ekle</tr><en>+ Add pair</en></string>
@@ -181,7 +231,7 @@
   <string key="fleet.empty.title"><tr>Aktif bot yok</tr><en>No active bots</en></string>
   <string key="fleet.empty.body"><tr>İlk botunu dakikalar içinde kur.</tr><en>Set up your first bot in minutes.</en></string>
   <string key="fleet.empty.cta"><tr>Yeni bot oluştur</tr><en>Create new bot</en></string>
-  <string key="fleet.history.note"><tr>Koşu geçmişi Olaylar &amp; Denetim'de tutulur.</tr><en>Run history lives in Events &amp; Audit.</en></string>
+  <string key="fleet.history.note"><tr>Koşu geçmişi Backtest'te tutulur.</tr><en>Run history lives in Backtest.</en></string>
   <string key="fleet.history.open"><tr>Geçmişi aç</tr><en>Open history</en></string>
   <string key="fleet.type.label"><tr>Tür</tr><en>Type</en></string>
   <string key="futuresdca.title"><tr>Futures DCA Bot</tr><en>Futures DCA Bot</en></string>

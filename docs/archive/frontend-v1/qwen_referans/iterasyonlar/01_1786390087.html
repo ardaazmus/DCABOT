@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexusBot · Mimari Kontrol Paneli v2</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/500.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/600.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/700.css">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['"Space Grotesk"', 'ui-sans-serif', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
+      },
+      colors: {
+        ink: { 950:'#05070d', 900:'#0a0f1a', 800:'#0e1626', 700:'#152036' },
+        neon: { cyan:'#22d3ee', mint:'#34d399', amber:'#fbbf24', rose:'#fb7185', violet:'#a78bfa' }
+      }
+    }
+  }
+}
+</script>
+<style>
+  html{scroll-behavior:smooth}
+  body{background:#05070d}
+  .bg-grid{
+    background-image:linear-gradient(rgba(34,211,238,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,.045) 1px,transparent 1px);
+    background-size:44px 44px;
+    mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,black 40%,transparent 100%);
+  }
+  .orb{position:absolute;border-radius:9999px;filter:blur(90px);opacity:.35;animation:orbFloat 14s ease-in-out infinite}
+  @keyframes orbFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(28px) scale(1.08)}}
+  .panel{background:rgba(14,22,38,.72);border:1px solid rgba(148,163,184,.12);backdrop-filter:blur(10px);border-radius:16px}
+  .panel-title{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:#7d8ba3;font-weight:600}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#1e293b;border-radius:8px}
+  ::-webkit-scrollbar-thumb:hover{background:#334155}
+  .tab-section{display:none}
+  .tab-section.active{display:block;animation:fadeUp .4s cubic-bezier(.22,1,.36,1)}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes ping-dot{0%{transform:scale(1);opacity:.8}80%,100%{transform:scale(2.6);opacity:0}}
+  .ping-ring{animation:ping-dot 1.6s cubic-bezier(0,0,.2,1) infinite}
+  .nav-btn{transition:all .2s ease}
+  .nav-btn.active{background:linear-gradient(90deg,rgba(34,211,238,.16),rgba(34,211,238,.04));color:#67e8f9;border-left-color:#22d3ee}
+  .nav-btn:hover{background:rgba(148,163,184,.07);color:#e2e8f0}
+  .switch{width:44px;height:24px;border-radius:9999px;background:#26334a;position:relative;transition:background .25s;flex:none}
+  .switch::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:9999px;background:#94a3b8;transition:all .25s cubic-bezier(.22,1,.36,1)}
+  .switch.on{background:rgba(34,211,238,.35)}
+  .switch.on::after{left:23px;background:#22d3ee;box-shadow:0 0 10px rgba(34,211,238,.7)}
+  .loadbar{height:6px;border-radius:9999px;background:#1b2740;overflow:hidden}
+  .loadbar>span{display:block;height:100%;border-radius:9999px;transition:width .8s cubic-bezier(.22,1,.36,1)}
+  .logline{animation:fadeUp .3s ease}
+  .flowDash{stroke-dasharray:7 7;animation:dashMove 1.1s linear infinite}
+  @keyframes dashMove{to{stroke-dashoffset:-14}}
+  svg.paused .flowDash{animation-play-state:paused}
+  .flowNode{cursor:pointer}
+  .flowNode rect,.flowNode polygon{transition:stroke .2s}
+  .flowNode:hover rect,.flowNode:hover polygon{stroke:#22d3ee}
+  .flowNode.selected rect,.flowNode.selected polygon{stroke:#22d3ee;stroke-width:2}
+  #toast{transform:translateY(120%);transition:transform .4s cubic-bezier(.22,1,.36,1)}
+  #toast.show{transform:translateY(0)}
+  .chip{transition:all .2s}
+  .chip.active{background:rgba(34,211,238,.15);color:#67e8f9;border-color:rgba(34,211,238,.5)}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:9999px;background:#1b2740;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:9999px;background:#22d3ee;cursor:pointer;box-shadow:0 0 12px rgba(34,211,238,.6);border:3px solid #0a0f1a}
+  .checkbox{appearance:none;width:42px;height:23px;border-radius:9999px;background:#26334a;position:relative;cursor:pointer;transition:background .25s;flex:none}
+  .checkbox::after{content:'';position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:9999px;background:#94a3b8;transition:all .25s}
+  .checkbox:checked{background:rgba(52,211,153,.4)}
+  .checkbox:checked::after{left:22px;background:#34d399}
+  .blink{animation:blinkc 1s steps(2) infinite}
+  @keyframes blinkc{50%{opacity:0}}
+</style>
+</head>
+<body class="text-slate-200 font-sans min-h-screen antialiased">
+
+<!-- arka plan dekoru -->
+<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+  <div class="absolute inset-0 bg-grid"></div>
+  <div class="orb w-[420px] h-[420px] bg-cyan-500/40 -top-32 -left-24"></div>
+  <div class="orb w-[380px] h-[380px] bg-violet-600/30 top-1/3 -right-32" style="animation-delay:-6s"></div>
+  <div class="orb w-[300px] h-[300px] bg-emerald-500/25 bottom-0 left-1/3" style="animation-delay:-3s"></div>
+</div>
+
+<!-- kenar çubuğu -->
+<aside id="sidebar" class="fixed z-40 top-0 left-0 h-full w-64 bg-ink-900/95 backdrop-blur-xl border-r border-slate-800/70 -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col">
+  <div class="flex items-center gap-3 px-5 h-16 border-b border-slate-800/70">
+    <img src="https://image.qwenlm.ai/public_source/8c15eb31-c77d-4860-89a7-f934d91dc1ae/116a0b98d-b316-492f-a4bd-2132bfff1d82.png" alt="NexusBot" class="w-9 h-9 rounded-xl ring-1 ring-cyan-400/50 shadow-[0_0_18px_rgba(34,211,238,.35)]">
+    <div>
+      <div class="font-bold text-slate-100 leading-tight tracking-wide">NexusBot</div>
+      <div class="text-[10px] font-mono text-cyan-400/80 tracking-widest">MİMARİ PLAN v2</div>
+    </div>
+  </div>
+  <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+    <button class="nav-btn active w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-400 border-l-2 border-transparent" data-tab="overview">
+      <svg class="w-4.5 h-4.5 w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13h4v8H3zM10 8h4v13h-4zM17 3h4v18h-4z"/></svg>
+      Genel Bakış
+    </button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-400 border-l-2 border-transparent" data-tab="modules">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM4 15a2 2 0 012-2h12a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3zM8 7h.01M8 16h.01"/></svg>
+      Modüller
+      <span id="modCount" class="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300">6/6</span>
+    </button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-400 border-l-2 border-transparent" data-tab="flows">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      Akış Şeması
+    </button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-400 border-l-2 border-transparent" data-tab="logs">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4 4-4 4M14 17h4M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"/></svg>
+      Canlı Loglar
+      <span id="logBadge" class="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-700/60 text-slate-300">0</span>
+    </button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-400 border-l-2 border-transparent" data-tab="settings">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 4.3a1.7 1.7 0 013.4 0 1.7 1.7 0 002.6 1.1 1.7 1.7 0 012.3 2.3 1.7 1.7 0 001.1 2.6 1.7 1.7 0 010 3.4 1.7 1.7 0 00-1.1 2.6 1.7 1.7 0 01-2.3 2.3 1.7 1.7 0 00-2.6 1.1 1.7 1.7 0 01-3.4 0 1.7 1.7 0 00-2.6-1.1 1.7 1.7 0 01-2.3-2.3 1.7 1.7 0 00-1.1-2.6 1.7 1.7 0 010-3.4 1.7 1.7 0 001.1-2.6 1.7 1.7 0 012.3-2.3 1.7 1.7 0 001-1.1zM15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Ayarlar
+    </button>
+  </nav>
+  <div class="p-4 border-t border-slate-800/70">
+    <div class="panel p-3 flex items-center gap-3">
+      <span class="relative flex w-2.5 h-2.5">
+        <span id="sidePing" class="ping-ring absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75"></span>
+        <span id="sideDot" class="relative inline-flex w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+      </span>
+      <div>
+        <div id="sideStatusText" class="text-xs font-semibold text-emerald-300">Çevrimiçi</div>
+        <div class="text-[10px] font-mono text-slate-500">çekirdek v2.4.1 · node tr-ist-1</div>
+      </div>
+    </div>
+  </div>
+</aside>
+<div id="backdrop" class="fixed inset-0 bg-black/70 z-30 hidden lg:hidden"></div>
+
+<div class="lg:pl-64 relative z-10 flex flex-col min-h-screen">
+
+  <!-- üst bar -->
+  <header class="sticky top-0 z-20 h-16 flex items-center gap-3 px-4 md:px-6 bg-ink-950/80 backdrop-blur-xl border-b border-slate-800/70">
+    <button id="menuBtn" class="lg:hidden p-2 rounded-lg hover:bg-slate-800/70 text-slate-300" aria-label="Menü">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div>
+      <h1 id="headerTitle" class="font-bold text-slate-100 text-base md:text-lg leading-none">Genel Bakış</h1>
+      <div class="text-[10px] font-mono text-slate-500 mt-1">nexusbot / üretim / <span class="text-cyan-400">v2.4.1</span></div>
+    </div>
+    <div class="ml-auto flex items-center gap-2 md:gap-3">
+      <div class="hidden md:flex items-center gap-2 text-xs font-mono text-slate-400 px-3 py-1.5 rounded-lg bg-slate-800/50 border border-slate-700/50">
+        <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span id="uptimeText">1g 14:22:05</span>
+      </div>
+      <span id="statusPill" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Aktif
+      </span>
+      <button id="botToggleBtn" class="text-xs font-semibold px-4 py-2 rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 transition">
+        Botu Durdur
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 p-4 md:p-6 xl:p-8 space-y-6">
+
+    <!-- ============ GENEL BAKIŞ ============ -->
+    <section id="tab-overview" class="tab-section active space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="panel p-5 relative overflow-hidden">
+          <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-cyan-500/10 blur-2xl"></div>
+          <div class="flex items-center justify-between">
+            <span class="panel-title">İşlenen Mesaj</span>
+            <span class="text-[10px] font-mono text-cyan-300 bg-cyan-500/10 px-1.5 py-0.5 rounded">+%18 / 24s</span>
+          </div>
+          <div class="mt-2 text-3xl font-bold text-slate-50 font-mono tabular-nums" id="statMessages">18.432</div>
+          <canvas id="sparkMessages" class="mt-3 w-full h-9"></canvas>
+        </div>
+        <div class="panel p-5 relative overflow-hidden">
+          <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-violet-500/10 blur-2xl"></div>
+          <div class="flex items-center justify-between">
+            <span class="panel-title">Aktif Kullanıcı</span>
+            <span class="text-[10px] font-mono text-violet-300 bg-violet-500/10 px-1.5 py-0.5 rounded">canlı</span>
+          </div>
+          <div class="mt-2 text-3xl font-bold text-slate-50 font-mono tabular-nums" id="statUsers">214</div>
+          <canvas id="sparkUsers" class="mt-3 w-full h-9"></canvas>
+        </div>
+        <div class="panel p-5 relative overflow-hidden">
+          <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-emerald-500/10 blur-2xl"></div>
+          <div class="flex items-center justify-between">
+            <span class="panel-title">Ort. Yanıt Süresi</span>
+            <span id="latencyBadge" class="text-[10px] font-mono text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded">hedef &lt; 200ms</span>
+          </div>
+          <div class="mt-2 text-3xl font-bold text-slate-50 font-mono tabular-nums"><span id="statLatency">142</span><span class="text-sm text-slate-500 ml-1">ms</span></div>
+          <canvas id="sparkLatency" class="mt-3 w-full h-9"></canvas>
+        </div>
+        <div class="panel p-5 relative overflow-hidden">
+          <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-rose-500/10 blur-2xl"></div>
+          <div class="flex items-center justify-between">
+            <span class="panel-title">Hata Oranı</span>
+            <span class="text-[10px] font-mono text-rose-300 bg-rose-500/10 px-1.5 py-0.5 rounded">eşik %2</span>
+          </div>
+          <div class="mt-2 text-3xl font-bold text-slate-50 font-mono tabular-nums"><span id="statErrors">%0.8</span></div>
+          <canvas id="sparkErrors" class="mt-3 w-full h-9"></canvas>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div class="panel p-5 xl:col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="font-semibold text-slate-100">Mesaj Trafiği</h2>
+              <p class="text-xs text-slate-500 mt-0.5">dakikalık işlenen mesaj · canlı</p>
+            </div>
+            <div class="flex items-center gap-2 text-[10px] font-mono">
+              <span class="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-800/60 text-cyan-300"><span class="w-2 h-0.5 bg-cyan-400 inline-block"></span> mesaj/dk</span>
+            </div>
+          </div>
+          <canvas id="trafficChart" class="w-full h-64"></canvas>
+        </div>
+        <div class="panel p-5">
+          <h2 class="font-semibold text-slate-100 mb-1">Modül Sağlığı</h2>
+          <p class="text-xs text-slate-500 mb-4">çekirdek servislerin anlık yükü</p>
+          <div id="healthList" class="space-y-4"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div class="panel p-5 xl:col-span-2">
+          <h2 class="font-semibold text-slate-100 mb-1">Son Etkinlik</h2>
+          <p class="text-xs text-slate-500 mb-4">sistemden en yeni olaylar</p>
+          <ul id="feedList" class="space-y-2.5"></ul>
+        </div>
+        <div class="panel p-5">
+          <h2 class="font-semibold text-slate-100 mb-1">Hızlı Durum</h2>
+          <p class="text-xs text-slate-500 mb-4">altyapı göstergeleri</p>
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-xs mb-1.5"><span class="text-slate-400">Kuyruk Derinliği</span><span id="quickQueue" class="font-mono text-amber-300">12 mesaj</span></div>
+              <div class="loadbar"><span id="queueBar" class="bg-amber-400" style="width:18%"></span></div>
+            </div>
+            <div class="flex items-center justify-between text-sm bg-slate-800/40 rounded-lg px-3 py-2.5">
+              <span class="text-slate-400 text-xs">Webhook Durumu</span>
+              <span id="quickWebhook" class="font-mono text-xs text-emerald-300">200 OK · 12ms</span>
+            </div>
+            <div class="flex items-center justify-between text-sm bg-slate-800/40 rounded-lg px-3 py-2.5">
+              <span class="text-slate-400 text-xs">Sonraki Cron Görevi</span>
+              <span id="quickCron" class="font-mono text-xs text-cyan-300">04:59</span>
+            </div>
+            <div class="flex items-center justify-between text-sm bg-slate-800/40 rounded-lg px-3 py-2.5">
+              <span class="text-slate-400 text-xs">Redis Önbellek</span>
+              <span class="font-mono text-xs text-violet-300">%94 isabet</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ MODÜLLER ============ -->
+    <section id="tab-modules" class="tab-section space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="font-bold text-lg text-slate-100">Sistem Modülleri</h2>
+          <p class="text-sm text-slate-500">Mimari Plan v2 kapsamındaki çekirdek servisler — anahtarlarla anında aç/kapat.</p>
+        </div>
+        <button id="restartAllBtn" class="text-xs font-semibold px-4 py-2 rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/20 transition">Tümünü Yeniden Başlat</button>
+      </div>
+      <div id="moduleGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+    </section>
+
+    <!-- ============ AKIŞ ŞEMASI ============ -->
+    <section id="tab-flows" class="tab-section space-y-5">
+      <div>
+        <h2 class="font-bold text-lg text-slate-100">Mesaj İşleme Akışı</h2>
+        <p class="text-sm text-slate-500">Bir mesajın kullanıcıdan yanıta izlediği yol — düğümlere tıklayarak detayları görün.</p>
+      </div>
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div class="panel p-4 xl:col-span-2 overflow-x-auto">
+          <svg id="flowSvg" viewBox="0 0 1200 500" class="w-full min-w-[860px]">
+            <defs>
+              <marker id="arrowHead" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M0 0 L8 4 L0 8 Z" fill="#475569"/>
+              </marker>
+              <linearGradient id="nodeGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#101c33"/><stop offset="1" stop-color="#0b1322"/>
+              </linearGradient>
+              <filter id="pulseGlow" x="-200%" y="-200%" width="500%" height="500%">
+                <feGaussianBlur stdDeviation="3" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+
+            <!-- kenarlar -->
+            <path id="edgePath1" d="M154 250 L192 250" stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#arrowHead)"/>
+            <path id="edgePath2" d="M322 250 L360 250" stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#arrowHead)"/>
+            <path id="edgePath3" d="M490 250 L528 250" stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#arrowHead)"/>
+            <path id="edgePath4" d="M658 250 L668 250" stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#arrowHead)"/>
+            <path id="edgePath5" d="M740 196 C 740 140, 800 124, 876 124" stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#arrowHead)"/>
+            <path id="edgePath6" d="M1010 124 L1036 124" stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#arrowHead)"/>
+            <path id="edgePath7" d="M740 304 C 740 372, 800 380, 876 380" stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#arrowHead)"/>
+            <path id="edgePath8" d="M1105 152 C 1105 260, 1050 380, 1014 380" stroke="#64748b" stroke-width="1.4" fill="none" class="flowDash" marker-end="url(#arrowHead)"/>
+            <path id="edgePath9" d="M945 408 C 900 486, 240 486, 89 282" stroke="#64748b" stroke-width="1.4" fill="none" class="flowDash" marker-end="url(#arrowHead)"/>
+            <text x="800" y="140" fill="#a78bfa" font-size="11" font-family="JetBrains Mono">komut</text>
+            <text x="800" y="368" fill="#34d399" font-size="11" font-family="JetBrains Mono">sohbet</text>
+            <text x="470" y="478" fill="#64748b" font-size="11" font-family="JetBrains Mono">yanıt dönüşü</text>
+
+            <!-- düğümler -->
+            <g class="flowNode" data-node="kullanici">
+              <rect x="24" y="222" width="130" height="56" rx="12" fill="url(#nodeGrad)" stroke="rgba(56,189,248,.35)"/>
+              <text x="89" y="246" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">Kullanıcı</text>
+              <text x="89" y="263" text-anchor="middle" fill="#64748b" font-size="10" font-family="JetBrains Mono">giriş</text>
+            </g>
+            <g class="flowNode" data-node="gateway">
+              <rect x="192" y="222" width="130" height="56" rx="12" fill="url(#nodeGrad)" stroke="rgba(56,189,248,.35)"/>
+              <text x="257" y="246" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">API Ağ Geçidi</text>
+              <text x="257" y="263" text-anchor="middle" fill="#64748b" font-size="10" font-family="JetBrains Mono">webhook</text>
+            </g>
+            <g class="flowNode" data-node="queue">
+              <rect x="360" y="222" width="130" height="56" rx="12" fill="url(#nodeGrad)" stroke="rgba(56,189,248,.35)"/>
+              <text x="425" y="246" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">Mesaj Kuyruğu</text>
+              <text x="425" y="263" text-anchor="middle" fill="#64748b" font-size="10" font-family="JetBrains Mono">fifo</text>
+            </g>
+            <g class="flowNode" data-node="nlp">
+              <rect x="528" y="222" width="130" height="56" rx="12" fill="url(#nodeGrad)" stroke="rgba(56,189,248,.35)"/>
+              <text x="593" y="246" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">NLP Motoru</text>
+              <text x="593" y="263" text-anchor="middle" fill="#64748b" font-size="10" font-family="JetBrains Mono">niyet + varlık</text>
+            </g>
+            <g class="flowNode" data-node="karar">
+              <polygon points="740,196 808,250 740,304 672,250" fill="#171331" stroke="rgba(251,191,36,.45)"/>
+              <text x="740" y="246" text-anchor="middle" fill="#fde68a" font-size="12.5" font-weight="600">Karar</text>
+              <text x="740" y="262" text-anchor="middle" fill="#64748b" font-size="10" font-family="JetBrains Mono">router</text>
+            </g>
+            <g class="flowNode" data-node="komut">
+              <rect x="880" y="96" width="130" height="56" rx="12" fill="url(#nodeGrad)" stroke="rgba(167,139,250,.4)"/>
+              <text x="945" y="120" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">Komut İşleyici</text>
+              <text x="945" y="137" text-anchor="middle" fill="#64748b" font-size="10" font-family="JetBrains Mono">/komut</text>
+            </g>
+            <g class="flowNode" data-node="db">
+              <rect x="1040" y="96" width="130" height="56" rx="12" fill="url(#nodeGrad)" stroke="rgba(56,189,248,.35)"/>
+              <text x="1105" y="120" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">Veritabanı</text>
+              <text x="1105" y="137" text-anchor="middle" fill="#64748b" font-size="10" font-family="JetBrains Mono">pg + redis</text>
+            </g>
+            <g class="flowNode" data-node="yanit">
+              <rect x="880" y="352" width="130" height="56" rx="12" fill="url(#nodeGrad)" stroke="rgba(52,211,153,.4)"/>
+              <text x="945" y="376" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">Yanıt Üretici</text>
+              <text x="945" y="393" text-anchor="middle" fill="#64748b" font-size="10" font-family="JetBrains Mono">şablon + llm</text>
+            </g>
+
+            <!-- veri darbeleri -->
+            <g id="pulseLayer">
+              <circle r="4" fill="#22d3ee" filter="url(#pulseGlow)"><animateMotion dur="1.4s" repeatCount="indefinite" begin="0s"><mpath href="#edgePath1"/></animateMotion></circle>
+              <circle r="4" fill="#22d3ee" filter="url(#pulseGlow)"><animateMotion dur="1.4s" repeatCount="indefinite" begin="0.3s"><mpath href="#edgePath2"/></animateMotion></circle>
+              <circle r="4" fill="#22d3ee" filter="url(#pulseGlow)"><animateMotion dur="1.4s" repeatCount="indefinite" begin="0.6s"><mpath href="#edgePath3"/></animateMotion></circle>
+              <circle r="4" fill="#22d3ee" filter="url(#pulseGlow)"><animateMotion dur="1.4s" repeatCount="indefinite" begin="0.9s"><mpath href="#edgePath4"/></animateMotion></circle>
+              <circle r="4" fill="#a78bfa" filter="url(#pulseGlow)"><animateMotion dur="2s" repeatCount="indefinite" begin="1.2s"><mpath href="#edgePath5"/></animateMotion></circle>
+              <circle r="4" fill="#a78bfa" filter="url(#pulseGlow)"><animateMotion dur="1.4s" repeatCount="indefinite" begin="2s"><mpath href="#edgePath6"/></animateMotion></circle>
+              <circle r="4" fill="#34d399" filter="url(#pulseGlow)"><animateMotion dur="2s" repeatCount="indefinite" begin="1.4s"><mpath href="#edgePath7"/></animateMotion></circle>
+            </g>
+          </svg>
+        </div>
+        <div class="panel p-5">
+          <div class="panel-title mb-3">Düğüm Detayı</div>
+          <h3 id="flowDetailTitle" class="font-semibold text-slate-100 text-lg">Karar Düğümü</h3>
+          <p id="flowDetailDesc" class="text-sm text-slate-400 mt-2 leading-relaxed">NLP motorundan gelen niyet skoruna göre mesajı komut işleyiciye veya sohbet yanıt üreticisine yönlendirir.</p>
+          <div id="flowDetailMetrics" class="mt-4 space-y-2"></div>
+          <div class="mt-5 pt-4 border-t border-slate-800/70 text-[11px] font-mono text-slate-500">
+            <span class="text-cyan-400">●</span> veri darbesi &nbsp; <span class="text-slate-400">- -</span> asenkron dönüş
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CANLI LOGLAR ============ -->
+    <section id="tab-logs" class="tab-section space-y-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <button class="chip active text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-700 text-slate-400" data-filter="all">Tümü</button>
+        <button class="chip text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-700 text-slate-400" data-filter="bilgi">BİLGİ</button>
+        <button class="chip text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-700 text-slate-400" data-filter="komut">KOMUT</button>
+        <button class="chip text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-700 text-slate-400" data-filter="uyari">UYARI</button>
+        <button class="chip text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-700 text-slate-400" data-filter="hata">HATA</button>
+        <button class="chip text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-700 text-slate-400" data-filter="sistem">SİSTEM</button>
+        <div class="ml-auto flex gap-2">
+          <button id="pauseBtn" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800/70 text-slate-300 hover:bg-slate-700/70 transition">Duraklat</button>
+          <button id="clearBtn" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800/70 text-slate-300 hover:bg-slate-700/70 transition">Temizle</button>
+        </div>
+      </div>
+      <div class="panel overflow-hidden">
+        <div class="flex items-center gap-2 px-4 py-2.5 border-b border-slate-800/70 bg-ink-800/60">
+          <span class="w-3 h-3 rounded-full bg-rose-500/80"></span>
+          <span class="w-3 h-3 rounded-full bg-amber-500/80"></span>
+          <span class="w-3 h-3 rounded-full bg-emerald-500/80"></span>
+          <span class="ml-3 text-xs font-mono text-slate-500">nexusbot@tr-ist-1:~$ tail -f /var/log/bot.log</span>
+          <span class="ml-auto text-[10px] font-mono text-slate-600"><span id="logCount">0</span> satır</span>
+        </div>
+        <div id="logBody" class="h-[520px] overflow-y-auto p-4 font-mono text-[12px] leading-relaxed bg-ink-950/70 space-y-1"></div>
+      </div>
+    </section>
+
+    <!-- ============ AYARLAR ============ -->
+    <section id="tab-settings" class="tab-section space-y-5">
+      <div>
+        <h2 class="font-bold text-lg text-slate-100">Yapılandırma</h2>
+        <p class="text-sm text-slate-500">Bot davranışını ve altyapı parametrelerini yönetin.</p>
+      </div>
+      <form id="settingsForm" class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="panel p-5 space-y-5">
+          <h3 class="font-semibold text-slate-100">Genel</h3>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1.5" for="botNameInput">Bot Adı</label>
+            <input id="botNameInput" type="text" value="NexusBot" class="w-full bg-ink-800/80 border border-slate-700/70 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 transition">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1.5" for="prefixInput">Komut Öneki</label>
+            <input id="prefixInput" type="text" value="/" maxlength="3" class="w-full bg-ink-800/80 border border-slate-700/70 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 transition">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1.5" for="langSelect">Varsayılan Dil</label>
+            <select id="langSelect" class="w-full bg-ink-800/80 border border-slate-700/70 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-cyan-400/60">
+              <option selected>Türkçe (tr-TR)</option>
+              <option>English (en-US)</option>
+              <option>Deutsch (de-DE)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1.5" for="webhookInput">Webhook URL</label>
+            <input id="webhookInput" type="text" value="https://api.nexusbot.dev/v2/hook" class="w-full bg-ink-800/80 border border-slate-700/70 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 transition">
+          </div>
+        </div>
+        <div class="panel p-5 space-y-5">
+          <h3 class="font-semibold text-slate-100">Davranış</h3>
+          <div>
+            <div class="flex justify-between text-xs mb-2"><span class="text-slate-400">Yanıt Yaratıcılığı (sıcaklık)</span><span id="tempVal" class="font-mono text-cyan-300">0.7</span></div>
+            <input id="tempRange" type="range" min="0" max="1" step="0.1" value="0.7" class="w-full">
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-2"><span class="text-slate-400">Hız Limiti (istek/dk)</span><span id="rateVal" class="font-mono text-cyan-300">60</span></div>
+            <input id="rateRange" type="range" min="10" max="200" step="5" value="60" class="w-full">
+          </div>
+          <label class="flex items-center justify-between gap-3 text-sm text-slate-300">
+            Otomatik yeniden başlatma
+            <input type="checkbox" class="checkbox" checked>
+          </label>
+          <label class="flex items-center justify-between gap-3 text-sm text-slate-300">
+            Hata bildirimleri (Telegram)
+            <input type="checkbox" class="checkbox" checked>
+          </label>
+          <label class="flex items-center justify-between gap-3 text-sm text-slate-300">
+            Bakım modu
+            <input type="checkbox" class="checkbox">
+          </label>
+          <div class="pt-4 border-t border-slate-800/70 flex gap-2">
+            <button type="submit" class="flex-1 text-sm font-semibold px-4 py-2.5 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/25 transition">Kaydet</button>
+            <button type="button" id="resetSettingsBtn" class="text-sm px-4 py-2.5 rounded-lg bg-slate-800/70 text-slate-400 hover:bg-slate-700/70 transition">Sıfırla</button>
+          </div>
+        </div>
+      </form>
+      <div class="panel p-5 border-rose-500/20">
+        <h3 class="font-semibold text-rose-300 mb-1">Tehlikeli Bölge</h3>
+        <p class="text-xs text-slate-500 mb-4">Bu işlemler botu anında etkiler; dikkatli kullanın.</p>
+        <div class="flex flex-wrap gap-2">
+          <button id="dangerRestartBtn" class="text-xs font-semibold px-4 py-2 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 transition">Servisi Yeniden Başlat</button>
+          <button id="dangerCacheBtn" class="text-xs font-semibold px-4 py-2 rounded-lg bg-violet-500/10 text-violet-300 border border-violet-500/30 hover:bg-violet-500/20 transition">Önbelleği Temizle</button>
+          <button id="dangerShutdownBtn" class="text-xs font-semibold px-4 py-2 rounded-lg bg-rose-500/10 text-rose-300 border border-rose-500/30 hover:bg-rose-500/20 transition">Botu Kapat</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="px-6 py-4 text-center text-[11px] font-mono text-slate-600 border-t border-slate-800/50">
+    NexusBot Mimari Plan v2 · derleme 2.4.1-stable · © 2024
+  </footer>
+</div>
+
+<!-- toast -->
+<div id="toast" class="fixed bottom-6 right-6 z-50 panel px-5 py-3.5 flex items-center gap-3 border-cyan-500/30 shadow-[0_0_30px_rgba(34,211,238,.15)]">
+  <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-sm font-bold">✓</span>
+  <span id="toastMsg" class="text-sm text-slate-200">İşlem tamamlandı</span>
+</div>
+
+<script>
+'use strict';
+/* ------------------ durum ------------------ */
+const appState = {
+  running: true,
+  uptimeMs: ((1*24 + 14) * 3600 + 22*60 + 5) * 1000,
+  messages: 18432,
+  users: 214,
+  latency: 142,
+  errRate: 0.8,
+  cronIn: 299,
+  logFilter: 'all',
+  logPaused: false,
+  logTotal: 0
+};
+
+const botModules = [
+  { id:'gateway', name:'API Ağ Geçidi', desc:'Webhook ve REST uç noktalarını yönetir, istek doğrulama yapar.', ver:'v2.4.1', load:34, lat:'12ms', on:true,
+    icon:'<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zM3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg>' },
+  { id:'queue', name:'Mesaj Kuyruğu', desc:'Gelen mesajları FIFO düzeninde işçilere dağıtır.', ver:'v1.9.0', load:21, lat:'3ms', on:true,
+    icon:'<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h10M4 18h6"/></svg>' },
+  { id:'nlp', name:'NLP Motoru', desc:'Niyet tespiti, varlık çıkarımı ve dil algılama.', ver:'v3.1.2', load:58, lat:'96ms', on:true,
+    icon:'<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.7 3.3a2 2 0 014 0v.5a4 4 0 013 3h.5a2 2 0 010 4h-.5a4 4 0 01-3 3v.5a2 2 0 01-4 0v-.5a4 4 0 01-3-3h-.5a2 2 0 010-4h.5a4 4 0 013-3v-.5zM12 10v4M10 12h4"/></svg>' },
+  { id:'commands', name:'Komut İşleyici', desc:'Komutları ayrıştırır, yetki kontrolü yapar, yönlendirir.', ver:'v2.0.5', load:42, lat:'8ms', on:true,
+    icon:'<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4 4-4 4M14 17h6M4 4h16v16H4z"/></svg>' },
+  { id:'scheduler', name:'Zamanlayıcı', desc:'Cron görevleri, hatırlatmalar ve periyodik raporlar.', ver:'v1.4.0', load:12, lat:'—', on:true,
+    icon:'<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
+  { id:'db', name:'Veritabanı Katmanı', desc:'PostgreSQL kalıcılık + Redis önbellek soyutlama katmanı.', ver:'v2.2.0', load:47, lat:'6ms', on:true,
+    icon:'<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>' }
+];
+
+const flowInfo = {
+  kullanici: { t:'Kullanıcı', d:'Telegram, Discord ve web arayüzünden gelen son kullanıcı isteklerinin giriş noktası.', m:[['Kanal','Telegram · Discord · Web'],['Ort. istek','1.2/sn']] },
+  gateway: { t:'API Ağ Geçidi', d:'Tüm gelen istekleri TLS sonlandırma, imza doğrulama ve hız limiti kontrolünden geçirir.', m:[['Protokol','HTTPS / WSS'],['Hız limiti','60 istek/dk']] },
+  queue: { t:'Mesaj Kuyruğu', d:'Anlık yük altında mesaj kaybını önlemek için istekleri sıraya alır ve işçilere dağıtır.', m:[['Derinlik','12 mesaj'],['Tüketici','4 işçi']] },
+  nlp: { t:'NLP Motoru', d:'Mesajın niyetini ve varlıklarını çıkarır; Türkçe için ince ayarlı transformer modeli kullanır.', m:[['Model','nexus-tr-bert v3'],['Ort. çıkarım','96ms']] },
+  karar: { t:'Karar Düğümü', d:'NLP motorundan gelen niyet skoruna göre mesajı komut işleyiciye veya sohbet yanıt üreticisine yönlendirir.', m:[['Eşik skor','0.82'],['Rota','komut / sohbet']] },
+  komut: { t:'Komut İşleyici', d:'Komut sözdizimini ayrıştırır, yetki denetimi yapar ve ilgili eylemi çalıştırır.', m:[['Kayıtlı komut','47'],['Yetki','RBAC']] },
+  db: { t:'Veritabanı', d:'PostgreSQL kalıcı depolama ve Redis önbellek; tüm sorgular hazırlanmış ifadelerle çalışır.', m:[['Bağlantı havuzu','20'],['Önbellek','%94 isabet']] },
+  yanit: { t:'Yanıt Üretici', d:'Şablon veya LLM tabanlı yanıtları üretir, kişiselleştirme katmanı ekler ve kullanıcıya iletir.', m:[['Sıcaklık','0.7'],['Şablon','128']] }
+};
+
+const logTemplates = {
+  bilgi: ['Mesaj işlendi (id:#<N>)','Yanıt üretildi · <MS> ms','Önbellek isabeti: %<P>','Oturum yenilendi: kullanıcı_<N>','Niyet algılandı: sohbet (skor 0.<P>)'],
+  komut: ['<CMD> çağrıldı · kullanıcı_<N>','<CMD> yanıtlandı · <MS> ms','Komut kaydı doğrulandı: <CMD>'],
+  uyari: ['Yanıt süresi eşiğe yaklaşıyor: <MS> ms','Hız limiti uyarısı: kullanıcı_<N>','Kuyruk derinliği artıyor: <Q> mesaj'],
+  hata: ['NLP zaman aşımı · yeniden denenecek','Webhook 502 · yeniden deneme 1/3','Veritabanı bağlantısı koptu · havuz yenilendi'],
+  sistem: ['Sağlık kontrolü tamam · tüm modüller sağlıklı','Zamanlayıcı görevi çalıştı: günlük_özet','Konfigürasyon sıcak yüklendi']
+};
+const cmdList = ['/yardım','/hava','/istatistik','/ayar','/özet','/döviz'];
+
+/* ------------------ yardımcılar ------------------ */
+const $ = (s) => document.querySelector(s);
+const rnd = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
+const fmtNum = (n) => n.toLocaleString('tr-TR');
+const pad2 = (n) => String(n).padStart(2,'0');
+const nowStr = () => { const d = new Date(); return pad2(d.getHours())+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds()); };
+
+function fmtUptime(ms){
+  const s = Math.floor(ms/1000);
+  const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  return d + 'g ' + pad2(h) + ':' + pad2(m) + ':' + pad2(sec);
+}
+
+let toastTimer = null;
+function showToast(msg){
+  $('#toastMsg').textContent = msg;
+  const tEl = $('#toast');
+  tEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>tEl.classList.remove('show'), 2600);
+}
+
+/* ------------------ grafikler ------------------ */
+const trafficData = [];
+(function(){ let v = 120; for(let i=0;i<26;i++){ v = clamp(v + rnd(-24,24), 40, 210); trafficData.push(v); } })();
+
+const sparkData = {
+  messages: Array.from({length:20},()=>rnd(40,100)),
+  users: Array.from({length:20},()=>rnd(30,90)),
+  latency: Array.from({length:20},()=>rnd(30,80)),
+  errors: Array.from({length:20},()=>rnd(5,40))
+};
+
+function prepCanvas(cv){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = cv.getBoundingClientRect();
+  if (cv.width !== Math.round(rect.width*dpr) || cv.height !== Math.round(rect.height*dpr)){
+    cv.width = Math.round(rect.width*dpr); cv.height = Math.round(rect.height*dpr);
+  }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return { ctx, w: rect.width, h: rect.height };
+}
+
+function drawTraffic(){
+  const cv = $('#trafficChart'); if(!cv) return;
+  const { ctx, w, h } = prepCanvas(cv);
+  ctx.clearRect(0,0,w,h);
+  const padL=38, padR=16, padT=14, padB=26;
+  const maxV = Math.max.apply(null, trafficData) * 1.25;
+  ctx.font = '10px "JetBrains Mono", monospace';
+  ctx.strokeStyle = 'rgba(148,163,184,.12)';
+  ctx.fillStyle = 'rgba(148,163,184,.55)';
+  for(let g=0; g<=4; g++){
+    const y = padT + (h-padT-padB)*g/4;
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.stroke();
+    ctx.fillText(String(Math.round(maxV*(1-g/4))), 6, y+3);
+  }
+  const n = trafficData.length;
+  const px = (i)=> padL + (w-padL-padR)*i/(n-1);
+  const py = (v)=> padT + (h-padT-padB)*(1 - v/maxV);
+  [0,5,10,15,20,25].forEach(i=>{
+    const lbl = (i===n-1) ? 'şimdi' : (-(n-1-i)) + 'dk';
+    ctx.fillText(lbl, clamp(px(i)-14, 0, w-34), h-8);
+  });
+  // alan
+  ctx.beginPath();
+  ctx.moveTo(px(0), py(trafficData[0]));
+  for(let i=1;i<n;i++){
+    const x0=px(i-1), y0=py(trafficData[i-1]), x1=px(i), y1=py(trafficData[i]);
+    const xm=(x0+x1)/2;
+    ctx.bezierCurveTo(xm,y0,xm,y1,x1,y1);
+  }
+  const grad = ctx.createLinearGradient(0,padT,0,h-padB);
+  grad.addColorStop(0,'rgba(34,211,238,.30)');
+  grad.addColorStop(1,'rgba(34,211,238,0)');
+  ctx.save();
+  ctx.lineTo(px(n-1), h-padB); ctx.lineTo(px(0), h-padB); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.restore();
+  // çizgi
+  ctx.beginPath();
+  ctx.moveTo(px(0), py(trafficData[0]));
+  for(let i=1;i<n;i++){
+    const x0=px(i-1), y0=py(trafficData[i-1]), x1=px(i), y1=py(trafficData[i]);
+    const xm=(x0+x1)/2;
+    ctx.bezierCurveTo(xm,y0,xm,y1,x1,y1);
+  }
+  ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2; ctx.stroke();
+  // son nokta
+  const lx = px(n-1), ly = py(trafficData[n-1]);
+  ctx.beginPath(); ctx.arc(lx,ly,4,0,Math.PI*2); ctx.fillStyle='#22d3ee'; ctx.fill();
+  ctx.beginPath(); ctx.arc(lx,ly,9,0,Math.PI*2); ctx.fillStyle='rgba(34,211,238,.25)'; ctx.fill();
+}
+
+function drawSpark(canvasId, arr, color){
+  const cv = $(canvasId); if(!cv) return;
+  const { ctx, w, h } = prepCanvas(cv);
+  ctx.clearRect(0,0,w,h);
+  const maxV = Math.max.apply(null, arr)*1.15 || 1;
+  const minV = Math.min.apply(null, arr)*0.85;
+  const px = (i)=> w*i/(arr.length-1);
+  const py = (v)=> 4 + (h-8)*(1-(v-minV)/(maxV-minV || 1));
+  ctx.beginPath(); ctx.moveTo(px(0), py(arr[0]));
+  for(let i=1;i<arr.length;i++){
+    const xm=(px(i-1)+px(i))/2;
+    ctx.bezierCurveTo(xm,py(arr[i-1]),xm,py(arr[i]),px(i),py(arr[i]));
+  }
+  ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.lineTo(w,h); ctx.lineTo(0,h); ctx.closePath();
+  const g2 = ctx.createLinearGradient(0,0,0,h);
+  g2.addColorStop(0, color.replace(')', ',.25)').replace('rgb','rgba'));
+  g2.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g2; ctx.fill();
+}
+function drawAllSparks(){
+  drawSpark('#sparkMessages', sparkData.messages, 'rgb(34,211,238)');
+  drawSpark('#sparkUsers', sparkData.users, 'rgb(167,139,250)');
+  drawSpark('#sparkLatency', sparkData.latency, 'rgb(52,211,153)');
+  drawSpark('#sparkErrors', sparkData.errors, 'rgb(251,113,133)');
+}
+
+/* ------------------ modüller ------------------ */
+function loadColor(v){ return v>75 ? 'bg-rose-400' : (v>50 ? 'bg-amber-400' : 'bg-cyan-400'); }
+
+function renderModules(){
+  const grid = $('#moduleGrid');
+  grid.innerHTML = botModules.map(m => `
+    <div class="panel p-5 transition ${m.on ? '' : 'opacity-50'}" id="card-${m.id}">
+      <div class="flex items-start justify-between">
+        <div class="flex items-center gap-3">
+          <span class="w-10 h-10 rounded-xl flex items-center justify-center ${m.on ? 'bg-cyan-500/10 text-cyan-300' : 'bg-slate-700/40 text-slate-500'}">${m.icon}</span>
+          <div>
+            <div class="font-semibold text-slate-100 text-sm">${m.name}</div>
+            <div class="text-[10px] font-mono text-slate-500">${m.ver} · gecikme ${m.on ? m.lat : '—'}</div>
+          </div>
+        </div>
+        <button class="switch ${m.on ? 'on' : ''}" data-mod="${m.id}" aria-label="${m.name} aç/kapat"></button>
+      </div>
+      <p class="text-xs text-slate-500 mt-3 leading-relaxed">${m.desc}</p>
+      <div class="mt-4">
+        <div class="flex justify-between text-[10px] font-mono mb-1.5">
+          <span class="text-slate-500">YÜK</span>
+          <span class="${m.on ? 'text-slate-300' : 'text-slate-600'}" id="loadtxt-${m.id}">${m.on ? '%'+m.load : 'pasif'}</span>
+        </div>
+        <div class="loadbar"><span id="loadbar-${m.id}" class="${m.on ? loadColor(m.load) : 'bg-slate-600'}" style="width:${m.on ? m.load : 0}%"></span></div>
+      </div>
+    </div>`).join('');
+  grid.querySelectorAll('.switch').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const mod = botModules.find(x=>x.id===btn.dataset.mod);
+      mod.on = !mod.on;
+      addLog('sistem', (mod.on ? 'Modül başlatıldı: ' : 'Modül durduruldu: ') + mod.name);
+      showToast(mod.name + (mod.on ? ' başlatıldı' : ' durduruldu'));
+      renderModules(); renderHealth(); updateModCount();
+    });
+  });
+}
+
+function renderHealth(){
+  $('#healthList').innerHTML = botModules.map(m => `
+    <div>
+      <div class="flex items-center justify-between text-xs mb-1.5">
+        <span class="flex items-center gap-2 text-slate-300">
+          <span class="w-1.5 h-1.5 rounded-full ${m.on ? 'bg-emerald-400' : 'bg-rose-400'}"></span>${m.name}
+        </span>
+        <span class="font-mono ${m.on ? 'text-slate-400' : 'text-rose-400'}" id="hl-${m.id}">${m.on ? '%'+m.load : 'PASİF'}</span>
+      </div>
+      <div class="loadbar"><span id="hb-${m.id}" class="${m.on ? loadColor(m.load) : 'bg-rose-400'}" style="width:${m.on ? m.load : 4}%"></span></div>
+    </div>`).join('');
+}
+
+function updateModCount(){
+  const on = botModules.filter(m=>m.on).length;
+  $('#modCount').textContent = on + '/' + botModules.length;
+}
+
+function jitterLoads(){
+  botModules.forEach(m=>{
+    if(!m.on) return;
+    m.load = clamp(m.load + rnd(-7,7), 6, 96);
+    const bar = $('#loadbar-'+m.id), txt = $('#loadtxt-'+m.id), hb = $('#hb-'+m.id), hl = $('#hl-'+m.id);
+    if(bar){ bar.style.width = m.load+'%'; bar.className = loadColor(m.load); }
+    if(txt){ txt.textContent = '%'+m.load; }
+    if(hb){ hb.style.width = m.load+'%'; hb.className = loadColor(m.load); }
+    if(hl){ hl.textContent = '%'+m.load; }
+  });
+}
+
+/* ------------------ loglar ------------------ */
+const levelStyle = {
+  bilgi:  { badge:'bg-cyan-500/10 text-cyan-300',    tag:'BİLGİ'  },
+  komut:  { badge:'bg-violet-500/10 text-violet-300',tag:'KOMUT'  },
+  uyari:  { badge:'bg-amber-500/10 text-amber-300',  tag:'UYARI'  },
+  hata:   { badge:'bg-rose-500/10 text-rose-300',    tag:'HATA'   },
+  sistem: { badge:'bg-emerald-500/10 text-emerald-300',tag:'SİSTEM'}
+};
+
+function fillTemplate(t){
+  return t
+    .replace('<N>', String(rnd(1000,9999)))
+    .replace('<MS>', String(rnd(60,280)))
+    .replace('<P>', String(rnd(80,99)))
+    .replace('<Q>', String(rnd(30,90)))
+    .replace('<CMD>', cmdList[rnd(0, cmdList.length-1)]);
+}
+
+function pickLevel(){
+  const r = Math.random();
+  if(r < .52) return 'bilgi';
+  if(r < .72) return 'komut';
+  if(r < .85) return 'uyari';
+  if(r < .93) return 'sistem';
+  return 'hata';
+}
+
+function addLog(level, text){
+  const body = $('#logBody');
+  const st = levelStyle[level];
+  const row = document.createElement('div');
+  row.className = 'logline flex items-start gap-2 ' + (appState.logFilter !== 'all' && appState.logFilter !== level ? 'hidden' : '');
+  row.dataset.level = level;
+  row.innerHTML = '<span class="text-slate-600 shrink-0">'+nowStr()+'</span>' +
+    '<span class="shrink-0 px-1.5 rounded text-[10px] font-bold '+st.badge+'">'+st.tag+'</span>' +
+    '<span class="text-slate-300 break-all">'+text+'</span>';
+  body.appendChild(row);
+  while(body.children.length > 140) body.removeChild(body.firstChild);
+  appState.logTotal++;
+  $('#logCount').textContent = appState.logTotal;
+  $('#logBadge').textContent = appState.logTotal > 99 ? '99+' : appState.logTotal;
+  pushFeed(level, text);
+  if(!appState.logPaused){
+    const nearBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 90;
+    if(nearBottom) body.scrollTop = body.scrollHeight;
+  }
+}
+
+function generateLog(){
+  const lvl = pickLevel();
+  addLog(lvl, fillTemplate(logTemplates[lvl][rnd(0, logTemplates[lvl].length-1)]));
+}
+
+let feedItems = [];
+function pushFeed(level, text){
+  feedItems.unshift({ level, text, time: nowStr() });
+  feedItems = feedItems.slice(0,6);
+  $('#feedList').innerHTML = feedItems.map(f => `
+    <li class="flex items-start gap-3 text-sm bg-slate-800/30 rounded-lg px-3 py-2">
+      <span class="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${f.level==='hata'?'bg-rose-400':f.level==='uyari'?'bg-amber-400':f.level==='komut'?'bg-violet-400':f.level==='sistem'?'bg-emerald-400':'bg-cyan-400'}"></span>
+      <span class="text-slate-300 text-xs leading-relaxed flex-1">${f.text}</span>
+      <span class="text-[10px] font-mono text-slate-600 shrink-0">${f.time}</span>
+    </li>`).join('');
+}
+
+/* ------------------ canlı döngüler ------------------ */
+function liveTick(){
+  if(!appState.running) return;
+  const lastV = trafficData[trafficData.length-1];
+  trafficData.push(clamp(lastV + rnd(-26,26), 40, 215));
+  trafficData.shift();
+
+  appState.messages += rnd(4,18);
+  appState.users = clamp(appState.users + rnd(-3,4), 120, 420);
+  appState.latency = clamp(appState.latency + rnd(-14,14), 80, 320);
+  appState.errRate = clamp(appState.errRate + (Math.random()-.5)*.2, .1, 2.4);
+
+  $('#statMessages').textContent = fmtNum(appState.messages);
+  $('#statUsers').textContent = appState.users;
+  $('#statLatency').textContent = appState.latency;
+  $('#statErrors').textContent = '%' + appState.errRate.toFixed(1).replace('.',',');
+  $('#latencyBadge').className = 'text-[10px] font-mono px-1.5 py-0.5 rounded ' + (appState.latency < 200 ? 'text-emerald-300 bg-emerald-500/10' : 'text-amber-300 bg-amber-500/10');
+
+  sparkData.messages.push(rnd(40,100)); sparkData.messages.shift();
+  sparkData.users.push(appState.users/4); sparkData.users.shift();
+  sparkData.latency.push(appState.latency/3); sparkData.latency.shift();
+  sparkData.errors.push(appState.errRate*15); sparkData.errors.shift();
+
+  const q = rnd(4,60);
+  $('#quickQueue').textContent = q + ' mesaj';
+  $('#queueBar').style.width = clamp(q,5,100) + '%';
+  $('#quickWebhook').textContent = '200 OK · ' + rnd(8,26) + 'ms';
+
+  drawTraffic(); drawAllSparks();
+}
+
+function secondTick(){
+  if(appState.running) appState.uptimeMs += 1000;
+  $('#uptimeText').textContent = fmtUptime(appState.uptimeMs);
+  appState.cronIn--;
+  if(appState.cronIn <= 0){
+    appState.cronIn = 300;
+    if(appState.running) addLog('sistem','Zamanlayıcı görevi çalıştı: saatlik_özet');
+  }
+  $('#quickCron').textContent = pad2(Math.floor(appState.cronIn/60)) + ':' + pad2(appState.cronIn%60);
+}
+
+function scheduleLog(){
+  setTimeout(()=>{
+    if(appState.running) generateLog();
+    scheduleLog();
+  }, rnd(900, 3000));
+}
+
+/* ------------------ bot aç/kapat ------------------ */
+function setBotRunning(on){
+  appState.running = on;
+  const pill = $('#statusPill');
+  const btn = $('#botToggleBtn');
+  pill.innerHTML = on
+    ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Aktif'
+    : '<span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Durduruldu';
+  pill.className = 'hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ' +
+    (on ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/10 text-rose-300 border-rose-500/30');
+  btn.textContent = on ? 'Botu Durdur' : 'Botu Başlat';
+  btn.className = 'text-xs font-semibold px-4 py-2 rounded-lg border transition ' +
+    (on ? 'bg-rose-500/15 text-rose-300 border-rose-500/30 hover:bg-rose-500/25' : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25');
+  $('#sideStatusText').textContent = on ? 'Çevrimiçi' : 'Çevrimdışı';
+  $('#sideStatusText').className = 'text-xs font-semibold ' + (on ? 'text-emerald-300' : 'text-rose-300');
+  $('#sideDot').className = 'relative inline-flex w-2.5 h-2.5 rounded-full ' + (on ? 'bg-emerald-400' : 'bg-rose-400');
+  $('#sidePing').className = 'ping-ring absolute inline-flex w-full h-full rounded-full opacity-75 ' + (on ? 'bg-emerald-400' : 'bg-rose-400');
+  $('#pulseLayer').style.display = on ? '' : 'none';
+  $('#flowSvg').classList.toggle('paused', !on);
+  addLog('sistem', on ? 'Bot başlatıldı · tüm modüller yükleniyor…' : 'Bot güvenli şekilde durduruldu.');
+}
+
+/* ------------------ sekmeler ------------------ */
+const tabTitles = { overview:'Genel Bakış', modules:'Modüller', flows:'Akış Şeması', logs:'Canlı Loglar', settings:'Ayarlar' };
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const key = btn.dataset.tab;
+    document.querySelectorAll('.tab-section').forEach(s=>s.classList.remove('active'));
+    $('#tab-'+key).classList.add('active');
+    $('#headerTitle').textContent = tabTitles[key];
+    closeSidebar();
+    if(key==='overview'){ drawTraffic(); drawAllSparks(); }
+  });
+});
+
+/* ------------------ kenar çubuğu (mobil) ------------------ */
+function openSidebar(){ $('#sidebar').classList.remove('-translate-x-full'); $('#backdrop').classList.remove('hidden'); }
+function closeSidebar(){ $('#sidebar').classList.add('-translate-x-full'); $('#backdrop').classList.add('hidden'); }
+$('#menuBtn').addEventListener('click', openSidebar);
+$('#backdrop').addEventListener('click', closeSidebar);
+if(window.innerWidth >= 1024) $('#sidebar').classList.remove('-translate-x-full');
+
+/* ------------------ akış düğüm detayı ------------------ */
+document.querySelectorAll('.flowNode').forEach(node=>{
+  node.addEventListener('click', ()=>{
+    document.querySelectorAll('.flowNode').forEach(n=>n.classList.remove('selected'));
+    node.classList.add('selected');
+    const info = flowInfo[node.dataset.node];
+    $('#flowDetailTitle').textContent = info.t;
+    $('#flowDetailDesc').textContent = info.d;
+    $('#flowDetailMetrics').innerHTML = info.m.map(pair =>
+      '<div class="flex items-center justify-between text-xs bg-slate-800/40 rounded-lg px-3 py-2"><span class="text-slate-500">'+pair[0]+'</span><span class="font-mono text-cyan-300">'+pair[1]+'</span></div>'
+    ).join('');
+  });
+});
+
+/* ------------------ log araç çubuğu ------------------ */
+document.querySelectorAll('.chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    appState.logFilter = chip.dataset.filter;
+    document.querySelectorAll('#logBody .logline').forEach(row=>{
+      row.classList.toggle('hidden', appState.logFilter !== 'all' && row.dataset.level !== appState.logFilter);
+    });
+  });
+});
+$('#pauseBtn').addEventListener('click', ()=>{
+  appState.logPaused = !appState.logPaused;
+  $('#pauseBtn').textContent = appState.logPaused ? 'Devam Et' : 'Duraklat';
+});
+$('#clearBtn').addEventListener('click', ()=>{
+  $('#logBody').innerHTML = '';
+  showToast('Log geçmişi temizlendi');
+});
+
+/* ------------------ ayarlar ------------------ */
+$('#tempRange').addEventListener('input', e=>{ $('#tempVal').textContent = Number(e.target.value).toFixed(1).replace('.',','); });
+$('#rateRange').addEventListener('input', e=>{ $('#rateVal').textContent = e.target.value; });
+$('#settingsForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  addLog('sistem','Konfigürasyon kaydedildi ve sıcak yüklendi.');
+  showToast('Ayarlar kaydedildi ✓');
+});
+$('#resetSettingsBtn').addEventListener('click', ()=>{
+  $('#botNameInput').value = 'NexusBot';
+  $('#prefixInput').value = '/';
+  $('#webhookInput').value = 'https://api.nexusbot.dev/v2/hook';
+  $('#tempRange').value = 0.7; $('#tempVal').textContent = '0,7';
+  $('#rateRange').value = 60; $('#rateVal').textContent = '60';
+  showToast('Ayarlar varsayılana döndü');
+});
+$('#dangerRestartBtn').addEventListener('click', ()=>{
+  showToast('Servis yeniden başlatılıyor…');
+  addLog('sistem','Servis yeniden başlatma komutu alındı · PID 4821');
+});
+$('#dangerCacheBtn').addEventListener('click', ()=>{
+  showToast('Redis önbelleği temizlendi');
+  addLog('sistem','Redis FLUSHALL çalıştırıldı · 12.408 anahtar silindi');
+});
+$('#dangerShutdownBtn').addEventListener('click', ()=>{
+  if(appState.running){ setBotRunning(false); showToast('Bot kapatıldı'); }
+  else showToast('Bot zaten kapalı');
+});
+$('#restartAllBtn').addEventListener('click', ()=>{
+  botModules.forEach(m=>m.on = true);
+  renderModules(); renderHealth(); updateModCount();
+  addLog('sistem','Tüm modüller yeniden başlatıldı.');
+  showToast('Tüm modüller yeniden başlatıldı');
+});
+$('#botToggleBtn').addEventListener('click', ()=>{
+  setBotRunning(!appState.running);
+});
+
+/* ------------------ başlangıç ------------------ */
+window.addEventListener('resize', ()=>{ drawTraffic(); drawAllSparks(); });
+
+renderModules(); renderHealth(); updateModCount();
+$('#flowDetailMetrics').innerHTML = flowInfo.karar.m.map(pair =>
+  '<div class="flex items-center justify-between text-xs bg-slate-800/40 rounded-lg px-3 py-2"><span class="text-slate-500">'+pair[0]+'</span><span class="font-mono text-cyan-300">'+pair[1]+'</span></div>'
+).join('');
+
+['bilgi','sistem','komut','bilgi','uyari','bilgi','sistem','komut'].forEach(lvl=>{
+  addLog(lvl, fillTemplate(logTemplates[lvl][rnd(0, logTemplates[lvl].length-1)]));
+});
+
+drawTraffic(); drawAllSparks();
+setInterval(liveTick, 2000);
+setInterval(secondTick, 1000);
+setInterval(jitterLoads, 2500);
+scheduleLog();
+</script>
+</body>
+</html>

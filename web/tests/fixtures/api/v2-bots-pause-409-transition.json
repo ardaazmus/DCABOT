@@ -1,0 +1,1 @@
+{"type":"urn:local-api:problem:BOT-TRANSITION-INVALID","title":"Bot işlemi yapılamadı","status":409,"detail":"STOPPED durumundaki bot için 'pause' geçersiz.","code":"BOT_TRANSITION_INVALID"}

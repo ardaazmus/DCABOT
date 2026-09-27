@@ -5,15 +5,17 @@ import { STRATEGY_DRAFT_PREFIX } from "./BotWizard";
 import { useI18n } from "./i18n";
 
 /**
- * Faz 11 madde 5: kart-özet yerine table-first operasyonel yüzey.
- * Satırlar yalnız kayıtlı kimlik + seçili botun yüklenmiş detayını
- * gösterir; yüklenmemiş botlarda bilinmeyen alan "—" kalır.
+ * Faz 11 madde 5: operasyonel filo yüzeyi (Faz 17 A.5'te tablo → tıklanabilir
+ * kart görünümüne çevrildi, qwen `botcard` deseni). Kartlar yalnız kayıtlı
+ * kimlik + seçili botun yüklenmiş detayını gösterir; yüklenmemiş botlarda
+ * bilinmeyen alan "—" kalır. Karta tıklamak tam sayfa detayı açar (A.4).
  */
 
 export type BotTableRow = {
   botId: string;
   name: string | null;
   sessionCount: number | null;
+  activeDeals: number | null;
   selected: boolean;
 };
 
@@ -134,40 +136,26 @@ export function BotTable({ rows, busy, onSelect, onCreate, onOpenHistory }: {
           ) : visible.length === 0 ? (
             <div className="empty-state">Filtreye uyan bot yok.</div>
           ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Bot</th>
-                    <th>Ad</th>
-                    <th>{t("fleet.type.label")}</th>
-                    <th>Session</th>
-                    <th>Durum</th>
-                    <th>İşlem</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visible.map(({ row, botType }) => (
-                    <tr key={row.botId}>
-                      <td>{row.botId}</td>
-                      <td>{row.name ?? "—"}</td>
-                      <td>{typeLabel(botType)}</td>
-                      <td>{row.sessionCount ?? "—"}</td>
-                      <td>{row.selected ? "Seçili" : "—"}</td>
-                      <td>
-                        <button
-                          className="secondary-button"
-                          type="button"
-                          disabled={busy || row.selected}
-                          onClick={() => onSelect(row.botId)}
-                        >
-                          Yükle
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="botcard-grid">
+              {visible.map(({ row, botType }) => (
+                <button
+                  key={row.botId}
+                  type="button"
+                  className="panel botcard"
+                  disabled={busy}
+                  aria-current={row.selected ? "true" : undefined}
+                  onClick={() => onSelect(row.botId)}
+                >
+                  <span className="botcard-title">{row.botId}</span>
+                  <span className="botcard-name">{row.name ?? "—"}</span>
+                  <span className="botcard-meta">
+                    <span className="state-label">{typeLabel(botType)}</span>
+                    <span className="state-label">{row.sessionCount === null ? "—" : `${row.sessionCount} session`}</span>
+                    <span className="state-label">{row.activeDeals === null ? "—" : `${row.activeDeals} aktif deal`}</span>
+                    {row.selected && <span className="state-label ready">Seçili</span>}
+                  </span>
+                </button>
+              ))}
             </div>
           )}
         </>
@@ -189,7 +177,7 @@ export function BotContextHeader({ profile, sessionCount }: {
   return (
     <section className="panel rebalance-panel" aria-labelledby="bot-context-title">
       <nav className="breadcrumb" aria-label="Konum">
-        <span>Botlar &amp; Stratejiler</span>
+        <span>Botlarım</span>
         <span aria-hidden="true">›</span>
         <span aria-current="page">{profile?.bot_id ?? "bot seçili değil"}</span>
       </nav>

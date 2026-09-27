@@ -676,6 +676,20 @@ def _state_payload(state: State) -> dict[str, object]:
         "max_dd": ratio(state.max_dd),
         "halted": state.halted,
         "safety_stopped": state.safety_stopped,
+        # Faz 17 H.1/H.2/I.1: added well after this store's original field
+        # set -- omitted here for years, which silently dropped them on
+        # every save/reload round-trip (a real bug, fixed together with the
+        # new testnet DCA session store that needs these to survive).
+        "ladder_start_qty": None if state.ladder_start_qty is None else ratio(state.ladder_start_qty),
+        "now_us": state.now_us,
+        "deal_started_at_us": state.deal_started_at_us,
+        "deal_duration_expired": state.deal_duration_expired,
+        "sl_breach_streak": state.sl_breach_streak,
+        # F09a: armed trailing water must survive save/reload, or a
+        # restart would silently disarm an in-profit deal's ratchet.
+        "trail_water": None if state.trail_water is None else ratio(state.trail_water),
+        "profit_cost_recovered": state.profit_cost_recovered,
+        "retained_profit_base": ratio(state.retained_profit_base),
         "orders": {
             key: _order_payload(order) for key, order in sorted(state.orders.items())
         },
@@ -695,29 +709,53 @@ def _order_payload(order: Order) -> dict[str, object]:
         "notional": ratio(order.notional),
         "status": order.status,
         "complete": order.complete,
+        "order_type": order.order_type,
     }
     if order.intent_id is not None:
         payload["intent_id"] = order.intent_id
+    if order.reference_price is not None:
+        payload["reference_price"] = ratio(order.reference_price)
+    if order.realized_slippage is not None:
+        payload["realized_slippage"] = ratio(order.realized_slippage)
     return payload
 
 
+_STATE_REQUIRED_FIELDS = {
+    "position",
+    "realized",
+    "fees",
+    "funding",
+    "entry_notional",
+    "mark",
+    "anchor",
+    "peak",
+    "max_dd",
+    "halted",
+    "safety_stopped",
+    "orders",
+    "blockers",
+    "last_rejection",
+}
+# Faz 17 H.1/H.2/I.1: optional-on-decode so a record written before these
+# fields existed still loads, defaulting exactly like a fresh State() would.
+_STATE_OPTIONAL_FIELDS = {
+    "ladder_start_qty",
+    "now_us",
+    "deal_started_at_us",
+    "deal_duration_expired",
+    "sl_breach_streak",
+    "trail_water",
+    "profit_cost_recovered",
+    "retained_profit_base",
+}
+
+
 def _decode_state(payload: object) -> State:
-    if not isinstance(payload, dict) or set(payload) != {
-        "position",
-        "realized",
-        "fees",
-        "funding",
-        "entry_notional",
-        "mark",
-        "anchor",
-        "peak",
-        "max_dd",
-        "halted",
-        "safety_stopped",
-        "orders",
-        "blockers",
-        "last_rejection",
-    }:
+    if (
+        not isinstance(payload, dict)
+        or not _STATE_REQUIRED_FIELDS <= set(payload)
+        or not (set(payload) - _STATE_REQUIRED_FIELDS) <= _STATE_OPTIONAL_FIELDS
+    ):
         raise SpotBindingStoreError("SPOT_BINDING_RECORD_CORRUPT", "Core state alanları geçersiz.")
     try:
         position = payload["position"]
@@ -743,6 +781,26 @@ def _decode_state(payload: object) -> State:
             payload["last_rejection"], str
         ):
             raise ValueError("Invalid rejection")
+        now_us = payload.get("now_us")
+        if now_us is not None and type(now_us) is not int:
+            raise ValueError("Invalid now_us")
+        deal_started_at_us = payload.get("deal_started_at_us")
+        if deal_started_at_us is not None and type(deal_started_at_us) is not int:
+            raise ValueError("Invalid deal_started_at_us")
+        deal_duration_expired = payload.get("deal_duration_expired", False)
+        if type(deal_duration_expired) is not bool:
+            raise ValueError("Invalid deal_duration_expired")
+        sl_breach_streak = payload.get("sl_breach_streak", 0)
+        if type(sl_breach_streak) is not int:
+            raise ValueError("Invalid sl_breach_streak")
+        trail_water = _optional_fraction(payload.get("trail_water"))
+        profit_cost_recovered = payload.get("profit_cost_recovered", False)
+        if type(profit_cost_recovered) is not bool:
+            raise ValueError("Invalid profit_cost_recovered")
+        retained_profit_base_raw = payload.get("retained_profit_base")
+        retained_profit_base = (
+            Q(0) if retained_profit_base_raw is None else _fraction(retained_profit_base_raw)
+        )
         return State(
             position=Position(_fraction(position["qty"]), _fraction(position["cost"])),
             realized=_fraction(payload["realized"]),
@@ -755,6 +813,14 @@ def _decode_state(payload: object) -> State:
             max_dd=_fraction(payload["max_dd"]),
             halted=payload["halted"],
             safety_stopped=payload["safety_stopped"],
+            ladder_start_qty=_optional_fraction(payload.get("ladder_start_qty")),
+            now_us=now_us,
+            deal_started_at_us=deal_started_at_us,
+            deal_duration_expired=deal_duration_expired,
+            sl_breach_streak=sl_breach_streak,
+            trail_water=trail_water,
+            profit_cost_recovered=profit_cost_recovered,
+            retained_profit_base=retained_profit_base,
             orders=orders,
             blockers=blockers,
             last_rejection=payload["last_rejection"],
@@ -765,26 +831,39 @@ def _decode_state(payload: object) -> State:
         ) from exc
 
 
+_ORDER_REQUIRED_FIELDS = {
+    "order_id",
+    "role",
+    "side",
+    "qty",
+    "limit",
+    "filled",
+    "notional",
+    "status",
+    "complete",
+}
+# Faz 17 G.2: `order_type`/`reference_price`/`realized_slippage` are new on
+# Order and optional on decode -- a record written before this feature
+# existed must still load, defaulting exactly like a fresh Order() would.
+_ORDER_OPTIONAL_FIELDS = {"intent_id", "order_type", "reference_price", "realized_slippage"}
+
+
 def _decode_order(payload: object) -> Order:
-    fields = {
-        "order_id",
-        "role",
-        "side",
-        "qty",
-        "limit",
-        "filled",
-        "notional",
-        "status",
-        "complete",
-    }
     payload_fields = set(payload) if isinstance(payload, dict) else None
-    if payload_fields not in (fields, fields | {"intent_id"}):
+    if (
+        payload_fields is None
+        or not _ORDER_REQUIRED_FIELDS <= payload_fields
+        or not (payload_fields - _ORDER_REQUIRED_FIELDS) <= _ORDER_OPTIONAL_FIELDS
+    ):
         raise ValueError("Invalid order fields")
     if type(payload["complete"]) is not bool:
         raise ValueError("Invalid order flag")
     intent_id = payload.get("intent_id")
     if intent_id is not None:
         intent_id = identifier(intent_id)
+    order_type = payload.get("order_type", "LIMIT")
+    if order_type not in ("MARKET", "LIMIT"):
+        raise ValueError("Invalid order type")
     return Order(
         order_id=payload["order_id"],
         role=payload["role"],
@@ -796,6 +875,9 @@ def _decode_order(payload: object) -> Order:
         status=payload["status"],
         complete=payload["complete"],
         intent_id=intent_id,
+        order_type=order_type,
+        reference_price=_optional_fraction(payload.get("reference_price")),
+        realized_slippage=_optional_fraction(payload.get("realized_slippage")),
     )
 
 
@@ -815,17 +897,59 @@ def _optional_fraction(value: object) -> Q | None:
     return None if value is None else _fraction(value)
 
 
+_CONFIG_PAYLOAD_CATEGORICAL = {
+    "symbol", "base_asset", "quote_asset", "target_mode", "safety_count",
+    "margin_mode", "direction", "max_active_safety_orders",
+    "base_order_type", "safety_order_type", "exit_order_type", "stop_order_type",
+    "slippage_reference",
+    "stop_loss_confirmation_bars", "max_deal_duration_seconds", "max_deal_duration_action",
+    "cooldown_seconds",
+    "profit_asset",
+    "safety_sizing",
+    "base_sizing",
+}
+# Faz 17 H.2: a Q field that may be None (like max_adverse_slippage_bps) --
+# exact_text() would crash on None, so it needs the same None-aware branch.
+_CONFIG_PAYLOAD_OPTIONAL_EXACT = {
+    "max_adverse_slippage_bps",
+    "stop_loss_rate",
+    # F09a: without this, _config_payload crashes on exact_text(None)
+    # for every default (non-trailing) config.
+    "trailing_take_profit_rate",
+    # Faz G1-kalan/a: entry price band -- exact when set, null when open.
+    "min_entry_price",
+    "max_entry_price",
+}
+
+
+def _config_field_payload(config: Config, name: str) -> object:
+    value = getattr(config, name)
+    if name in _CONFIG_PAYLOAD_CATEGORICAL:
+        return value
+    if name in _CONFIG_PAYLOAD_OPTIONAL_EXACT:
+        return None if value is None else exact_text(value)
+    if name == "take_profit_ladder":
+        # Faz 17 H.1: a tuple of TakeProfitLevel (or None) -- neither
+        # categorical passthrough nor a single exact_text() value fits, so
+        # each level is exploded into its own [weight, target_percent] pair.
+        return (
+            None
+            if value is None
+            else [[exact_text(level.weight), exact_text(level.target_percent)] for level in value]
+        )
+    return exact_text(value)
+
+
 def _config_payload(config: Config) -> dict[str, object]:
+    # safety_sizing is emitted only when non-default so every pre-Faz-W
+    # persisted payload (and its identity hash) stays byte-identical.
     return {
         "mode": "offline",
         "schema_version": 1,
         **{
-            name: (
-                getattr(config, name)
-                if name in {"symbol", "base_asset", "quote_asset", "target_mode", "safety_count"}
-                else exact_text(getattr(config, name))
-            )
+            name: _config_field_payload(config, name)
             for name in config.__dataclass_fields__
+            if not (name in ("safety_sizing", "base_sizing") and getattr(config, name) == "BASE")
         },
     }
 

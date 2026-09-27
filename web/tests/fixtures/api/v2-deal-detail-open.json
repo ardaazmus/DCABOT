@@ -1,0 +1,39 @@
+{
+  "data": {
+    "bot_id": "bot_65ca1f6fd849",
+    "bot_name": "W-F6 fixture",
+    "symbol": "BTCUSDT",
+    "mode": "PAPER",
+    "deal": 1,
+    "started_at_us": 1790459940000000,
+    "closed_at_us": null,
+    "safety_orders_filled": 0,
+    "manual_orders_filled": 0,
+    "profit": null,
+    "close_reason": null,
+    "duration_us": null,
+    "fees": "0.02440604",
+    "gross_profit": null,
+    "qty": "0.00029",
+    "cost": "24.4060375",
+    "average_price": "84158.75",
+    "mark_price": "84158.75",
+    "unrealized_profit": "0",
+    "unrealized_percent": "0",
+    "take_profit_price": "85841.93",
+    "next_safety_order_price": "82896.36",
+    "cumulative_profit": null,
+    "events": [
+      {
+        "time_us": 1790459940000000,
+        "kind": "DEAL_STARTED",
+        "detail": {
+          "deal": 1,
+          "fee": "0.02440604",
+          "price": "84158.75",
+          "qty": "0.00029"
+        }
+      }
+    ]
+  }
+}

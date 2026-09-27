@@ -42,7 +42,7 @@ BINDABLE_PARAMS = frozenset(
     _NUMERIC_POSITIVE
     | _NUMERIC_FRACTION
     | _NUMERIC_NONNEGATIVE
-    | {"safety_count", "target_mode"}
+    | {"safety_count", "target_mode", "max_active_safety_orders"}
 )
 _TARGET_MODES = frozenset({"GROSS_PRICE_RETURN", "NET_QUOTE"})
 
@@ -163,6 +163,17 @@ def _checked_value(key: str, value: object) -> object:
             raise TemplateBindingError(
                 "TEMPLATE_BINDING_PARAM_INVALID",
                 "safety_count 0 ile 50 arasında integer olmalıdır.",
+            )
+        return value
+    if key == "max_active_safety_orders":
+        # Faz 17 G.3: None açık varsayılan (=safety_count); aralık burada,
+        # safety_count ile çapraz-doğrulama Config.parse'ta (materialize).
+        if value is None:
+            return None
+        if type(value) is not int or not 0 <= value <= 50:
+            raise TemplateBindingError(
+                "TEMPLATE_BINDING_PARAM_INVALID",
+                "max_active_safety_orders None ya da 0 ile 50 arasında integer olmalıdır.",
             )
         return value
     if key == "target_mode":

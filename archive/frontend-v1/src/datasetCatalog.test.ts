@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatDatasetBytes,
   isActiveDownloadJob,
+  isEquityCurve,
   shortSha256,
 } from "./datasetCatalog";
 
@@ -14,6 +15,15 @@ describe("datasetCatalog yardımcıları", () => {
 
   it("sha256 özetini yalnızca sunum için kısaltır", () => {
     expect(shortSha256("a".repeat(64))).toBe("aaaaaaaaaaaa…aaaaaaaa");
+  });
+
+  it("equity eğrisini string-listesi olarak doğrular", () => {
+    expect(isEquityCurve(["100", "99.5", "-3"])).toBe(true);
+    expect(isEquityCurve([])).toBe(true);
+    expect(isEquityCurve(["100", 99])).toBe(false);
+    expect(isEquityCurve("100")).toBe(false);
+    expect(isEquityCurve(null)).toBe(false);
+    expect(isEquityCurve(undefined)).toBe(false);
   });
 
   it("yalnızca çalışan indirme durumlarını aktif sayar", () => {

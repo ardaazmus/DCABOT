@@ -10,6 +10,7 @@ from dcabot.application.testnet_dca_session import (
     apply_mark,
     build_live_config,
     new_session,
+    paper_fill_next_action,
     place_next_action,
     propose_next_action,
     sync_order_fills,
@@ -106,6 +107,7 @@ def _config():
         initial_equity="1000",
         max_entry_notional="1000",
         minimum_equity="10",
+        margin_mode="ISOLATED",
     )
 
 
@@ -148,6 +150,34 @@ class TestnetDcaSessionTests(unittest.IsolatedAsyncioTestCase):
         session = apply_mark(session, "100")
 
         self.assertEqual(propose_next_action(session), ("BASE", number("0.001")))
+
+    def test_paper_fill_applies_locally_at_the_same_price_place_would_send(self):
+        """2026-09-23 design decision (docs/KARARLAR.md): "paper" mode is the
+        real engine + real market data, no real order API. Fills locally at
+        `role_price()` -- the exact price `place_next_action` would sign and
+        send -- via engine.py's own INTENT+FILL, never a re-derived price."""
+        session = new_session(_config(), "BTCUSDT")
+        session = apply_mark(session, "100")
+        role, qty = propose_next_action(session)
+        self.assertEqual(role, "BASE")
+
+        filled = paper_fill_next_action(session, role=role, qty=qty, attempt_id="paper-1")
+
+        order = filled.state.orders["paper-1"]
+        self.assertTrue(order.complete)
+        self.assertEqual(order.filled, qty)
+        self.assertEqual(filled.state.position.qty, qty)
+        # No venue call happened -- no binding was ever recorded.
+        self.assertEqual(filled.bindings, ())
+
+    def test_paper_fill_never_touches_credentials_or_the_network(self):
+        """The function signature itself proves this: no credential_id,
+        provider, clock, or websocket_factory parameter exists to pass one
+        through -- unlike `place_next_action`."""
+        import inspect
+
+        params = set(inspect.signature(paper_fill_next_action).parameters)
+        self.assertEqual(params, {"session", "role", "qty", "attempt_id"})
 
     async def test_full_arc_base_then_safety_then_exit(self):
         with TemporaryDirectory() as directory:

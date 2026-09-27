@@ -4,14 +4,20 @@
     {
       "name": "dcabot-api",
       "runtimeExecutable": "powershell",
-      "runtimeArgs": ["-NoProfile", "-Command", "$env:PYTHONPATH='src'; uv run --frozen uvicorn dcabot.server.api:app --host 127.0.0.1 --port 8000"],
-      "port": 8000
+      "runtimeArgs": ["-NoProfile", "-Command", "$env:PYTHONPATH='src'; uv run --frozen uvicorn dcabot.server.api:app --host 127.0.0.1 --port 8770"],
+      "port": 8770
     },
     {
-      "name": "dcabot-frontend",
+      "name": "dcabot-frontend-v1-archive",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "frontend", "run", "dev", "--", "--host", "127.0.0.1"],
+      "runtimeArgs": ["--prefix", "archive/frontend-v1", "run", "dev", "--", "--host", "127.0.0.1"],
       "port": 5173
+    },
+    {
+      "name": "dcabot-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "web", "run", "dev"],
+      "port": 3770
     }
   ]
 }

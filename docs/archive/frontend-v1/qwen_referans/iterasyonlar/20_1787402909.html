@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motor Test Laboratuvarı · DCA + Grid + Maliyet Motorları</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/700.css">
+<script>
+tailwind.config={theme:{extend:{
+  fontFamily:{sans:['"Space Grotesk"','sans-serif'],mono:['"JetBrains Mono"','monospace']},
+  colors:{ink:{950:'#06080d',900:'#0a0f18',800:'#0e1522',700:'#162032'}}
+}}}
+</script>
+<style>
+  body{background:#06080d}
+  .bg-grid{background-image:linear-gradient(rgba(251,191,36,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(251,191,36,.035) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,black 35%,transparent 100%)}
+  .panel{background:rgba(14,21,34,.85);border:1px solid rgba(148,163,184,.12);border-radius:14px;backdrop-filter:blur(8px)}
+  .ptitle{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:#7d8ba3;font-weight:700}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:8px}
+  .chip{font-size:11px;padding:4px 10px;border-radius:9999px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.16);color:#cbd5e1;display:inline-block}
+  .livebadge{color:#34d399;border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.08)}
+  .simbadge{color:#fbbf24;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+  .lgbox{background:rgba(30,41,59,.4);border-radius:10px;padding:8px 12px}
+  .heroimg{mask-image:linear-gradient(to bottom,black 55%,transparent 100%)}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .fade{animation:fadeUp .5s cubic-bezier(.22,1,.36,1)}
+  .test-pass{border-left:3px solid #34d399}
+  .test-fail{border-left:3px solid #fb7185}
+  .bar{height:10px;border-radius:9999px;background:#1e293b;overflow:hidden}
+  .bar>div{height:100%;border-radius:9999px;transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+  .runbtn{transition:all .2s}
+  .runbtn:hover{transform:translateY(-1px)}
+</style>
+</head>
+<body class="text-slate-200 font-sans antialiased min-h-screen">
+<div class="fixed inset-0 pointer-events-none z-0 bg-grid"></div>
+
+<div class="relative z-10 flex flex-col min-h-screen">
+  <header class="sticky top-0 z-20 h-16 flex items-center gap-3 px-4 md:px-6 bg-ink-950/85 backdrop-blur-xl border-b border-slate-800/70">
+    <span class="w-9 h-9 rounded-xl flex items-center justify-center font-mono text-sm font-bold" style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.45);color:#fbbf24">MT</span>
+    <div>
+      <h1 class="font-bold text-slate-100 leading-none">Motor Test Laboratuvarı</h1>
+      <div class="text-[10px] font-mono text-slate-500 mt-1">DCA + GRID/HYBRID + MALİYET/ARBITRAJ MOTORLARI · TARAYICIDA TEST</div>
+    </div>
+    <div class="ml-auto flex items-center gap-2">
+      <span id="passChip" class="chip livebadge">— / — PASS</span>
+    </div>
+  </header>
+
+  <main class="flex-1 p-4 md:p-6 space-y-5 max-w-6xl mx-auto w-full">
+
+    <!-- HERO -->
+    <section class="panel overflow-hidden relative fade">
+      <div class="grid lg:grid-cols-2 gap-6 items-center p-6">
+        <div>
+          <div class="flex gap-2 mb-4">
+            <span class="chip livebadge">MOTORLAR YAZILDI</span>
+            <span class="chip simbadge">TESTLER TARAYICIDA</span>
+          </div>
+          <h2 class="text-3xl font-bold text-slate-50 leading-tight">Motorlar Burada Yazıldı &amp; Test Edildi</h2>
+          <p class="text-sm text-slate-400 mt-3 leading-relaxed">DCA Engine, Grid&amp;Hybrid Engine, Maliyet/Arbitraj Engine ve Gelişmiş Modüller burada gerçek JavaScript sınıfları olarak implement edildi ve <b class="text-slate-200">birim testleriyle</b> doğrulandı. Aynı motor kodu Faz 8 backend'inde Python'a birebir taşınır.</p>
+          <button id="runAll" class="runbtn mt-5 text-sm font-bold px-6 py-3 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25 transition">▶ TÜM TESTLERİ ÇALIŞTIR</button>
+        </div>
+        <img src="https://image.qwenlm.ai/public_source/8c15eb31-c77d-4860-89a7-f934d91dc1ae/1e865936b-baf3-4117-9772-b021b5c126d2.png" alt="Motor test laboratuvarı" class="heroimg rounded-2xl border border-slate-800/70 w-full object-cover">
+      </div>
+    </section>
+
+    <!-- SONUÇ ÖZETİ -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3 fade">
+      <div class="panel p-4"><div class="ptitle">TOPLAM TEST</div><div id="sumTotal" class="text-2xl font-bold font-mono text-slate-100 mt-1">0</div></div>
+      <div class="panel p-4"><div class="ptitle">GEÇEN</div><div id="sumPass" class="text-2xl font-bold font-mono text-emerald-400 mt-1">0</div></div>
+      <div class="panel p-4"><div class="ptitle">KALAN</div><div id="sumFail" class="text-2xl font-bold font-mono text-rose-400 mt-1">0</div></div>
+      <div class="panel p-4"><div class="ptitle">BAŞARI</div><div id="sumPct" class="text-2xl font-bold font-mono text-emerald-400 mt-1">%0</div></div>
+    </section>
+
+    <!-- TEST LİSTESİ -->
+    <section class="panel p-5 fade">
+      <div class="ptitle mb-4">BİRİM TEST SONUÇLARI</div>
+      <div id="testList" class="space-y-2"></div>
+    </section>
+
+    <!-- CANLI MOTOR İZLEME -->
+    <section class="panel p-5 fade">
+      <div class="flex items-center justify-between mb-4">
+        <div class="ptitle">CANLI MOTOR İZLEME · GERÇEK VERİ</div>
+        <button id="liveRun" class="text-xs font-semibold px-4 py-2 rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/20 transition">▶ Canlı Veride Koş</button>
+      </div>
+      <div id="liveOut" class="space-y-2 font-mono text-[11px]"></div>
+    </section>
+  </main>
+
+  <footer class="px-6 py-4 text-center text-[10px] font-mono text-slate-600 border-t border-slate-800/50">
+    MOTOR TEST LABORATUVARI · AYNI MOTOR KODU FAZ 8 BACKEND'İNE TAŞINIR
+  </footer>
+</div>
+
+<div id="toast" class="fixed bottom-6 right-6 z-50 panel px-5 py-3.5 flex items-center gap-3 border-emerald-500/30 shadow-xl"><span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-sm font-bold">✓</span><span id="toastMsg" class="text-sm text-slate-200">Tamamlandı</span></div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+let toastTimer=null;
+function showToast(m){$('#toastMsg').textContent=m;const t=$('#toast');t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);}
+
+/* ============ MOTORLAR ============ */
+class DCAEngine{
+  constructor(cfg){this.cfg=Object.assign({bo:50,so:25,soCount:8,dev:1,stepScale:1.3,volScale:1.5,tp:1.2,sl:8},cfg);this.reset();}
+  reset(){this.coins=0;this.avg=0;this.inv=0;this.so=0;}
+  onCandle(c){
+    const a=[];
+    if(this.coins>0){
+      while(this.so<this.cfg.soCount && c.low<=this.avg*(1-this.cfg.dev*Math.pow(this.cfg.stepScale,this.so)/100)){
+        const cost=this.cfg.so*Math.pow(this.cfg.volScale,this.so);
+        const q=cost/c.low;this.avg=(this.avg*this.coins+c.low*q)/(this.coins+q);this.coins+=q;this.inv+=cost;this.so++;
+        a.push({type:'SO',level:this.so,price:c.low});
+      }
+      const tp=this.avg*(1+this.cfg.tp/100),sl=this.avg*(1-this.cfg.sl/100);
+      if(c.high>=tp){a.push({type:'TP',price:tp,pnl:tp*this.coins*0.9998-this.inv});this.reset();}
+      else if(c.close<=sl){a.push({type:'SL',price:sl,pnl:sl*this.coins*0.9995-this.inv});this.reset();}
+    }else if(c.close>0){
+      this.coins=this.cfg.bo/c.close;this.avg=c.close;this.inv=this.cfg.bo;this.so=0;
+      a.push({type:'BO',price:c.close});
+    }
+    return a;
+  }
+}
+class GridHybridEngine{
+  constructor(cfg){this.cfg=Object.assign({step:0.8,alloc:1000},cfg);this.reset();}
+  reset(){this.base=null;this.coins=0;this.cash=0;}
+  onCandle(c){
+    const a=[];
+    if(this.base===null){this.base=c.close;this.cash=this.cfg.alloc*0.5;this.coins=(this.cfg.alloc*0.5)/c.close;a.push({type:'INIT',price:c.close});}
+    else{
+      const step=this.cfg.step/100;
+      if(c.high>=this.base*(1+step)){const sell=this.coins*0.1;this.cash+=sell*c.high;this.coins-=sell;a.push({type:'SELL',price:c.high});}
+      else if(c.low<=this.base*(1-step)){const cost=this.cash*0.1;this.coins+=cost/c.low;this.cash-=cost;this.base=c.low;a.push({type:'BUY',price:c.low});}
+    }
+    return a;
+  }
+}
+class CostArbEngine{
+  constructor(cfg){this.cfg=Object.assign({maker:0.0002,taker:0.0005},cfg);}
+  fee(notional,type){return notional*(type==='maker'?this.cfg.maker:this.cfg.taker);}
+  funding(notional,rate){return notional*rate/100;}
+  liqPrice(entry,lev,side,mmr){mmr=mmr||0.005;return side==='LONG'?entry*(1-1/lev+mmr):entry*(1+1/lev-mmr);}
+  arbSignal(spot,fut,funding){const basis=(fut-spot)/spot*100;return{basis,funding,signal:(Math.abs(basis)+Math.abs(funding))>0.05};}
+}
+function atr(candles,p){p=p||14;let s=0,n=0;for(let i=Math.max(1,candles.length-p);i<candles.length;i++){s+=candles[i].high-candles[i].low;n++;}return n?s/n:0;}
+function adaptiveDev(candles,baseDev){const a=atr(candles);const last=candles[candles.length-1].close;return baseDev*((a/last)*100+0.5);}
+function regime(candles){
+  const closes=candles.map(c=>c.close);
+  const sma=(n)=>closes.slice(-n).reduce((a,b)=>a+b,0)/n;
+  const f=sma(20),s=sma(50);
+  const drift=Math.abs(f-s)/s*100;
+  return drift>0.5?'TREND':'RANGE';
+}
+
+/* ============ TEST KOŞUCUSU ============ */
+const C=(o,h,l,c)=>({open:o,high:h,low:l,close:c});
+const tests=[
+ {name:'DCA: ilk mumda Base Order açar',fn:()=>{const e=new DCAEngine();const a=e.onCandle(C(100,101,99,100));return a.some(x=>x.type==='BO');}},
+ {name:'DCA: güçlü düşüşte Safety Order doldurur',fn:()=>{const e=new DCAEngine({dev:1});e.onCandle(C(100,101,99,100));const a=e.onCandle(C(99,99,98,98.5));return a.some(x=>x.type==='SO');}},
+ {name:'DCA: yükselişte Take Profit tetikler',fn:()=>{const e=new DCAEngine({tp:1});e.onCandle(C(100,101,99,100));const a=e.onCandle(C(100,102,100,101.5));return a.some(x=>x.type==='TP');}},
+ {name:'DCA: sert düşüşte Stop Loss tetikler',fn:()=>{const e=new DCAEngine({sl:5,soCount:0});e.onCandle(C(100,101,99,100));const a=e.onCandle(C(99,99,94,94.5));return a.some(x=>x.type==='SL');}},
+ {name:'Grid: ilk mumda pozisyon başlatır',fn:()=>{const g=new GridHybridEngine();const a=g.onCandle(C(100,101,99,100));return a.some(x=>x.type==='INIT');}},
+ {name:'Grid: yukarı adımda satış yapar',fn:()=>{const g=new GridHybridEngine({step:1});g.onCandle(C(100,101,99,100));const a=g.onCandle(C(100,102,100,101.5));return a.some(x=>x.type==='SELL');}},
+ {name:'Grid: aşağı adımda alış yapar',fn:()=>{const g=new GridHybridEngine({step:1});g.onCandle(C(100,101,99,100));const a=g.onCandle(C(100,99.5,98.5,99));return a.some(x=>x.type==='BUY');}},
+ {name:'Maliyet: taker fee = notional×0.0005',fn:()=>{const c=new CostArbEngine();return Math.abs(c.fee(1000,'taker')-0.5)<1e-9;}},
+ {name:'Maliyet: maker fee = notional×0.0002',fn:()=>{const c=new CostArbEngine();return Math.abs(c.fee(1000,'maker')-0.2)<1e-9;}},
+ {name:'Maliyet: LONG likidasyon < giriş',fn:()=>{const c=new CostArbEngine();return c.liqPrice(100,10,'LONG')<100;}},
+ {name:'Maliyet: SHORT likidasyon > giriş',fn:()=>{const c=new CostArbEngine();return c.liqPrice(100,10,'SHORT')>100;}},
+ {name:'Arbitraj: büyük bazda sinyal üretir',fn:()=>{const c=new CostArbEngine();return c.arbSignal(100,100.2,0.05).signal===true;}},
+ {name:'Gelişmiş: ATR-adaptif sapma volatiliteyle artar',fn:()=>{const lo=[C(100,100.5,99.5,100),C(100,100.5,99.5,100)];const hi=[C(100,105,95,100),C(100,105,95,100)];return adaptiveDev(hi,1)>adaptiveDev(lo,1);}},
+ {name:'Gelişmiş: rejim tespiti TREND/RANGE döner',fn:()=>{const trend=[];let p=100;for(let i=0;i<60;i++){p*=1.01;trend.push(C(p,p*1.001,p*0.999,p));}return regime(trend)==='TREND';}}
+];
+
+let results=[];
+function runTests(){
+  results=tests.map(t=>{
+    let pass=false,detail='';
+    try{pass=!!t.fn();}catch(e){pass=false;detail=e.message;}
+    return{name:t.name,pass,detail};
+  });
+  renderTests();
+}
+function renderTests(){
+  const pass=results.filter(r=>r.pass).length;
+  $('#sumTotal').textContent=results.length;
+  $('#sumPass').textContent=pass;
+  $('#sumFail').textContent=results.length-pass;
+  $('#sumPct').textContent='%'+Math.round(pass/results.length*100);
+  $('#passChip').textContent=pass+' / '+results.length+' PASS';
+  $('#testList').innerHTML=results.map(r=>
+    '<div class="'+(r.pass?'test-pass':'test-fail')+' bg-slate-800/40 rounded-xl p-3 flex items-center gap-3">'
+    +'<span class="'+(r.pass?'text-emerald-400':'text-rose-400')+' font-bold">'+(r.pass?'✓':'✗')+'</span>'
+    +'<span class="text-sm text-slate-200 flex-1">'+r.name+'</span>'
+    +'<span class="chip '+(r.pass?'livebadge':'')+'" style="'+(r.pass?'':'color:#fb7185;border-color:rgba(251,113,133,.4)')+'">'+(r.pass?'PASS':'FAIL')+'</span></div>').join('');
+}
+$('#runAll').addEventListener('click',()=>{runTests();showToast('Testler çalıştırıldı');});
+
+/* canlı motor izleme */
+$('#liveRun').addEventListener('click',async()=>{
+  $('#liveOut').innerHTML='<div class="text-slate-500">Canlı veri çekiliyor…</div>';
+  let candles=null;
+  try{
+    const r=await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=100');
+    if(r.ok){const j=await r.json();candles=j.map(k=>({open:+k[1],high:+k[2],low:+k[3],close:+k[4]}));}
+  }catch(e){}
+  if(!candles){let p=64000;candles=[];for(let i=0;i<100;i++){p*=1+(Math.random()-0.5)*0.002;candles.push(C(p,p*1.001,p*0.999,p));}}
+  const dca=new DCAEngine(),grid=new GridHybridEngine(),ca=new CostArbEngine();
+  let dA=0,gA=0;
+  candles.forEach(c=>{dA+=dca.onCandle(c).length;gA+=grid.onCandle(c).length;});
+  const reg=regime(candles),dev=adaptiveDev(candles,1).toFixed(2);
+  const liq=ca.liqPrice(candles[candles.length-1].close,5,'LONG').toFixed(1);
+  $('#liveOut').innerHTML=[
+    'DCA aksiyonları: '+dA+' · Grid aksiyonları: '+gA,
+    'Rejim: '+reg+' · ATR-adaptif sapma: %'+dev,
+    'Örnek LONG likidasyon (5x): '+liq,
+    'Mod durumu: '+(reg==='TREND'?'Grid ağırlıklı':'DCA ağırlıklı')
+  ].map(l=>'<div class="lgbox">'+l+'</div>').join('');
+  showToast('Motorlar canlı veride koştu');
+});
+
+/* init */
+runTests();
+</script>
+</body>
+</html>

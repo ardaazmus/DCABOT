@@ -1,20 +1,22 @@
 """Small local-only HTTP API that delegates preview calculations to the core."""
 
+import asyncio
 import json
 import os
 import re
+import shutil
 import time
 from copy import deepcopy
 from datetime import date, datetime, timezone
 from pathlib import Path
-from threading import Lock
+from threading import Lock, Thread
 from typing import Annotated, Any, Literal
 from uuid import UUID, uuid4
 
 from fastapi import FastAPI, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from starlette.middleware.body_limit import RequestBodyLimitMiddleware
@@ -54,7 +56,9 @@ from dcabot.application.historical_run_contract import (
     HistoricalRunCapture,
     HistoricalRunContractError,
     build_historical_run_capture,
+    performance_metrics,
 )
+from dcabot.application.equity_curve_scores import equity_curve_sharpe_ratio
 from dcabot.application.paper_feed_binding import (
     apply_observations,
     new_market_state,
@@ -134,6 +138,19 @@ from dcabot.application.two_leg_fill_projection import (
     TwoLegFillProjection,
 )
 from dcabot.persistence.two_leg_journal import TwoLegJournal
+from dcabot.persistence.bot_store import BotStore
+from dcabot.server import bot_runner, telegram_worker, v2_backtests, v2_bots, v2_futures_grid_backtests, v2_grid_backtests, v2_notifications_telegram, v2_stats
+from dcabot.data_adapters.binance_futures_public_transport import (
+    fetch_funding_rate_history,
+    fetch_futures_public_klines_range,
+    fetch_futures_symbol_rules,
+    fetch_premium_index,
+)
+from dcabot.data_adapters.telegram_transport import send_telegram_message
+from dcabot.persistence.funding_cache import FundingCache
+from dcabot.persistence.notification_settings import NotificationSettings
+from dcabot.persistence.kline_cache import KlineCache
+from dcabot.application.sector_dca import bot_unsupported_reason
 from dcabot.application.bot_registry import BotProfile, BotRegistry, new_bot_profile
 from dcabot.application.dashboard import build_dashboard
 from dcabot.application.settlement_profile import (
@@ -160,7 +177,26 @@ from dcabot.persistence.lifecycle_store import LifecycleStore, LifecycleStoreErr
 from dcabot.application.signal_candidate_binding import bind_signal_candidate
 from dcabot.application.signal_event_contract import new_signal_event
 from dcabot.application.signal_intake import SignalIntakeError, hash_signal_payload, verify_signal_signature
-from dcabot.application.signal_native_indicators import detect_crosses
+from dcabot.application.signal_native_indicators import (
+    SignalIndicatorError,
+    detect_crosses,
+    ema_series,
+    sma_series,
+)
+from dcabot.application.momentum_oscillators import (
+    MomentumOscillatorError,
+    macd_series,
+    stoch_rsi_series,
+)
+from dcabot.application.bollinger_bands import BollingerBandsError, bollinger_bands_series
+from dcabot.application.correlation_risk import CorrelationRiskError, evaluate_correlation_gate
+from dcabot.application.regime_detection import (
+    RegimeDetectionError,
+    adx_series,
+    bb_width_series,
+    classify_regime,
+)
+from dcabot.application.indicator_registry import available_indicators
 from dcabot.application.signal_readiness import assess_signal_readiness
 from dcabot.application.tradingview_webhook import (
     TradingViewWebhookError,
@@ -179,12 +215,35 @@ from dcabot.application.template_materialization import (
     materialize_binding,
 )
 from dcabot.application.template_profile_binding import bind_template_to_profile
+from dcabot.application.preset_comparison import (
+    PresetComparisonError,
+    PresetComparisonSide,
+    compare_bindings_on_dataset,
+)
 from dcabot.data_adapters.binance_public import BinanceTimeUnit
 from dcabot.data_adapters.binance_public_transport import (
+    MAX_KLINES_LIMIT,
+    PUBLIC_KLINE_INTERVALS,
     BinancePublicTransportError,
+    fetch_binance_public_24hr_ticker,
+    fetch_binance_public_24hr_tickers,
+    fetch_binance_public_exchange_symbols,
+    fetch_binance_public_klines,
+    fetch_binance_public_klines_range,
+    fetch_binance_public_symbol_rules,
     fetch_binance_public_trades,
 )
+from dcabot.data_adapters.binance_public_depth import (
+    BinancePublicDepthError,
+    fetch_binance_public_depth_snapshot,
+)
 from dcabot.data_adapters.public_feed import ObservationOutcome, PublicObservation
+from dcabot.application.canary_policy import disengage_kill_switch, engage_kill_switch, read_kill_switch
+from dcabot.application.canary_status import canary_status
+from dcabot.application.liquidation_status_service import (
+    LiquidationStatusService,
+    LiquidationStatusServiceError,
+)
 from dcabot.application.service import preview
 from dcabot.data_adapters.catalog import (
     BINANCE_BTCUSDT_1H_2025_01_01_DATASET,
@@ -204,6 +263,7 @@ from dcabot.data_adapters.binance_testnet_account import (
 )
 from dcabot.application.signed_request import SignedRequestError
 from dcabot.application.sweep_optimize import SweepOptimizeError, optimize_parameters
+from dcabot.application.sweep_overfitting import SweepOverfittingError, assess_sweep_overfitting
 from dcabot.application.sweep_orchestrator import SweepError
 from dcabot.application.trial_sampler import TrialSamplerError
 from dcabot.application.windows_credential_provider import WindowsCredentialManagerProvider
@@ -216,7 +276,27 @@ from dcabot.data_adapters.download_jobs import (
 from dcabot.data_adapters.quality import DataQualityError, MAX_INPUT_BYTES, quality_from_bytes
 from dcabot.data_adapters.historical import MAX_BARS, HistoricalDatasetInput, HistoricalInputError
 from dcabot.domain.config import Config
-from dcabot.domain.numbers import exact_text, number, positive
+from dcabot.domain.engine import State, report as engine_report, target
+from dcabot.application.testnet_dca_session import (
+    DcaSession,
+    TestnetDcaSessionError,
+    apply_mark,
+    new_session,
+    paper_fill_next_action,
+    place_next_action,
+    propose_next_action,
+    role_price,
+    sync_order_fills,
+)
+from dcabot.application.testnet_order_execution import TestnetOrderExecutionError
+from dcabot.data_adapters.binance_testnet_order_execution import trading_kill_switch_enabled
+from dcabot.persistence.attempt_store import AttemptStore
+from dcabot.persistence.testnet_dca_session_store import (
+    TestnetDcaSessionStore,
+    TestnetDcaSessionStoreError,
+)
+from dcabot.domain.math import Position, directional_stop_loss
+from dcabot.domain.numbers import Q, align, exact_text, number, positive, text
 from dcabot.persistence.historical_runs import (
     DEFAULT_RUN_LIST_LIMIT,
     MAX_RUN_LIST_LIMIT,
@@ -226,6 +306,22 @@ from dcabot.persistence.historical_runs import (
 
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+def _data_dir() -> Path:
+    """Mutable local state root. `DCABOT_DATA_DIR` (absolute path) lets e2e
+    runs use a throwaway directory instead of the operator's real data."""
+
+    raw = os.environ.get("DCABOT_DATA_DIR")
+    if not raw:
+        return ROOT / "data"
+    path = Path(raw)
+    if not path.is_absolute():
+        raise RuntimeError("DCABOT_DATA_DIR must be an absolute path")
+    return path
+
+
+DATA_DIR = _data_dir()
 CONFIG_PATH = ROOT / "config" / "paper.json"
 _PAPER_CONFIG_CACHE: tuple[int, dict[str, Any]] | None = None
 DEFAULT_CORS_ORIGINS = (
@@ -261,6 +357,8 @@ SMALL_JSON_BODY_LIMITS = {
     "/api/templates/import": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/templates/{template_id}/bind": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/templates/diff": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/presets/compare": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/testnet/dca-sessions/{session_id}/paper-fill": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/rebalance/plan": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/rebalance/disclose": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/signals/hash": SMALL_JSON_BODY_LIMIT_BYTES,
@@ -269,6 +367,7 @@ SMALL_JSON_BODY_LIMITS = {
     "/api/signals/intake": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/signals/indicators/cross": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/sweeps/optimize": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/sweeps/overfitting": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/signals/webhook/tradingview": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/signals/webhook/{signal_id}/bind": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/futures/grid/levels": SMALL_JSON_BODY_LIMIT_BYTES,
@@ -302,18 +401,20 @@ SMALL_JSON_BODY_LIMITS = {
     "/api/admin/backup/verify": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/recurring/schedule": SMALL_JSON_BODY_LIMIT_BYTES,
     "/api/risk/explain": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/risk/kill-switch": SMALL_JSON_BODY_LIMIT_BYTES,
+    "/api/notifications/read": SMALL_JSON_BODY_LIMIT_BYTES,
 }
 FIELD_LABELS = {
     "anchor": "Anchor fiyatı",
     "safety_qty": "Safety miktarı",
     "deviation": "Sapma",
 }
-DATASET_CACHE_DIR = ROOT / "data" / "public_cache"
+DATASET_CACHE_DIR = DATA_DIR / "public_cache"
 DATASET_CATALOG = PublicDatasetCatalog(DATASET_CACHE_DIR, [BINANCE_BTCUSDT_1H_2025_01_01_DATASET])
 DOWNLOAD_JOBS = DownloadJobManager()
 HISTORICAL_EXECUTION_LOCK = Lock()
 HISTORICAL_EXECUTIONS_LOCK = Lock()
-HISTORICAL_RUNS_PATH = ROOT / "data" / "historical_runs.sqlite3"
+HISTORICAL_RUNS_PATH = DATA_DIR / "historical_runs.sqlite3"
 HISTORICAL_EXECUTIONS: dict[str, HistoricalRunCapture] = {}
 MAX_EPHEMERAL_HISTORICAL_EXECUTIONS = 16
 MAX_HISTORICAL_RUN_DETAIL_RESPONSE_BYTES = 256 * 1024
@@ -344,13 +445,41 @@ BinanceTestnetSymbol = Annotated[
     str,
     Field(min_length=1, max_length=32, pattern=r"^[^\x00-\x20\x7f]{1,32}$"),
 ]
+# Same alphabet as the public transport's own `_SYMBOL` gate: the handler
+# rejects before the transport is touched (422), the transport re-checks.
+BinancePublicSymbol = Annotated[
+    str,
+    Field(min_length=1, max_length=20, pattern=r"^[A-Z0-9]{1,20}$"),
+]
+_BINANCE_PUBLIC_SYMBOL_RE = re.compile(r"[A-Z0-9]{1,20}\Z", re.ASCII)
 
+
+# Budgets derived from each validator's own caps: series are <= 5000
+# decimal strings of <= 50 chars; bar series carry 4-5 such fields per bar.
+CONFIG_JSON_BODY_LIMIT_BYTES = 16 * 1024
+SERIES_JSON_BODY_LIMIT_BYTES = 320 * 1024
+PAIRED_SERIES_JSON_BODY_LIMIT_BYTES = 640 * 1024
+BAR_SERIES_JSON_BODY_LIMIT_BYTES = 2 * 1024 * 1024
 
 ROUTE_BODY_LIMITS = {
     **SMALL_JSON_BODY_LIMITS,
     # Upload route: own 20 MB budget enforced before the handler reads;
     # a lying or missing Content-Length must not cause an unbounded read.
     "/api/data-quality": MAX_INPUT_BYTES,
+    "/api/preview/full": CONFIG_JSON_BODY_LIMIT_BYTES,
+    "/api/testnet/dca-sessions": CONFIG_JSON_BODY_LIMIT_BYTES,
+    "/api/testnet/dca-sessions/{session_id}/mark": CONFIG_JSON_BODY_LIMIT_BYTES,
+    "/api/testnet/dca-sessions/{session_id}/place": CONFIG_JSON_BODY_LIMIT_BYTES,
+    "/api/testnet/dca-sessions/{session_id}/sync": CONFIG_JSON_BODY_LIMIT_BYTES,
+    "/api/datasets/{dataset_id}/draft-level": CONFIG_JSON_BODY_LIMIT_BYTES,
+    "/api/historical-runs/{run_id}/reproduce": CONFIG_JSON_BODY_LIMIT_BYTES,
+    "/api/indicators/sma": SERIES_JSON_BODY_LIMIT_BYTES,
+    "/api/indicators/ema": SERIES_JSON_BODY_LIMIT_BYTES,
+    "/api/indicators/macd": SERIES_JSON_BODY_LIMIT_BYTES,
+    "/api/indicators/stoch-rsi": SERIES_JSON_BODY_LIMIT_BYTES,
+    "/api/indicators/bollinger": SERIES_JSON_BODY_LIMIT_BYTES,
+    "/api/risk/correlation": PAIRED_SERIES_JSON_BODY_LIMIT_BYTES,
+    "/api/risk/regime": BAR_SERIES_JSON_BODY_LIMIT_BYTES,
 }
 
 
@@ -445,6 +574,51 @@ class BinanceTestnetExchangeInfoResponse(BaseModel):
     exchange_filters: list[dict[str, str]]
     rate_limits: list[dict[str, str]]
     response_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    observed_at_us: int = Field(ge=0)
+    read_only: Literal[True]
+    credential_required: Literal[False]
+
+
+class BinancePublicListedSymbolResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+    symbol: str
+    status: str
+    base_asset: str
+    quote_asset: str
+
+
+class BinancePublicSymbolListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+    environment: Literal["BINANCE_SPOT"]
+    symbols: list[BinancePublicListedSymbolResponse]
+    count: int = Field(ge=0)
+    observed_at_us: int = Field(ge=0)
+    read_only: Literal[True]
+    credential_required: Literal[False]
+
+
+class BinancePublicLastPriceResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+    environment: Literal["BINANCE_SPOT"]
+    symbol: str
+    price: str
+    event_id: str
+    event_time_us: int = Field(ge=0)
+    read_only: Literal[True]
+    credential_required: Literal[False]
+
+
+class BinancePublic24hTickerResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+    environment: Literal["BINANCE_SPOT"]
+    symbol: str
+    last_price: str
+    price_change_percent: str
+    quote_volume: str
     observed_at_us: int = Field(ge=0)
     read_only: Literal[True]
     credential_required: Literal[False]
@@ -761,6 +935,15 @@ class HistoricalSimulationSummaryResponse(BaseModel):
     position_status: Literal["CLOSED", "OPEN_AT_END"]
     funding_status: Literal["NOT_MODELED"]
     mark_status: Literal["NOT_AVAILABLE"]
+    deal_pnls: list[str]
+    win_count: int
+    win_rate: str | None
+    profit_factor: str | None
+    roi: str | None
+    safety_order_fill_count: int
+    safety_order_fill_rate: str | None
+    equity_curve: list[str]
+    sharpe_ratio: str | None
 
 
 class HistoricalFixedSliceSummaryResponse(BaseModel):
@@ -1327,6 +1510,75 @@ def _calculate_preview(payload: dict[str, object]) -> dict[str, object]:
     return result
 
 
+PREVIEW_FULL_FIELDS = {"config", "anchor"}
+
+
+def _validate_preview_full_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, PREVIEW_FULL_FIELDS)
+    if body is None or fields:
+        return None, fields
+    if not isinstance(body.get("config"), dict):
+        fields["config"] = "config nesne olmalıdır."
+    if not isinstance(body.get("anchor"), str):
+        fields["anchor"] = "anchor exact decimal string olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _calculate_preview_full(validated: dict[str, object]) -> dict[str, object]:
+    """AA.5's 5-mini-stat preview (avg/TP/SL/margin) -- reuses `Config.plan()`/
+    `target()`/`directional_stop_loss()` verbatim, no new economic formula.
+    A synthetic single-order `State` (as if the BASE order just filled at the
+    given anchor) is built only to feed `target()`'s existing signature;
+    nothing here is written back to any real deal. LCR-12: liquidation is
+    NEVER computed -- the field is always null with an explanatory note.
+    """
+
+    try:
+        c = Config.parse(validated["config"])
+    except ValueError as exc:
+        raise ValueError(f"config: {exc}") from exc
+    anchor = positive(validated["anchor"])  # type: ignore[arg-type]
+    base_price = align(anchor, c.tick, up=True)
+    base_qty = c.base_order_qty(base_price)
+    c.check_order(base_qty, base_price)
+    levels = c.plan(base_price)
+    gross = base_qty * base_price + sum((level.qty * level.price for level in levels), Q(0))
+    synthetic_state = State(
+        position=Position(base_qty, base_qty * base_price),
+        anchor=base_price,
+        mark=base_price,
+    )
+    tp_price = target(synthetic_state, c)
+    sl_price = (
+        directional_stop_loss(c.direction_enum, base_price, c.stop_loss_rate)
+        if c.stop_loss_rate is not None
+        else None
+    )
+    return {
+        "symbol": c.symbol,
+        "anchor": text(base_price),
+        "average_cost": text(base_price),
+        "take_profit_price": text(tp_price) if tp_price is not None else None,
+        "stop_loss_price": text(sl_price) if sl_price is not None else None,
+        "liquidation_price": None,
+        "liquidation_note": "LCR-12: motor likidasyon fiyatı hesaplamaz; yalnız venue değeri gösterilebilir.",
+        "estimated_initial_margin": text(gross / c.leverage),
+        "planned_gross_notional": text(gross),
+        "within_gross_entry_cap": gross <= c.max_entry_notional,
+        "levels": [
+            {
+                "index": level.index,
+                "price": text(level.price),
+                "qty": text(level.qty),
+                "notional": text(level.price * level.qty),
+            }
+            for level in levels
+        ],
+    }
+
+
 def _validate_rebalance_valuation_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
     if not isinstance(payload, dict):
         return None, {"body": "JSON gövdesi nesne olmalıdır."}
@@ -1394,18 +1646,31 @@ PAPER_LOCK = Lock()
 TEMPLATE_IMPORT_FIELDS = {"template_id", "schema_version", "payload", "declared_capabilities"}
 TEMPLATE_BIND_FIELDS = {"profile_id", "allowed_capabilities", "approval"}
 TEMPLATE_DIFF_FIELDS = {"first_id", "second_id"}
-TEMPLATE_STORE = TemplateFileStore(ROOT / "data" / "templates")
+TEMPLATE_STORE = TemplateFileStore(DATA_DIR / "templates")
 TEMPLATE_LOCK = Lock()
 TWO_LEG_LOCK = Lock()
 BOT_REGISTRY = BotRegistry()
 BOT_LOCK = Lock()
-DEALS_DIR = ROOT / "data" / "deals"
-BACKUPS_DIR = ROOT / "data" / "backups"
+DEALS_DIR = DATA_DIR / "deals"
+KILL_SWITCH_PATH = DATA_DIR / "kill_switch.json"
+CANARY_APPROVAL_PATH = DATA_DIR / "canary_approval.json"
+CANARY_SPEC_PATH = DATA_DIR / "canary_spec.json"
+CANARY_LOCK = Lock()
+BACKUPS_DIR = DATA_DIR / "backups"
 BACKUP_LOCK = Lock()
-EVENT_LOG = EventLog()
+EVENT_LOG = EventLog(path=DATA_DIR / "events.sqlite3")
 EVENT_LOCK = Lock()
+
+
+def _record_v2_event(kind: str, ref: str, summary: str, time_us: int) -> None:
+    """Funnel v2 bot/runner landmarks into the shared event log."""
+    with EVENT_LOCK:
+        _record_event(EVENT_LOG, kind, ref, summary, time_us)
 DEAL_LOCK = Lock()
 _DEAL_EVENTS = frozenset({"START", "PAUSE", "RESUME", "COMPLETE", "ABORT", "FAIL"})
+TESTNET_DCA_SESSIONS_PATH = DATA_DIR / "testnet_dca_sessions.sqlite3"
+TESTNET_DCA_SESSION_STORE = TestnetDcaSessionStore(TESTNET_DCA_SESSIONS_PATH)
+TESTNET_DCA_SESSION_LOCK = Lock()
 _TWO_LEG_SESSION_RE = re.compile(r"[A-Za-z0-9_.:-]{1,100}\Z", re.ASCII)
 _TWO_LEG_JOURNAL: TwoLegJournal | None = None
 _WEBHOOK_STORE: WebhookDedupStore | None = None
@@ -1414,14 +1679,14 @@ _WEBHOOK_STORE: WebhookDedupStore | None = None
 def _get_two_leg_journal() -> TwoLegJournal:
     global _TWO_LEG_JOURNAL
     if _TWO_LEG_JOURNAL is None:
-        _TWO_LEG_JOURNAL = TwoLegJournal(ROOT / "data" / "two_leg_journal.db")
+        _TWO_LEG_JOURNAL = TwoLegJournal(DATA_DIR / "two_leg_journal.db")
     return _TWO_LEG_JOURNAL
 
 
 def _get_webhook_store() -> WebhookDedupStore:
     global _WEBHOOK_STORE
     if _WEBHOOK_STORE is None:
-        _WEBHOOK_STORE = WebhookDedupStore(ROOT / "data" / "webhook_intakes.db")
+        _WEBHOOK_STORE = WebhookDedupStore(DATA_DIR / "webhook_intakes.db")
     return _WEBHOOK_STORE
 
 
@@ -1738,6 +2003,91 @@ def _validate_template_bind_payload(payload: object) -> tuple[dict[str, object] 
     return payload, {}
 
 
+_HEX64 = re.compile(r"^[0-9a-f]{64}\Z")
+PRESET_COMPARE_FIELDS = {"dataset_id", "artifact_sha256", "a", "b"}
+PRESET_COMPARE_SIDE_FIELDS = {"template_id", "profile_id", "allowed_capabilities", "approval"}
+
+
+def _validate_preset_compare_side(payload: object, side: str, fields: dict[str, str]) -> dict[str, object] | None:
+    side_payload, side_fields = _template_field_errors(payload, PRESET_COMPARE_SIDE_FIELDS)
+    if side_payload is None or side_fields:
+        for key, message in side_fields.items():
+            fields[f"{side}.{key}"] = message
+        return None
+    if not isinstance(side_payload["template_id"], str):
+        fields[f"{side}.template_id"] = "template_id string olmalıdır."
+    if not isinstance(side_payload["profile_id"], str):
+        fields[f"{side}.profile_id"] = "profile_id string olmalıdır."
+    if (
+        not isinstance(side_payload["allowed_capabilities"], list)
+        or not all(isinstance(c, str) for c in side_payload["allowed_capabilities"])
+    ):
+        fields[f"{side}.allowed_capabilities"] = "allowed_capabilities string listesi olmalıdır."
+    if not isinstance(side_payload["approval"], str):
+        fields[f"{side}.approval"] = "approval string olmalıdır."
+    return side_payload
+
+
+def _validate_preset_compare_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    payload, fields = _template_field_errors(payload, PRESET_COMPARE_FIELDS)
+    if payload is None or fields:
+        return None, fields
+    assert isinstance(payload, dict)
+    if not isinstance(payload["dataset_id"], str):
+        fields["dataset_id"] = "dataset_id string olmalıdır."
+    if not isinstance(payload["artifact_sha256"], str) or not _HEX64.fullmatch(payload["artifact_sha256"]):
+        fields["artifact_sha256"] = "artifact_sha256 64 karakter hex olmalıdır."
+    side_a = _validate_preset_compare_side(payload.get("a"), "a", fields)
+    side_b = _validate_preset_compare_side(payload.get("b"), "b", fields)
+    if fields:
+        return None, fields
+    return {**payload, "a": side_a, "b": side_b}, {}
+
+
+def _bind_for_compare(side: dict[str, object], now_us: int):
+    template = TEMPLATE_STORE.load(side["template_id"])  # type: ignore[arg-type]
+    return bind_template_to_profile(
+        template=template,
+        profile_id=side["profile_id"],  # type: ignore[arg-type]
+        allowed_capabilities=tuple(side["allowed_capabilities"]),  # type: ignore[arg-type]
+        approval=side["approval"],  # type: ignore[arg-type]
+        binding_time_us=now_us,
+    )
+
+
+def _preset_comparison_side_response(side: PresetComparisonSide) -> dict[str, object]:
+    """Same shared `performance_metrics()` the saved-run/sweep/live-simulate
+    surfaces already use -- a compare side is not a fourth re-derivation."""
+
+    result = side.result
+    summary = result.summary
+    deal_count = max((action.deal_sequence for action in result.actions), default=0)
+    completed_deal_count = max(deal_count - (1 if result.position_status == "OPEN_AT_END" else 0), 0)
+    deal_pnls = summary["deal_pnls"]
+    metrics = performance_metrics(
+        deal_pnls,
+        peak_equity=summary["peak_equity"],
+        realized_net_after_all_costs=summary["realized_net_after_all_costs"],
+        roles=[action.role for action in result.actions],
+        max_active_safety_orders=side.config.effective_max_active_safety_orders,
+        deal_count=deal_count,
+    )
+    return {
+        "binding_id": side.binding_id,
+        "profile_id": side.profile_id,
+        "config_hash": side.config_hash,
+        "execution_status": result.execution_status,
+        "position_status": result.position_status,
+        "realized_net_after_all_costs": summary["realized_net_after_all_costs"],
+        "peak_equity": summary["peak_equity"],
+        "max_drawdown": summary["max_drawdown"],
+        "deal_count": deal_count,
+        "completed_deal_count": completed_deal_count,
+        "deal_pnls": deal_pnls,
+        **metrics,
+    }
+
+
 def _validate_template_diff_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
     payload, fields = _template_field_errors(payload, TEMPLATE_DIFF_FIELDS)
     if payload is None or fields:
@@ -1815,6 +2165,18 @@ SIGNAL_HASH_FIELDS = {"payload"}
 SIGNAL_ASSESS_FIELDS = {"signal", "closed_bar_time_us", "warmup_bars_observed", "required_warmup_bars", "max_staleness_us"}
 SIGNAL_CANDIDATE_FIELDS = SIGNAL_ASSESS_FIELDS | {"action", "symbol", "action_map", "qty", "ttl_us"}
 SIGNAL_INDICATOR_CROSS_FIELDS = {"closes", "fast_window", "slow_window"}
+INDICATOR_SERIES_FIELDS = {"closes", "window"}
+INDICATOR_MACD_FIELDS = {"closes", "fast", "slow", "signal", "scale"}
+INDICATOR_STOCH_RSI_FIELDS = {"closes", "rsi_window", "stoch_window", "scale"}
+INDICATOR_BOLLINGER_FIELDS = {"closes", "window", "num_std"}
+RISK_CORRELATION_FIELDS = {
+    "prices_x", "prices_y", "windows", "threshold_numerator", "threshold_denominator", "scale",
+}
+RISK_REGIME_REQUIRED_FIELDS = {
+    "bars", "adx_window", "bb_window", "bb_num_std",
+    "trend_threshold", "range_threshold", "squeeze_threshold",
+}
+RISK_REGIME_OPTIONAL_FIELDS = {"min_di_separation"}
 SWEEP_OPTIMIZE_FIELDS = {"dataset_id", "profile_id", "space", "max_trials"}
 WEBHOOK_ALERT_FIELDS = {"secret", "symbol", "action", "event_time_us", "price", "strategy_order_id"}
 INTERNAL_INTAKE_FIELDS = {"symbol", "action", "event_time_us", "price", "strategy_order_id", "key_id", "signature"}
@@ -2274,6 +2636,268 @@ def _signal_indicator_cross(validated: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _closes_field_error(closes: object, *, max_len: int = 5000) -> str | None:
+    if not isinstance(closes, list) or not 2 <= len(closes) <= max_len or not all(
+        isinstance(item, str) for item in closes
+    ):
+        return f"closes 2-{max_len} exact decimal string olmalıdır."
+    return None
+
+
+def _validate_indicator_series_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, INDICATOR_SERIES_FIELDS)
+    if body is None or fields:
+        return None, fields
+    closes_error = _closes_field_error(body.get("closes"))
+    if closes_error:
+        fields["closes"] = closes_error
+    if type(body.get("window")) is not int or not 1 <= body["window"] <= 500:
+        fields["window"] = "window 1-500 integer olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _indicators_sma(validated: dict[str, object]) -> dict[str, object]:
+    result = sma_series(tuple(validated["closes"]), window=validated["window"])  # type: ignore[arg-type]
+    return {"points": [{"index": p.index, "value": p.value, "exact": p.exact} for p in result]}
+
+
+def _indicators_ema(validated: dict[str, object]) -> dict[str, object]:
+    result = ema_series(tuple(validated["closes"]), window=validated["window"])  # type: ignore[arg-type]
+    return {"points": [{"index": p.index, "value": p.value, "exact": p.exact} for p in result]}
+
+
+def _validate_indicator_macd_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, INDICATOR_MACD_FIELDS)
+    if body is None or fields:
+        return None, fields
+    closes_error = _closes_field_error(body.get("closes"))
+    if closes_error:
+        fields["closes"] = closes_error
+    for name in ("fast", "slow", "signal"):
+        if type(body.get(name)) is not int or not 1 <= body[name] <= 1000:  # type: ignore[operator]
+            fields[name] = f"{name} 1-1000 integer olmalıdır."
+    if type(body.get("scale")) is not int or not 1 <= body["scale"] <= 18:  # type: ignore[operator]
+        fields["scale"] = "scale 1-18 integer olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _scaled_int_text(value: int | None, scale: int) -> str | None:
+    if value is None:
+        return None
+    return text(Q(value, 10**scale))
+
+
+def _indicators_macd(validated: dict[str, object]) -> dict[str, object]:
+    scale = validated["scale"]
+    assert isinstance(scale, int)
+    result = macd_series(
+        tuple(validated["closes"]),  # type: ignore[arg-type]
+        fast=validated["fast"],  # type: ignore[arg-type]
+        slow=validated["slow"],  # type: ignore[arg-type]
+        signal=validated["signal"],  # type: ignore[arg-type]
+        scale=scale,
+    )
+    return {
+        "points": [
+            {
+                "index": p.index,
+                "macd": _scaled_int_text(p.macd, scale),
+                "signal": _scaled_int_text(p.signal, scale),
+                "histogram": _scaled_int_text(p.histogram, scale),
+            }
+            for p in result
+        ]
+    }
+
+
+def _validate_indicator_stoch_rsi_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, INDICATOR_STOCH_RSI_FIELDS)
+    if body is None or fields:
+        return None, fields
+    closes_error = _closes_field_error(body.get("closes"))
+    if closes_error:
+        fields["closes"] = closes_error
+    for name in ("rsi_window", "stoch_window"):
+        if type(body.get(name)) is not int or not 1 <= body[name] <= 500:  # type: ignore[operator]
+            fields[name] = f"{name} 1-500 integer olmalıdır."
+    if type(body.get("scale")) is not int or not 1 <= body["scale"] <= 18:  # type: ignore[operator]
+        fields["scale"] = "scale 1-18 integer olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _indicators_stoch_rsi(validated: dict[str, object]) -> dict[str, object]:
+    scale = validated["scale"]
+    assert isinstance(scale, int)
+    result = stoch_rsi_series(
+        tuple(validated["closes"]),  # type: ignore[arg-type]
+        rsi_window=validated["rsi_window"],  # type: ignore[arg-type]
+        stoch_window=validated["stoch_window"],  # type: ignore[arg-type]
+        scale=scale,
+    )
+    return {
+        "points": [
+            {
+                "index": p.index,
+                "rsi": _scaled_int_text(p.rsi, scale),
+                "stoch_rsi": _scaled_int_text(p.stoch_rsi, scale),
+            }
+            for p in result
+        ]
+    }
+
+
+def _validate_indicator_bollinger_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, INDICATOR_BOLLINGER_FIELDS)
+    if body is None or fields:
+        return None, fields
+    closes_error = _closes_field_error(body.get("closes"))
+    if closes_error:
+        fields["closes"] = closes_error
+    if type(body.get("window")) is not int or not 2 <= body["window"] <= 500:
+        fields["window"] = "window 2-500 integer olmalıdır."
+    if not isinstance(body.get("num_std"), str):
+        fields["num_std"] = "num_std exact decimal string olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _indicators_bollinger(validated: dict[str, object]) -> dict[str, object]:
+    result = bollinger_bands_series(
+        tuple(validated["closes"]),  # type: ignore[arg-type]
+        window=validated["window"],  # type: ignore[arg-type]
+        num_std=validated["num_std"],  # type: ignore[arg-type]
+    )
+    return {
+        "points": [
+            {
+                "index": p.index,
+                "middle": p.middle,
+                "middle_exact": p.middle_exact,
+                "variance": p.variance,
+                "variance_exact": p.variance_exact,
+                "upper": p.upper,
+                "lower": p.lower,
+                "percent_b": p.percent_b,
+            }
+            for p in result
+        ]
+    }
+
+
+def _validate_risk_correlation_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    body, fields = _template_field_errors(payload, RISK_CORRELATION_FIELDS)
+    if body is None or fields:
+        return None, fields
+    for name in ("prices_x", "prices_y"):
+        value = body.get(name)
+        if not isinstance(value, list) or not 2 <= len(value) <= 5000 or not all(
+            isinstance(item, (int, float)) for item in value
+        ):
+            fields[name] = f"{name} 2-5000 sayı listesi olmalıdır."
+    windows = body.get("windows")
+    if (
+        not isinstance(windows, list)
+        or not 1 <= len(windows) <= 16
+        or not all(type(w) is int and w >= 2 for w in windows)
+    ):
+        fields["windows"] = "windows en az 1, her biri >=2 integer olan bir liste olmalıdır."
+    for name in ("threshold_numerator", "threshold_denominator", "scale"):
+        if type(body.get(name)) is not int or body[name] <= 0:  # type: ignore[operator]
+            fields[name] = f"{name} pozitif integer olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _risk_correlation(validated: dict[str, object]) -> dict[str, object]:
+    result = evaluate_correlation_gate(
+        [float(v) for v in validated["prices_x"]],  # type: ignore[union-attr]
+        [float(v) for v in validated["prices_y"]],  # type: ignore[union-attr]
+        windows=tuple(validated["windows"]),  # type: ignore[arg-type]
+        threshold_numerator=validated["threshold_numerator"],  # type: ignore[arg-type]
+        threshold_denominator=validated["threshold_denominator"],  # type: ignore[arg-type]
+        scale=validated["scale"],  # type: ignore[arg-type]
+    )
+    return {
+        "decision": result.decision,
+        "reason": result.reason,
+        "worst_window": result.worst_window,
+    }
+
+
+def _validate_risk_regime_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    unknown = set(payload) - RISK_REGIME_REQUIRED_FIELDS - RISK_REGIME_OPTIONAL_FIELDS
+    missing = RISK_REGIME_REQUIRED_FIELDS - set(payload)
+    fields: dict[str, str] = {}
+    if unknown:
+        fields["body"] = "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))
+    if missing:
+        fields["body"] = (
+            fields.get("body", "") + (" " if fields.get("body") else "")
+            + "Eksik alanlar: " + ", ".join(sorted(missing))
+        )
+    if fields:
+        return None, fields
+    body = dict(payload)
+    body.setdefault("min_di_separation", "0")
+    bars = body.get("bars")
+    if (
+        not isinstance(bars, list) or not 2 <= len(bars) <= 5000
+        or not all(
+            isinstance(b, dict) and set(b) == {"high", "low", "close"}
+            and all(isinstance(b[k], str) for k in ("high", "low", "close"))
+            for b in bars
+        )
+    ):
+        fields["bars"] = "bars, 2-5000 {high,low,close} exact-ondalık string nesnesi listesi olmalıdır."
+    for name in ("adx_window", "bb_window"):
+        if type(body.get(name)) is not int or body[name] < 1:  # type: ignore[operator]
+            fields[name] = f"{name} pozitif integer olmalıdır."
+    for name in ("bb_num_std", "trend_threshold", "range_threshold", "squeeze_threshold", "min_di_separation"):
+        if not isinstance(body.get(name), str):
+            fields[name] = f"{name} exact decimal string olmalıdır."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _risk_regime(validated: dict[str, object]) -> dict[str, object]:
+    bars = validated["bars"]  # type: ignore[assignment]
+    closes = tuple(b["close"] for b in bars)  # type: ignore[union-attr]
+    adx_points = adx_series(tuple(bars), window=validated["adx_window"])  # type: ignore[arg-type]
+    bbw = bb_width_series(closes, window=validated["bb_window"], num_std=validated["bb_num_std"])  # type: ignore[arg-type]
+    last_adx = adx_points[-1]
+    last_bbw = bbw[-1] if bbw else None
+    result = classify_regime(
+        adx=last_adx.adx,
+        plus_di=last_adx.plus_di,
+        minus_di=last_adx.minus_di,
+        bb_width=last_bbw,
+        trend_threshold=validated["trend_threshold"],  # type: ignore[arg-type]
+        range_threshold=validated["range_threshold"],  # type: ignore[arg-type]
+        squeeze_threshold=validated["squeeze_threshold"],  # type: ignore[arg-type]
+        min_di_separation=validated["min_di_separation"],  # type: ignore[arg-type]
+    )
+    return {
+        "state": result.state,
+        "direction": result.direction,
+        "confidence": result.confidence,
+        "adx": last_adx.adx,
+        "plus_di": last_adx.plus_di,
+        "minus_di": last_adx.minus_di,
+        "bb_width": last_bbw,
+    }
+
+
 def _validate_sweep_optimize_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
     sampler: object = "grid"
     seed: object = 0
@@ -2316,6 +2940,57 @@ def _sweep_optimize_compute(
         max_trials=validated["max_trials"],  # type: ignore[arg-type]
         seed=validated["seed"],  # type: ignore[arg-type]
         sampler=validated["sampler"],  # type: ignore[arg-type]
+    )
+
+
+SWEEP_OVERFITTING_FIELDS = {"dataset_id", "profile_id", "space", "max_trials", "block_count"}
+
+
+def _validate_sweep_overfitting_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    sampler: object = "grid"
+    seed: object = 0
+    if isinstance(payload, dict):
+        rest = dict(payload)
+        if "sampler" in rest:
+            sampler = rest.pop("sampler")
+        if "seed" in rest:
+            seed = rest.pop("seed")
+        payload = rest
+    body, fields = _template_field_errors(payload, SWEEP_OVERFITTING_FIELDS)
+    if body is None or fields:
+        return None, fields
+    assert isinstance(body, dict)
+    for name in ("dataset_id", "profile_id"):
+        if not isinstance(body.get(name), str) or not str(body[name]).strip():
+            fields[name] = f"{name} boş olmayan string olmalıdır."
+    if type(body.get("max_trials")) is not int or not 1 <= body["max_trials"] <= 32:  # type: ignore[operator]
+        fields["max_trials"] = "max_trials 1-32 integer olmalıdır."
+    if not isinstance(body.get("space"), dict) or not body["space"]:
+        fields["space"] = "space boş olmayan dict olmalıdır."
+    if type(body.get("block_count")) is not int or body["block_count"] < 2 or body["block_count"] % 2 != 0:  # type: ignore[operator]
+        fields["block_count"] = "block_count çift ve >=2 integer olmalıdır."
+    if sampler not in ("grid", "random"):
+        fields["sampler"] = "sampler yalnız grid ya da random olabilir."
+    if type(seed) is not int:
+        fields["seed"] = "seed integer olmalıdır."
+    if fields:
+        return None, fields
+    body["sampler"] = sampler
+    body["seed"] = seed
+    return body, {}
+
+
+def _sweep_overfitting_compute(
+    validated: dict[str, object], dataset: HistoricalDatasetInput, raw_config: dict
+) -> dict[str, object]:
+    return assess_sweep_overfitting(
+        dataset,
+        raw_config,
+        space=validated["space"],  # type: ignore[arg-type]
+        max_trials=validated["max_trials"],  # type: ignore[arg-type]
+        seed=validated["seed"],  # type: ignore[arg-type]
+        sampler=validated["sampler"],  # type: ignore[arg-type]
+        block_count=validated["block_count"],  # type: ignore[arg-type]
     )
 
 
@@ -3672,7 +4347,7 @@ def _exits_breakeven(validated: dict[str, object]) -> dict[str, object]:
 app = FastAPI(title="DCABOT Offline API", version="0.1.0")
 app.router.route_class = BoundedAPIRoute
 
-WORKER_LOCK_PATH = ROOT / "data" / ".api-single-worker.lock"
+WORKER_LOCK_PATH = DATA_DIR / ".api-single-worker.lock"
 _worker_guard: SingleWorkerGuard | None = None
 
 
@@ -3686,12 +4361,36 @@ def _acquire_worker_lock() -> None:
     _worker_guard = enforce_single_worker()
 
 
+def _prewarm_exchange_symbols() -> None:
+    try:
+        _cached_exchange_symbols()
+    except BinancePublicTransportError:
+        pass  # offline-first: the first real request reports the failure
+
+
+@app.on_event("startup")
+def _start_exchange_symbols_prewarm() -> None:
+    Thread(target=_prewarm_exchange_symbols, name="exchange-symbols-prewarm", daemon=True).start()
+
+
 @app.on_event("shutdown")
 def _release_worker_lock() -> None:
     global _worker_guard
     if _worker_guard is not None:
         _worker_guard.release()
         _worker_guard = None
+
+
+@app.get("/api/config/paper")
+def get_paper_config(response: Response):
+    """Read-only exposure of the canonical `config/paper.json`, so a client
+    can overlay its own chosen fields on top of a full, `Config.parse`-valid
+    base instead of fabricating defaults itself (AA.5a-önkoşul)."""
+
+    response.headers["Cache-Control"] = "no-store"
+    raw_config = _load_config()
+    Config.parse(raw_config)
+    return {"data": raw_config}
 
 
 @app.get("/api/historical-profiles", response_model=list[HistoricalProfileResponse | HistoricalFixedSliceProfileResponse])
@@ -3710,7 +4409,7 @@ app.add_middleware(
 
 @app.exception_handler(RequestValidationError)
 async def request_validation_error(_request: Request, exc: RequestValidationError):
-    if _request.url.path in {
+    if _request.url.path.startswith("/api/v2/") or _request.url.path in {
         "/api/dataset-selection",
         "/api/dataset-downloads",
         "/api/historical-runs/validate",
@@ -3740,9 +4439,174 @@ async def request_validation_error(_request: Request, exc: RequestValidationErro
     return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
 
 
+BOTS_V2_PATH = DATA_DIR / "bots.sqlite3"
+ROUTE_BODY_LIMITS.update(
+    {
+        "/api/v2/bots": SMALL_JSON_BODY_LIMIT_BYTES,
+        "/api/v2/bots/preview": SMALL_JSON_BODY_LIMIT_BYTES,
+        "/api/v2/bots/{bot_id}/{action}": SMALL_JSON_BODY_LIMIT_BYTES,
+        "/api/v2/bots/{bot_id}/deals/{deal_seq}/close": SMALL_JSON_BODY_LIMIT_BYTES,
+        "/api/v2/bots/{bot_id}/deals/{deal_seq}/cancel": SMALL_JSON_BODY_LIMIT_BYTES,
+        "/api/v2/bots/{bot_id}/deals/{deal_seq}/add-funds": SMALL_JSON_BODY_LIMIT_BYTES,
+    }
+)
+BOT_STORE_V2 = BotStore(BOTS_V2_PATH)
+LIVE_MARKET = v2_bots.LiveBinanceMarket(
+    fetch_rules=fetch_binance_public_symbol_rules,
+    fetch_trades=fetch_binance_public_trades,
+    transport_error=BinancePublicTransportError,
+    time_unit=BinanceTimeUnit.MILLISECONDS,
+)
+LIVE_FUTURES_MARKET = v2_bots.LiveBinanceFuturesMarket(
+    fetch_rules=fetch_futures_symbol_rules,
+    fetch_premium=fetch_premium_index,
+    transport_error=BinancePublicTransportError,
+)
+PAPER_BOT_RUNNER = bot_runner.PaperBotRunner(
+    bot_runner.RunnerDeps(
+        store=BOT_STORE_V2,
+        market=LIVE_MARKET,
+        fetch_range=fetch_binance_public_klines_range,
+        transport_error=BinancePublicTransportError,
+        template_loader=_load_config,
+        clock_us=lambda: time.time_ns() // 1000,
+        kill_switch_engaged=lambda: read_kill_switch(KILL_SWITCH_PATH),
+        record_event=_record_v2_event,
+        futures_market=LIVE_FUTURES_MARKET,
+        fetch_futures_range=fetch_futures_public_klines_range,
+        fetch_funding=fetch_funding_rate_history,
+    )
+)
+V2_BOT_DEPS = v2_bots.V2BotDeps(
+    store=BOT_STORE_V2,
+    market=LIVE_MARKET,
+    template_loader=_load_config,
+    clock_us=lambda: time.time_ns() // 1000,
+    runner_available=PAPER_BOT_RUNNER.is_running,
+    problem=_problem,
+    on_start=PAPER_BOT_RUNNER.prepare_start,
+    on_replay=PAPER_BOT_RUNNER.run_replay,
+    record_event=_record_v2_event,
+    futures_market=LIVE_FUTURES_MARKET,
+)
+v2_bots.register_routes(app, V2_BOT_DEPS)
+
+
+@app.on_event("startup")
+def _start_paper_bot_runner() -> None:
+    PAPER_BOT_RUNNER.start()
+    TELEGRAM_WORKER.start()
+
+
+@app.on_event("shutdown")
+def _stop_paper_bot_runner() -> None:
+    TELEGRAM_WORKER.stop()
+    PAPER_BOT_RUNNER.stop()
+
+KLINE_CACHE_PATH = DATA_DIR / "klines.sqlite3"
+ROUTE_BODY_LIMITS["/api/v2/backtests"] = SMALL_JSON_BODY_LIMIT_BYTES
+ROUTE_BODY_LIMITS["/api/v2/bots/{bot_id}/replay"] = SMALL_JSON_BODY_LIMIT_BYTES
+ROUTE_BODY_LIMITS["/api/v2/bots/{bot_id}/copy"] = SMALL_JSON_BODY_LIMIT_BYTES
+ROUTE_BODY_LIMITS["/api/v2/grid-bots"] = SMALL_JSON_BODY_LIMIT_BYTES
+ROUTE_BODY_LIMITS["/api/v2/grid-bots/preview"] = SMALL_JSON_BODY_LIMIT_BYTES
+ROUTE_BODY_LIMITS["/api/v2/futures-grid-bots"] = SMALL_JSON_BODY_LIMIT_BYTES
+ROUTE_BODY_LIMITS["/api/v2/futures-grid-bots/preview"] = SMALL_JSON_BODY_LIMIT_BYTES
+NOTIFICATION_SETTINGS = NotificationSettings(DATA_DIR / "notifications.sqlite3")
+try:
+    TELEGRAM_VAULT = WindowsCredentialManagerProvider(namespace="notify")
+except SignedRequestError:
+    TELEGRAM_VAULT = None
+V2_TELEGRAM_DEPS = v2_notifications_telegram.V2TelegramDeps(
+    settings=NOTIFICATION_SETTINGS,
+    vault=TELEGRAM_VAULT,
+    send_message=send_telegram_message,
+    clock_us=lambda: time.time_ns() // 1000,
+    problem=_problem,
+)
+v2_notifications_telegram.register_routes(app, V2_TELEGRAM_DEPS)
+TELEGRAM_WORKER = telegram_worker.TelegramWorker(
+    telegram_worker.TelegramWorkerDeps(
+        settings=NOTIFICATION_SETTINGS,
+        vault=TELEGRAM_VAULT,
+        send_message=send_telegram_message,
+        log=EVENT_LOG,
+    )
+)
+ROUTE_BODY_LIMITS["/api/notifications/telegram/configure"] = SMALL_JSON_BODY_LIMIT_BYTES
+ROUTE_BODY_LIMITS["/api/notifications/telegram/test"] = SMALL_JSON_BODY_LIMIT_BYTES
+ROUTE_BODY_LIMITS["/api/notifications/telegram/enabled"] = SMALL_JSON_BODY_LIMIT_BYTES
+V2_BACKTEST_DEPS = v2_backtests.V2BacktestDeps(
+    market=V2_BOT_DEPS.market,
+    fetch_range=fetch_binance_public_klines_range,
+    cache=KlineCache(KLINE_CACHE_PATH),
+    template_loader=_load_config,
+    clock_us=lambda: time.time_ns() // 1000,
+    problem=_problem,
+    transport_error=BinancePublicTransportError,
+)
+v2_backtests.register_routes(app, V2_BACKTEST_DEPS)
+ROUTE_BODY_LIMITS["/api/v2/grid-backtests"] = SMALL_JSON_BODY_LIMIT_BYTES
+V2_GRID_BACKTEST_DEPS = v2_grid_backtests.V2GridBacktestDeps(
+    market=V2_BOT_DEPS.market,
+    fetch_range=fetch_binance_public_klines_range,
+    cache=KlineCache(KLINE_CACHE_PATH),
+    clock_us=lambda: time.time_ns() // 1000,
+    problem=_problem,
+    transport_error=BinancePublicTransportError,
+)
+v2_grid_backtests.register_routes(app, V2_GRID_BACKTEST_DEPS)
+FUTURES_KLINE_CACHE_PATH = DATA_DIR / "futures_klines.sqlite3"
+FUNDING_CACHE_PATH = DATA_DIR / "funding.sqlite3"
+ROUTE_BODY_LIMITS["/api/v2/futures-grid-backtests"] = SMALL_JSON_BODY_LIMIT_BYTES
+V2_FUTURES_GRID_BACKTEST_DEPS = v2_futures_grid_backtests.V2FuturesGridBacktestDeps(
+    fetch_rules=fetch_futures_symbol_rules,
+    fetch_klines_range=fetch_futures_public_klines_range,
+    fetch_funding=fetch_funding_rate_history,
+    kline_cache=KlineCache(FUTURES_KLINE_CACHE_PATH),
+    funding_cache=FundingCache(FUNDING_CACHE_PATH),
+    clock_us=lambda: time.time_ns() // 1000,
+    problem=_problem,
+    transport_error=BinancePublicTransportError,
+)
+v2_futures_grid_backtests.register_routes(app, V2_FUTURES_GRID_BACKTEST_DEPS)
+V2_STATS_DEPS = v2_stats.V2StatsDeps(
+    store=BOT_STORE_V2,
+    clock_us=lambda: time.time_ns() // 1000,
+    problem=_problem,
+)
+v2_stats.register_routes(app, V2_STATS_DEPS)
+
+
 @app.get("/api/health")
 def health() -> dict[str, object]:
     return {"status": "ok", "mode": "offline", "trading_enabled": False}
+
+
+@app.get("/api/system/status")
+async def get_system_status():
+    """AA.12 (2026-09-23): real health-probe for the "Sistem & Yedekler"
+    screen -- backend-up (implicit, this responded), data-dir existence,
+    disk free/total, and real backup count/latest timestamp from the same
+    `list_backup_manifests` the dashboard already uses. No docker-compose/
+    service-card fiction -- only what this single local process can
+    actually observe about itself."""
+
+    data_dir = DATA_DIR
+    disk = shutil.disk_usage(ROOT)
+    with BACKUP_LOCK:
+        manifests = list_backup_manifests(BACKUPS_DIR)
+    latest = manifests[-1] if manifests else None
+    return {
+        "data": {
+            "status": "ok",
+            "data_dir": {"path": str(data_dir), "exists": data_dir.is_dir()},
+            "disk": {"free_bytes": disk.free, "total_bytes": disk.total},
+            "backups": {
+                "count": len(manifests),
+                "latest_created_us": latest["created_us"] if latest is not None else None,
+            },
+        }
+    }
 
 
 @app.get("/api/capabilities")
@@ -3809,6 +4673,387 @@ def get_binance_testnet_exchange_info(
     )
 
 
+# The full spot exchangeInfo is ~17 MB and changes rarely; refetching it per
+# request made the market list take ~14 s. Successful lists are reused for a
+# bounded TTL (failures are never cached); `observed_at_us` stays the real
+# fetch time. Keyed on the fetch function so a patched transport never
+# receives another transport's cached list.
+EXCHANGE_SYMBOLS_TTL_SECONDS = 600
+_EXCHANGE_SYMBOLS_LOCK = Lock()
+_exchange_symbols_cache: tuple[object, float, tuple, int] | None = None
+
+
+def _cached_exchange_symbols() -> tuple[tuple, int]:
+    global _exchange_symbols_cache
+    fetch = fetch_binance_public_exchange_symbols
+    with _EXCHANGE_SYMBOLS_LOCK:
+        cached = _exchange_symbols_cache
+        if cached is not None and cached[0] is fetch and time.monotonic() - cached[1] < EXCHANGE_SYMBOLS_TTL_SECONDS:
+            return cached[2], cached[3]
+        listed = fetch()
+        observed_at_us = time.time_ns() // 1000
+        _exchange_symbols_cache = (fetch, time.monotonic(), tuple(listed), observed_at_us)
+        return tuple(listed), observed_at_us
+
+
+@app.get(
+    "/api/public/exchange-symbols",
+    response_model=BinancePublicSymbolListResponse,
+)
+def get_binance_public_exchange_symbols(
+    response: Response,
+) -> BinancePublicSymbolListResponse | JSONResponse:
+    """Return the credential-free public Binance Spot symbol list."""
+
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        listed, observed_at_us = _cached_exchange_symbols()
+    except BinancePublicTransportError as exc:
+        if exc.code.startswith("PUBLIC_RESPONSE") or exc.code == "PUBLIC_ENCODING_INVALID":
+            return _problem(
+                502,
+                exc.code,
+                "Public sembol listesi geçersiz",
+                "Binance public sembol listesi güvenli sözleşmeye uymuyor.",
+            )
+        return _problem(
+            503,
+            exc.code,
+            "Binance public verisine ulaşılamadı",
+            "Public sembol listesi şu anda alınamadı.",
+        )
+    symbols = [
+        BinancePublicListedSymbolResponse(
+            symbol=item.symbol,
+            status=item.status,
+            base_asset=item.base_asset,
+            quote_asset=item.quote_asset,
+        )
+        for item in listed
+    ]
+    return BinancePublicSymbolListResponse(
+        environment="BINANCE_SPOT",
+        symbols=symbols,
+        count=len(symbols),
+        observed_at_us=observed_at_us,
+        read_only=True,
+        credential_required=False,
+    )
+
+
+@app.get(
+    "/api/public/last-price",
+    response_model=BinancePublicLastPriceResponse,
+)
+def get_binance_public_last_price(
+    symbol: BinancePublicSymbol,
+    response: Response,
+) -> BinancePublicLastPriceResponse | JSONResponse:
+    """Return the latest credential-free public print for one symbol."""
+
+    response.headers["Cache-Control"] = "no-store"
+    if type(symbol) is not str or _BINANCE_PUBLIC_SYMBOL_RE.fullmatch(symbol) is None:
+        return JSONResponse(
+            status_code=422,
+            content=_error(
+                "İstek doğrulanamadı.",
+                fields={"symbol": "Symbol büyük harf alfanumerik olmalıdır."},
+            ),
+        )
+    try:
+        now_us = time.time_ns() // 1000
+        observations = fetch_binance_public_trades(
+            symbol,
+            limit=1,
+            allowed_symbols=frozenset({symbol}),
+            receive_time_us=now_us,
+            processing_time_us=now_us,
+            time_unit=BinanceTimeUnit.MILLISECONDS,
+        )
+    except BinancePublicTransportError as exc:
+        # Same uniform mapping as the paper market-refresh: transport failures
+        # (including an upstream rejection of an unknown-but-wellformed
+        # symbol) never leak venue internals, only the bounded code/message.
+        return JSONResponse(
+            status_code=502, content=_error(str(exc), fields={"market": str(exc)})
+        )
+    if not observations:
+        return _problem(
+            404,
+            "PUBLIC_SYMBOL_NO_TRADES",
+            "Son baskı bulunamadı",
+            "Bu sembol için public baskı verisi yok.",
+        )
+    latest = observations[-1]
+    return BinancePublicLastPriceResponse(
+        environment="BINANCE_SPOT",
+        symbol=latest.symbol,
+        price=latest.price,
+        event_id=latest.event_id,
+        event_time_us=latest.event_time_us,
+        read_only=True,
+        credential_required=False,
+    )
+
+
+@app.get(
+    "/api/public/ticker-24h",
+    response_model=BinancePublic24hTickerResponse,
+)
+def get_binance_public_24h_ticker(
+    symbol: BinancePublicSymbol,
+    response: Response,
+) -> BinancePublic24hTickerResponse | JSONResponse:
+    """Return one symbol's credential-free 24h ticker stats (AA.2 display-only)."""
+
+    response.headers["Cache-Control"] = "no-store"
+    if type(symbol) is not str or _BINANCE_PUBLIC_SYMBOL_RE.fullmatch(symbol) is None:
+        return JSONResponse(
+            status_code=422,
+            content=_error(
+                "İstek doğrulanamadı.",
+                fields={"symbol": "Symbol büyük harf alfanumerik olmalıdır."},
+            ),
+        )
+    try:
+        ticker = fetch_binance_public_24hr_ticker(symbol, allowed_symbols=frozenset({symbol}))
+    except BinancePublicTransportError as exc:
+        return JSONResponse(
+            status_code=502, content=_error(str(exc), fields={"market": str(exc)})
+        )
+    return BinancePublic24hTickerResponse(
+        environment="BINANCE_SPOT",
+        symbol=ticker.symbol,
+        last_price=ticker.last_price,
+        price_change_percent=ticker.price_change_percent,
+        quote_volume=ticker.quote_volume,
+        observed_at_us=time.time_ns() // 1000,
+        read_only=True,
+        credential_required=False,
+    )
+
+
+class PublicSymbolRules(BaseModel):
+    symbol: str
+    status: str
+    base_asset: str
+    quote_asset: str
+    tick: str
+    qty_step: str
+    min_qty: str
+    min_notional: str
+    bot_supported: bool
+    bot_unsupported_reason: Literal["NOT_TRADING", "QUOTE_UNSUPPORTED"] | None
+
+
+class PublicSymbolRulesResponse(BaseModel):
+    data: PublicSymbolRules
+
+
+@app.get("/api/public/symbol-rules", response_model=PublicSymbolRulesResponse)
+def get_binance_public_symbol_rules(symbol: BinancePublicSymbol, response: Response):
+    """One symbol's venue rules plus whether a DCA bot can run on it, decided
+    by the same rule `sector_dca.derive_deal_config` enforces (no guessing
+    in the client)."""
+
+    response.headers["Cache-Control"] = "no-store"
+    if type(symbol) is not str or _BINANCE_PUBLIC_SYMBOL_RE.fullmatch(symbol) is None:
+        return _problem(
+            422, "REQUEST_VALIDATION_FAILED", "İstek doğrulanamadı",
+            "Symbol büyük harf alfanumerik olmalıdır.", errors=[{"field": "symbol", "code": "INVALID_REQUEST"}],
+        )
+    try:
+        rules = fetch_binance_public_symbol_rules(symbol, allowed_symbols=frozenset({symbol}))
+    except BinancePublicTransportError as exc:
+        return _problem(502, exc.code, "Piyasa verisi alınamadı", str(exc))
+    reason = bot_unsupported_reason(rules)
+    return PublicSymbolRulesResponse(
+        data=PublicSymbolRules(
+            symbol=rules.symbol,
+            status=rules.status,
+            base_asset=rules.base_asset,
+            quote_asset=rules.quote_asset,
+            tick=rules.tick,
+            qty_step=rules.qty_step,
+            min_qty=rules.min_qty,
+            min_notional=rules.min_notional,
+            bot_supported=reason is None,
+            bot_unsupported_reason=reason,
+        )
+    )
+
+
+class PublicTicker24hRow(BaseModel):
+    symbol: str
+    last_price: str
+    price_change_percent: str
+    quote_volume: str
+
+
+class PublicTickers24hResponse(BaseModel):
+    data: list[PublicTicker24hRow]
+    observed_at_us: int
+    read_only: bool
+    credential_required: bool
+
+
+@app.get("/api/public/tickers-24h", response_model=PublicTickers24hResponse)
+def get_binance_public_24h_tickers(symbols: str, response: Response):
+    """W-F2: up to 50 symbols' 24h stats in one venue request (market list).
+    `symbols` is a comma-separated list; order is preserved, display-only."""
+
+    response.headers["Cache-Control"] = "no-store"
+    requested = tuple(symbols.split(",")) if isinstance(symbols, str) and symbols else ()
+    if (
+        not 1 <= len(requested) <= 50
+        or len(set(requested)) != len(requested)
+        or any(_BINANCE_PUBLIC_SYMBOL_RE.fullmatch(symbol) is None for symbol in requested)
+    ):
+        return _problem(
+            422,
+            "REQUEST_VALIDATION_FAILED",
+            "İstek doğrulanamadı",
+            "symbols 1-50 tekrarsız, büyük harf alfanumerik sembol olmalıdır.",
+            errors=[{"field": "symbols", "code": "INVALID_REQUEST"}],
+        )
+    try:
+        tickers = fetch_binance_public_24hr_tickers(requested)
+    except BinancePublicTransportError as exc:
+        return _problem(502, exc.code, "Piyasa verisi alınamadı", str(exc))
+    return PublicTickers24hResponse(
+        data=[
+            PublicTicker24hRow(
+                symbol=t.symbol,
+                last_price=t.last_price,
+                price_change_percent=t.price_change_percent,
+                quote_volume=t.quote_volume,
+            )
+            for t in tickers
+        ],
+        observed_at_us=time.time_ns() // 1000,
+        read_only=True,
+        credential_required=False,
+    )
+
+
+@app.get("/api/public/depth")
+def get_binance_public_depth(
+    symbol: BinancePublicSymbol,
+    response: Response,
+    limit: int = 20,
+):
+    """AA.14 (2026-09-23): real, credential-free order-book depth --
+    `binance_public_depth.py` (E.3's whale-detection transport) was never
+    wired to HTTP. Replaces qwen's fabricated order-book with real bid/ask
+    levels; exact price/qty text, unmodified."""
+
+    response.headers["Cache-Control"] = "no-store"
+    if type(symbol) is not str or _BINANCE_PUBLIC_SYMBOL_RE.fullmatch(symbol) is None:
+        return JSONResponse(
+            status_code=422,
+            content=_error(
+                "İstek doğrulanamadı.",
+                fields={"symbol": "Symbol büyük harf alfanumerik olmalıdır."},
+            ),
+        )
+    if type(limit) is not int or limit not in (5, 10, 20, 50, 100, 500, 1000, 5000):
+        return JSONResponse(
+            status_code=422,
+            content=_error(
+                "İstek doğrulanamadı.",
+                fields={"limit": "limit yalnız 5/10/20/50/100/500/1000/5000 olabilir."},
+            ),
+        )
+    try:
+        snapshot = fetch_binance_public_depth_snapshot(symbol, limit=limit)
+    except BinancePublicDepthError as exc:
+        return JSONResponse(
+            status_code=502, content=_error(str(exc), fields={"depth": str(exc)})
+        )
+    return {
+        "data": {
+            "symbol": symbol,
+            "last_update_id": snapshot.last_update_id,
+            "bids": [list(level) for level in snapshot.bids],
+            "asks": [list(level) for level in snapshot.asks],
+            "observed_at_us": time.time_ns() // 1000,
+            "read_only": True,
+            "credential_required": False,
+        }
+    }
+
+
+@app.get("/api/public/klines")
+def get_binance_public_klines(
+    symbol: BinancePublicSymbol,
+    response: Response,
+    interval: str = "1h",
+    limit: int = 200,
+):
+    """AB.0: credential-free live candles so charts never depend on a
+    downloaded dataset. Bars use the historical-chart shape (exact text),
+    oldest first; `last_bar_closed` is false while the venue's newest
+    kline is still forming."""
+
+    response.headers["Cache-Control"] = "no-store"
+    if type(symbol) is not str or _BINANCE_PUBLIC_SYMBOL_RE.fullmatch(symbol) is None:
+        return JSONResponse(
+            status_code=422,
+            content=_error(
+                "İstek doğrulanamadı.",
+                fields={"symbol": "Symbol büyük harf alfanumerik olmalıdır."},
+            ),
+        )
+    if interval not in PUBLIC_KLINE_INTERVALS:
+        return JSONResponse(
+            status_code=422,
+            content=_error(
+                "İstek doğrulanamadı.",
+                fields={"interval": "Desteklenen aralıklar: " + ", ".join(sorted(PUBLIC_KLINE_INTERVALS))},
+            ),
+        )
+    if type(limit) is not int or not 1 <= limit <= MAX_KLINES_LIMIT:
+        return JSONResponse(
+            status_code=422,
+            content=_error(
+                "İstek doğrulanamadı.",
+                fields={"limit": f"limit 1 ile {MAX_KLINES_LIMIT} arasında olmalıdır."},
+            ),
+        )
+    try:
+        klines = fetch_binance_public_klines(
+            symbol, interval=interval, limit=limit, allowed_symbols=frozenset({symbol})
+        )
+    except BinancePublicTransportError as exc:
+        return JSONResponse(
+            status_code=502, content=_error(str(exc), fields={"market": str(exc)})
+        )
+    observed_at_us = time.time_ns() // 1000
+    return {
+        "data": {
+            "symbol": symbol,
+            "interval": interval,
+            "bars": [
+                {
+                    "bar_index": index,
+                    "open_time_us": kline.open_time_us,
+                    "close_time_us": kline.close_time_us,
+                    "open": kline.open,
+                    "high": kline.high,
+                    "low": kline.low,
+                    "close": kline.close,
+                    "base_volume": kline.base_volume,
+                }
+                for index, kline in enumerate(klines, start=1)
+            ],
+            "last_bar_closed": bool(klines) and klines[-1].close_time_us < observed_at_us,
+            "observed_at_us": observed_at_us,
+            "read_only": True,
+            "credential_required": False,
+        }
+    }
+
+
 def _testnet_credential_id() -> str | None:
     raw = os.getenv("DCABOT_TESTNET_CREDENTIAL_ID")
     return raw.strip() if raw and raw.strip() else None
@@ -3825,7 +5070,10 @@ def _testnet_not_configured() -> JSONResponse:
 
 @app.get("/api/testnet/account", response_model=BinanceTestnetAccountResponse)
 def get_binance_testnet_account(response: Response) -> BinanceTestnetAccountResponse | JSONResponse:
-    """Return one signed, read-only Testnet account snapshot. No mutation endpoint is reachable."""
+    """Return one signed, read-only Testnet account snapshot. This endpoint
+    itself never mutates; a real order can only be placed via the gated
+    `/api/testnet/dca-sessions/{id}/place` endpoint (Arda's explicit written
+    approval, 2026-09-23, per AGENTS.md's testnet-mutation gate)."""
 
     response.headers["Cache-Control"] = "no-store"
     credential_id = _testnet_credential_id()
@@ -3895,6 +5143,553 @@ def get_binance_testnet_open_orders(
         read_only=True,
         credential_required=True,
     )
+
+
+TESTNET_DCA_SESSION_CREATE_REQUIRED_FIELDS = {"session_id", "symbol", "config"}
+TESTNET_DCA_SESSION_CREATE_OPTIONAL_FIELDS = {"bot_id", "starting_balance", "mode"}
+TESTNET_DCA_SESSION_MODES = {"TESTNET", "PAPER"}
+TESTNET_DCA_SESSION_MARK_FIELDS = {"price"}
+
+
+def _validate_testnet_dca_session_create_payload(
+    payload: object,
+) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON gövdesi nesne olmalıdır."}
+    unknown = set(payload) - TESTNET_DCA_SESSION_CREATE_REQUIRED_FIELDS - TESTNET_DCA_SESSION_CREATE_OPTIONAL_FIELDS
+    missing = TESTNET_DCA_SESSION_CREATE_REQUIRED_FIELDS - set(payload)
+    fields: dict[str, str] = {}
+    if unknown:
+        fields["body"] = "Bilinmeyen alanlar: " + ", ".join(sorted(unknown))
+    if missing:
+        fields["body"] = (
+            fields.get("body", "") + (" " if fields.get("body") else "")
+            + "Eksik alanlar: " + ", ".join(sorted(missing))
+        )
+    if fields:
+        return None, fields
+    body = dict(payload)
+    body.setdefault("bot_id", None)
+    body.setdefault("starting_balance", None)
+    body.setdefault("mode", "TESTNET")
+    if not isinstance(body.get("session_id"), str) or not body["session_id"]:
+        fields["session_id"] = "session_id boş olmayan string olmalıdır."
+    if not isinstance(body.get("symbol"), str) or not body["symbol"]:
+        fields["symbol"] = "symbol boş olmayan string olmalıdır."
+    if not isinstance(body.get("config"), dict):
+        fields["config"] = "config nesne olmalıdır."
+    if body["bot_id"] is not None and (not isinstance(body["bot_id"], str) or not body["bot_id"]):
+        fields["bot_id"] = "bot_id boş olmayan string ya da null olmalıdır."
+    if body["starting_balance"] is not None:
+        try:
+            if not isinstance(body["starting_balance"], str) or number(body["starting_balance"]) <= 0:
+                raise ValueError
+        except ValueError:
+            fields["starting_balance"] = "starting_balance pozitif exact ondalık string ya da null olmalıdır."
+    if body["mode"] not in TESTNET_DCA_SESSION_MODES:
+        fields["mode"] = "mode yalnız 'TESTNET' ya da 'PAPER' olabilir."
+    if fields:
+        return None, fields
+    return body, {}
+
+
+def _testnet_dca_session_report(
+    session: DcaSession, starting_balance: str | None = None, mode: str = "TESTNET"
+) -> dict[str, object]:
+    data = engine_report(session.state, session.config)
+    data["symbol"] = session.symbol
+    data["bindings"] = [
+        {"local_order_id": b.local_order_id, "role": b.role, "venue_order_id": b.venue_order_id}
+        for b in session.bindings
+    ]
+    data["mode"] = mode
+    data["starting_balance"] = starting_balance
+    # Display-only: starting botUSD + the session's own exact net. Never fed
+    # back into engine.py -- the reducer has no concept of a virtual wallet.
+    data["virtual_balance"] = (
+        text(number(starting_balance) + number(data["realized_net_after_all_costs"]))
+        if starting_balance is not None
+        else None
+    )
+    return data
+
+
+def _testnet_dca_session_store_problem(exc: TestnetDcaSessionStoreError) -> JSONResponse:
+    status_code = {
+        "DCA_SESSION_NOT_FOUND": 404,
+        "DCA_SESSION_ALREADY_EXISTS": 409,
+    }.get(exc.code, 422)
+    return JSONResponse(status_code=status_code, content=_error(str(exc), fields={"session": str(exc)}))
+
+
+@app.post("/api/testnet/dca-sessions")
+async def create_testnet_dca_session(request: Request):
+    """Create a durable, LOCAL-only DCA session (no order placed here).
+
+    Reuses `domain.engine.State`/`Config` verbatim via `testnet_dca_session.
+    new_session` -- the same reducer G-I's fields all live on. Mark/decision
+    are read-only; placing a real (even testnet) order is a separate,
+    deliberately not-yet-wired step (docs/KARARLAR.md, 2026-09-23).
+    """
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_testnet_dca_session_create_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    assert validated is not None
+    try:
+        config = Config.parse(validated["config"])
+    except ValueError as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"config": str(exc)}))
+    session = new_session(config, validated["symbol"])  # type: ignore[arg-type]
+    now_us = time.time_ns() // 1000
+    try:
+        with TESTNET_DCA_SESSION_LOCK:
+            TESTNET_DCA_SESSION_STORE.create(
+                validated["session_id"], session, validated["config"],  # type: ignore[arg-type]
+                now_us=now_us, bot_id=validated["bot_id"],  # type: ignore[arg-type]
+                starting_balance=validated["starting_balance"],  # type: ignore[arg-type]
+                mode=validated["mode"],  # type: ignore[arg-type]
+            )
+    except TestnetDcaSessionStoreError as exc:
+        return _testnet_dca_session_store_problem(exc)
+    report = _testnet_dca_session_report(session, validated["starting_balance"], validated["mode"])  # type: ignore[arg-type]
+    return {"data": {"session_id": validated["session_id"], **report}}
+
+
+@app.get("/api/testnet/dca-sessions")
+async def list_testnet_dca_sessions():
+    """List every durable DCA session with its live-computed report.
+
+    This is the real, exact-Fraction deal list (AA.4) -- unlike `/api/deals`
+    (a non-economic lifecycle tracker), each row here carries real PnL/SO
+    fill state from the same reducer G-I's Config fields feed into.
+    """
+
+    with TESTNET_DCA_SESSION_LOCK:
+        ids = TESTNET_DCA_SESSION_STORE.list_ids()
+        sessions = []
+        for session_id in ids:
+            try:
+                session = TESTNET_DCA_SESSION_STORE.load(session_id)
+                starting_balance = TESTNET_DCA_SESSION_STORE.get_starting_balance(session_id)
+                mode = TESTNET_DCA_SESSION_STORE.get_mode(session_id)
+            except TestnetDcaSessionStoreError:
+                continue
+            sessions.append({"session_id": session_id, **_testnet_dca_session_report(session, starting_balance, mode)})
+    return {"data": sessions}
+
+
+@app.get("/api/bots/{bot_id}/dca-sessions/deal-count")
+async def get_bot_dca_deal_count(bot_id: str):
+    """Real, exact-Fraction deal counts for one bot's own DCA sessions
+    (`bot_id` is a purely associative link set at session-creation time --
+    no bot<->deal model existed before this)."""
+
+    try:
+        with TESTNET_DCA_SESSION_LOCK:
+            ids = TESTNET_DCA_SESSION_STORE.list_ids_for_bot(bot_id)
+            active = 0
+            completed = 0
+            for session_id in ids:
+                try:
+                    session = TESTNET_DCA_SESSION_STORE.load(session_id)
+                except TestnetDcaSessionStoreError:
+                    continue
+                if engine_report(session.state, session.config)["deal_complete"]:
+                    completed += 1
+                else:
+                    active += 1
+    except TestnetDcaSessionStoreError as exc:
+        return _testnet_dca_session_store_problem(exc)
+    return {"data": {"bot_id": bot_id, "total": len(ids), "active": active, "completed": completed}}
+
+
+@app.get("/api/bots/{bot_id}/dca-sessions/performance")
+async def get_bot_dca_performance(bot_id: str):
+    """Real, exact-Fraction performance aggregate across one bot's own DCA
+    sessions -- net PnL, win rate, max drawdown, all summed/maxed from the
+    same `State` fields G-I's Config alterations feed into, never from
+    display text."""
+
+    try:
+        with TESTNET_DCA_SESSION_LOCK:
+            ids = TESTNET_DCA_SESSION_STORE.list_ids_for_bot(bot_id)
+            total_net = Q(0)
+            max_drawdown = Q(0)
+            completed = 0
+            wins = 0
+            for session_id in ids:
+                try:
+                    session = TESTNET_DCA_SESSION_STORE.load(session_id)
+                except TestnetDcaSessionStoreError:
+                    continue
+                s = session.state
+                net = s.realized - s.fees - s.funding
+                total_net += net
+                max_drawdown = max(max_drawdown, s.max_dd)
+                if s.orders and not s.position.qty and not s.unsettled:
+                    completed += 1
+                    if net > 0:
+                        wins += 1
+    except TestnetDcaSessionStoreError as exc:
+        return _testnet_dca_session_store_problem(exc)
+    return {
+        "data": {
+            "bot_id": bot_id,
+            "deal_count": len(ids),
+            "completed_deal_count": completed,
+            "win_count": wins,
+            "win_rate": text(Q(wins, completed)) if completed else None,
+            "total_realized_net": text(total_net),
+            "max_drawdown": text(max_drawdown),
+        }
+    }
+
+
+@app.get("/api/portfolio/dca-performance")
+async def get_portfolio_dca_performance():
+    """Portfolio-wide aggregate across every bot's own testnet DCA sessions
+    -- per-bot net (for a ring/allocation view), total net, and a winning-
+    bot count, all exact-Fraction and computed server-side so the UI never
+    does ratio/sign/total math itself (AA.13 wire-finding #2, 2026-09-23).
+    Sessions with no `bot_id` contribute to `total_realized_net` but are not
+    attributable to any bot, so they are excluded from `bots`."""
+
+    try:
+        with TESTNET_DCA_SESSION_LOCK:
+            pairs = TESTNET_DCA_SESSION_STORE.list_bot_ids()
+            per_bot: dict[str, Q] = {}
+            total_net = Q(0)
+            for session_id, bot_id in pairs:
+                try:
+                    session = TESTNET_DCA_SESSION_STORE.load(session_id)
+                except TestnetDcaSessionStoreError:
+                    continue
+                s = session.state
+                net = s.realized - s.fees - s.funding
+                total_net += net
+                if bot_id is not None:
+                    per_bot[bot_id] = per_bot.get(bot_id, Q(0)) + net
+    except TestnetDcaSessionStoreError as exc:
+        return _testnet_dca_session_store_problem(exc)
+    bots = [
+        {
+            "bot_id": bot_id,
+            "realized_net": text(net),
+            "share_of_total": text(net / total_net) if total_net > 0 else None,
+        }
+        for bot_id, net in sorted(per_bot.items())
+    ]
+    return {
+        "data": {
+            "bot_count": len(per_bot),
+            "winning_bot_count": sum(1 for net in per_bot.values() if net > 0),
+            "total_realized_net": text(total_net),
+            "bots": bots,
+        }
+    }
+
+
+@app.get("/api/testnet/dca-sessions/{session_id}")
+async def get_testnet_dca_session(session_id: str):
+    try:
+        with TESTNET_DCA_SESSION_LOCK:
+            session = TESTNET_DCA_SESSION_STORE.load(session_id)
+            starting_balance = TESTNET_DCA_SESSION_STORE.get_starting_balance(session_id)
+            mode = TESTNET_DCA_SESSION_STORE.get_mode(session_id)
+    except TestnetDcaSessionStoreError as exc:
+        return _testnet_dca_session_store_problem(exc)
+    report = _testnet_dca_session_report(session, starting_balance, mode)
+    return {"data": {"session_id": session_id, **report}}
+
+
+@app.post("/api/testnet/dca-sessions/{session_id}/mark")
+async def mark_testnet_dca_session(session_id: str, request: Request):
+    """Apply a MARK price (caller-supplied, e.g. from /api/public/last-price
+    or a real testnet feed) -- read-only w.r.t. the venue, no order placed."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    body, fields = _template_field_errors(payload, TESTNET_DCA_SESSION_MARK_FIELDS)
+    if body is None or fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    if not isinstance(body.get("price"), str):
+        return JSONResponse(
+            status_code=422,
+            content=_error("İstek doğrulanamadı.", fields={"price": "price exact decimal string olmalıdır."}),
+        )
+    try:
+        with TESTNET_DCA_SESSION_LOCK:
+            session = TESTNET_DCA_SESSION_STORE.load(session_id)
+            next_session = apply_mark(session, body["price"])  # type: ignore[arg-type]
+            TESTNET_DCA_SESSION_STORE.save(session_id, next_session, now_us=time.time_ns() // 1000)
+            starting_balance = TESTNET_DCA_SESSION_STORE.get_starting_balance(session_id)
+            mode = TESTNET_DCA_SESSION_STORE.get_mode(session_id)
+    except TestnetDcaSessionStoreError as exc:
+        return _testnet_dca_session_store_problem(exc)
+    except (TestnetDcaSessionError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"mark": str(exc)}))
+    report = _testnet_dca_session_report(next_session, starting_balance, mode)
+    return {"data": {"session_id": session_id, **report}}
+
+
+@app.get("/api/testnet/dca-sessions/{session_id}/decision")
+async def get_testnet_dca_session_decision(session_id: str):
+    """Read-only: what the core reducer would do next, if anything.
+
+    `limit_price`/`notional` are a PREVIEW only -- `place_next_action`
+    recomputes the same `role_price()` itself at send-time and is the sole
+    source of truth for what actually gets signed; a mark update or a plan
+    change between this read and a real `/place` call can make the preview
+    stale, which is exactly what `/place`'s own (role, qty) match against a
+    freshly re-proposed action already guards against (409 on mismatch)."""
+
+    try:
+        with TESTNET_DCA_SESSION_LOCK:
+            session = TESTNET_DCA_SESSION_STORE.load(session_id)
+    except TestnetDcaSessionStoreError as exc:
+        return _testnet_dca_session_store_problem(exc)
+    action = propose_next_action(session)
+    if action is None:
+        return {"data": None}
+    role, qty = action
+    data: dict[str, object] = {"role": role, "qty": text(qty)}
+    try:
+        price = role_price(session, role)
+    except TestnetDcaSessionError:
+        data["limit_price"] = None
+        data["notional"] = None
+    else:
+        data["limit_price"] = text(price)
+        data["notional"] = text(qty * price)
+    return {"data": data}
+
+
+class _ApiWallClock:
+    def now_ms(self) -> int:
+        return time.time_ns() // 1_000_000
+
+
+TESTNET_DCA_ATTEMPTS_PATH = DATA_DIR / "testnet_dca_attempts.sqlite3"
+TESTNET_DCA_ATTEMPT_STORE = AttemptStore(TESTNET_DCA_ATTEMPTS_PATH)
+TESTNET_DCA_CLOCK = _ApiWallClock()
+TESTNET_DCA_SYNC_FIELDS = {"role"}
+TESTNET_DCA_PLACE_FIELDS = {"role", "qty", "confirmed"}
+
+
+@app.post("/api/testnet/dca-sessions/{session_id}/sync")
+async def sync_testnet_dca_session(session_id: str, request: Request):
+    """Read-only: fetch the real order status + exact fills for one already-
+    placed local order and feed them into the reducer. Never places or
+    cancels anything -- Faz 3.2's exact-fill source only."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    body, fields = _template_field_errors(payload, TESTNET_DCA_SYNC_FIELDS)
+    if body is None or fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    role = body.get("role")
+    if not isinstance(role, str) or not role:
+        return JSONResponse(
+            status_code=422,
+            content=_error("İstek doğrulanamadı.", fields={"role": "role boş olmayan string olmalıdır."}),
+        )
+    credential_id = _testnet_credential_id()
+    if credential_id is None:
+        return _testnet_not_configured()
+    try:
+        with TESTNET_DCA_SESSION_LOCK:
+            session = TESTNET_DCA_SESSION_STORE.load(session_id)
+            mode = TESTNET_DCA_SESSION_STORE.get_mode(session_id)
+            if mode != "TESTNET":
+                return _problem(
+                    409,
+                    "DCA_SESSION_MODE_MISMATCH",
+                    "PAPER oturumu sync edilemez",
+                    "sync yalnız gerçek venue emri olabilecek TESTNET oturumları içindir.",
+                )
+            next_session = await sync_order_fills(
+                session, role,
+                credential_id=credential_id,
+                provider=WindowsCredentialManagerProvider(),
+                clock=TESTNET_DCA_CLOCK,
+            )
+            TESTNET_DCA_SESSION_STORE.save(session_id, next_session, now_us=time.time_ns() // 1000)
+            starting_balance = TESTNET_DCA_SESSION_STORE.get_starting_balance(session_id)
+    except TestnetDcaSessionStoreError as exc:
+        return _testnet_dca_session_store_problem(exc)
+    except (TestnetDcaSessionError, BinanceTestnetAccountError, SignedRequestError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"sync": str(exc)}))
+    report = _testnet_dca_session_report(next_session, starting_balance, mode)
+    return {"data": {"session_id": session_id, **report}}
+
+
+@app.post("/api/testnet/dca-sessions/{session_id}/place")
+async def place_testnet_dca_session_order(session_id: str, request: Request):
+    """Place ONE real Binance Spot Testnet order for the reducer's proposed
+    next action -- Faz 3.4's mutation gate, unchanged, is the sole authority
+    over whether this can actually happen (kill-switch, idempotent
+    AttemptStore identity, single-in-flight-mutation rule, max_entry_notional
+    cap). This endpoint only ever sends the exact (role, qty) the reducer
+    itself currently proposes -- a caller cannot request an arbitrary order.
+
+    `confirmed` must be the literal boolean `true` in the request body: this
+    mirrors `testnet_order_execution.py`'s own documented contract ("this
+    module never sends without a confirmed=True the caller only sets after
+    showing the operator the exact order and getting an explicit yes") --
+    here, the caller is whatever UI surface a human just confirmed in.
+    """
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    body, fields = _template_field_errors(payload, TESTNET_DCA_PLACE_FIELDS)
+    if body is None or fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    role = body.get("role")
+    if not isinstance(role, str) or not role:
+        fields["role"] = "role boş olmayan string olmalıdır."
+    if not isinstance(body.get("qty"), str):
+        fields["qty"] = "qty exact decimal string olmalıdır."
+    if body.get("confirmed") is not True:
+        fields["confirmed"] = "confirmed tam olarak true olmalıdır."
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    credential_id = _testnet_credential_id()
+    if credential_id is None:
+        return _testnet_not_configured()
+    if not trading_kill_switch_enabled():
+        return _problem(
+            409,
+            "GATE_KILL_SWITCH_OFF",
+            "İşlem devre dışı",
+            "DCABOT_TRADING_ENABLED 'true' değil; hiçbir gerçek emir gönderilmez.",
+        )
+    provider = WindowsCredentialManagerProvider()
+    try:
+        with TESTNET_DCA_SESSION_LOCK:
+            session = TESTNET_DCA_SESSION_STORE.load(session_id)
+            mode = TESTNET_DCA_SESSION_STORE.get_mode(session_id)
+            if mode != "TESTNET":
+                return _problem(
+                    409,
+                    "DCA_SESSION_MODE_MISMATCH",
+                    "PAPER oturumu için gerçek emir gönderilemez",
+                    "/place yalnız TESTNET oturumları içindir; PAPER oturumları /paper-fill kullanır.",
+                )
+            proposed = propose_next_action(session)
+            if proposed is None or proposed[0] != role or text(proposed[1]) != text(number(body["qty"])):  # type: ignore[arg-type]
+                return JSONResponse(
+                    status_code=409,
+                    content=_error(
+                        "İstenen aksiyon motorun şu anki önerisiyle eşleşmiyor.",
+                        fields={"role": "Sıradaki aksiyon değişmiş olabilir; /decision'ı tekrar okuyun."},
+                    ),
+                )
+            qty = proposed[1]
+            account = fetch_binance_testnet_account(credential_id, provider=provider, clock=TESTNET_DCA_CLOCK)
+            now_us = time.time_ns() // 1000
+            attempt_id = f"dca-{session_id}-{role.lower().replace(':', '-')}-{now_us}"
+            next_session, result = await place_next_action(
+                session,
+                role=role,
+                qty=qty,
+                store=TESTNET_DCA_ATTEMPT_STORE,
+                attempt_id=attempt_id,
+                credential_id=credential_id,
+                provider=provider,
+                clock=TESTNET_DCA_CLOCK,
+                now_us=now_us,
+                max_entry_notional=session.config.max_entry_notional,
+                capability_snapshot_hash=account.response_sha256,
+            )
+            TESTNET_DCA_SESSION_STORE.save(session_id, next_session, now_us=now_us)
+            starting_balance = TESTNET_DCA_SESSION_STORE.get_starting_balance(session_id)
+    except TestnetDcaSessionStoreError as exc:
+        return _testnet_dca_session_store_problem(exc)
+    except (TestnetDcaSessionError, TestnetOrderExecutionError, BinanceTestnetAccountError, SignedRequestError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"place": str(exc)}))
+    return {
+        "data": {
+            "session_id": session_id,
+            "venue_order_id": result.placed.order_id,
+            "venue_status": result.placed.status,
+            **_testnet_dca_session_report(next_session, starting_balance, mode),
+        }
+    }
+
+
+TESTNET_DCA_PAPER_FILL_FIELDS = {"role", "qty"}
+
+
+@app.post("/api/testnet/dca-sessions/{session_id}/paper-fill")
+async def paper_fill_testnet_dca_session(session_id: str, request: Request):
+    """"Paper" mode (2026-09-23 design decision, docs/KARARLAR.md): the same
+    real engine as `/place`, fed by real market data already applied via
+    `/mark`, but NO real order API -- `paper_fill_next_action` fills locally
+    at `role_price()` (the exact price `/place` would sign and send).
+    No credential, no kill-switch, no `confirmed` field: no real money ever
+    moves, so none of `/place`'s mutation-gate machinery applies. The
+    (role, qty) match against the reducer's own current proposal is kept
+    anyway -- not a safety gate here, just the same staleness guard `/place`
+    already has (a caller cannot fill an action the engine did not propose).
+    """
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    body, fields = _template_field_errors(payload, TESTNET_DCA_PAPER_FILL_FIELDS)
+    if body is None or fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    role = body.get("role")
+    if not isinstance(role, str) or not role:
+        fields["role"] = "role boş olmayan string olmalıdır."
+    if not isinstance(body.get("qty"), str):
+        fields["qty"] = "qty exact decimal string olmalıdır."
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        with TESTNET_DCA_SESSION_LOCK:
+            session = TESTNET_DCA_SESSION_STORE.load(session_id)
+            mode = TESTNET_DCA_SESSION_STORE.get_mode(session_id)
+            if mode != "PAPER":
+                return _problem(
+                    409,
+                    "DCA_SESSION_MODE_MISMATCH",
+                    "TESTNET oturumu paper doldurulamaz",
+                    "/paper-fill yalnız PAPER oturumları içindir; TESTNET oturumları /place kullanır.",
+                )
+            proposed = propose_next_action(session)
+            if proposed is None or proposed[0] != role or text(proposed[1]) != text(number(body["qty"])):  # type: ignore[arg-type]
+                return JSONResponse(
+                    status_code=409,
+                    content=_error(
+                        "İstenen aksiyon motorun şu anki önerisiyle eşleşmiyor.",
+                        fields={"role": "Sıradaki aksiyon değişmiş olabilir; /decision'ı tekrar okuyun."},
+                    ),
+                )
+            qty = proposed[1]
+            now_us = time.time_ns() // 1000
+            attempt_id = f"paper-{session_id}-{role.lower().replace(':', '-')}-{now_us}"
+            next_session = paper_fill_next_action(session, role=role, qty=qty, attempt_id=attempt_id)
+            TESTNET_DCA_SESSION_STORE.save(session_id, next_session, now_us=now_us)
+            starting_balance = TESTNET_DCA_SESSION_STORE.get_starting_balance(session_id)
+    except TestnetDcaSessionStoreError as exc:
+        return _testnet_dca_session_store_problem(exc)
+    except TestnetDcaSessionError as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"paper_fill": str(exc)}))
+    report = _testnet_dca_session_report(next_session, starting_balance, mode)
+    return {"data": {"session_id": session_id, **report}}
 
 
 def _testnet_account_problem(code: str) -> JSONResponse:
@@ -4294,6 +6089,7 @@ def _historical_simulation_response(
     result: HistoricalSimulationResult,
     execution_id: str,
     profile,
+    config: Config,
 ) -> HistoricalSimulationResponse:
     summary = result.summary
     ambiguity = None
@@ -4304,6 +6100,17 @@ def _historical_simulation_response(
         )
     deal_count = max((action.deal_sequence for action in result.actions), default=0)
     completed_deal_count = max(deal_count - (1 if result.position_status == "OPEN_AT_END" else 0), 0)
+    # `build_historical_run_capture` already ran (and validated deal_pnls'
+    # shape) on this exact `result` just before this call -- see the caller.
+    deal_pnls = summary["deal_pnls"]
+    metrics = performance_metrics(
+        deal_pnls,
+        peak_equity=summary["peak_equity"],
+        realized_net_after_all_costs=summary["realized_net_after_all_costs"],
+        roles=[action.role for action in result.actions],
+        max_active_safety_orders=config.effective_max_active_safety_orders,
+        deal_count=deal_count,
+    )
     return HistoricalSimulationResponse(
         execution_id=execution_id,
         execution_status=result.execution_status,
@@ -4368,6 +6175,15 @@ def _historical_simulation_response(
             position_status=result.position_status,
             funding_status=result.funding_status,
             mark_status=result.mark_status,
+            deal_pnls=deal_pnls,
+            win_count=metrics["win_count"],
+            win_rate=metrics["win_rate"],
+            profit_factor=metrics["profit_factor"],
+            roi=metrics["roi"],
+            safety_order_fill_count=metrics["safety_order_fill_count"],
+            safety_order_fill_rate=metrics["safety_order_fill_rate"],
+            equity_curve=summary["equity_curve"],
+            sharpe_ratio=equity_curve_sharpe_ratio(tuple(summary["equity_curve"])),
         ),
         ambiguity=ambiguity,
         explanations=_read_only_explanation_responses(result),
@@ -4830,7 +6646,7 @@ def simulate_historical_run(payload: HistoricalSimulationRequest, response: Resp
             while len(HISTORICAL_EXECUTIONS) > MAX_EPHEMERAL_HISTORICAL_EXECUTIONS:
                 oldest_execution_id = next(iter(HISTORICAL_EXECUTIONS))
                 del HISTORICAL_EXECUTIONS[oldest_execution_id]
-        return _historical_simulation_response(loaded, plan, result, execution_id, profile)
+        return _historical_simulation_response(loaded, plan, result, execution_id, profile, config)
     finally:
         HISTORICAL_EXECUTION_LOCK.release()
 
@@ -5312,6 +7128,23 @@ async def create_preview(request: Request):
         )
 
 
+@app.post("/api/preview/full")
+async def create_preview_full(request: Request):
+    """AA.5: avg/TP/SL/margin preview from a full (not-yet-saved) Config."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_preview_full_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _calculate_preview_full(validated)}
+    except (KeyError, TypeError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"config": str(exc)}))
+
+
 @app.post("/api/rebalance/valuation")
 async def create_rebalance_valuation(request: Request):
     try:
@@ -5491,6 +7324,60 @@ async def bind_template(template_id: str, request: Request):
             return {"data": _template_bind(TEMPLATE_STORE, template_id, validated, time.time_ns() // 1000)}
     except (KeyError, TypeError, ValueError) as exc:
         return JSONResponse(status_code=422, content=_error(str(exc), fields={"binding": str(exc)}))
+
+
+@app.post("/api/presets/compare")
+async def compare_presets(request: Request):
+    """AA.13 sec-compare: bind two templates against (possibly different)
+    profiles and run each on the SAME dataset -- `preset_comparison.py`
+    (Faz 17 B.4-motor, already tested) orchestrates; no new economics."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_preset_compare_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    preflight = _dataset_preflight(validated["dataset_id"])  # type: ignore[arg-type]
+    if isinstance(preflight, JSONResponse):
+        return preflight
+    loaded, _preflight = preflight
+    if loaded.metadata.artifact_sha256 != validated["artifact_sha256"]:
+        return _problem(
+            409,
+            "ARTIFACT_MISMATCH",
+            "Dataset artifact eşleşmiyor",
+            "İstekteki artifact_sha256 mevcut dataset ile eşleşmiyor.",
+        )
+    if not HISTORICAL_EXECUTION_LOCK.acquire(blocking=False):
+        return _problem(
+            409,
+            "EXECUTION_BUSY",
+            "Karşılaştırma meşgul",
+            "Başka bir tarihsel simülasyon çalışıyor.",
+        )
+    try:
+        now_us = time.time_ns() // 1000
+        try:
+            with TEMPLATE_LOCK:
+                binding_a = _bind_for_compare(validated["a"], now_us)  # type: ignore[arg-type]
+                binding_b = _bind_for_compare(validated["b"], now_us)  # type: ignore[arg-type]
+        except (KeyError, TypeError, ValueError) as exc:
+            return JSONResponse(status_code=422, content=_error(str(exc), fields={"binding": str(exc)}))
+        try:
+            result = compare_bindings_on_dataset(binding_a, binding_b, loaded, ROOT)
+        except PresetComparisonError as exc:
+            return JSONResponse(status_code=422, content=_error(str(exc), fields={"compare": exc.code}))
+        return {
+            "data": {
+                "dataset_id": result.dataset_id,
+                "a": _preset_comparison_side_response(result.a),
+                "b": _preset_comparison_side_response(result.b),
+            }
+        }
+    finally:
+        HISTORICAL_EXECUTION_LOCK.release()
 
 
 @app.post("/api/templates/diff")
@@ -5692,6 +7579,139 @@ async def detect_indicator_cross(request: Request):
         return JSONResponse(status_code=422, content=_error(str(exc), fields={"cross": str(exc)}))
 
 
+@app.post("/api/indicators/sma")
+async def compute_sma_series(request: Request):
+    """Exact SMA series over closes (offline, read-only, no new math)."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_indicator_series_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _indicators_sma(validated)}
+    except (SignalIndicatorError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"sma": str(exc)}))
+
+
+@app.post("/api/indicators/ema")
+async def compute_ema_series(request: Request):
+    """Exact EMA series over closes (offline, read-only, no new math)."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_indicator_series_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _indicators_ema(validated)}
+    except (SignalIndicatorError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"ema": str(exc)}))
+
+
+@app.get("/api/indicators/registry")
+async def get_indicator_registry():
+    """AA.8b (2026-09-23): salt-okunur görünüm over `indicator_registry.py`
+    (Faz 17 G.4) -- the registry itself computes nothing; this just exposes
+    the same name list every `/api/indicators/*` route already dispatches
+    against, so a "module discovery" screen can show it's real."""
+
+    return {"data": {"indicators": list(available_indicators())}}
+
+
+@app.post("/api/indicators/macd")
+async def compute_macd_series(request: Request):
+    """MACD via fixed-point integer recursion (Faz 17 G.4) -- offline, read-only."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_indicator_macd_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _indicators_macd(validated)}
+    except (MomentumOscillatorError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"macd": str(exc)}))
+
+
+@app.post("/api/indicators/stoch-rsi")
+async def compute_stoch_rsi_series(request: Request):
+    """StochRSI via fixed-point integer recursion (Faz 17 G.4) -- offline, read-only."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_indicator_stoch_rsi_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _indicators_stoch_rsi(validated)}
+    except (MomentumOscillatorError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"stoch_rsi": str(exc)}))
+
+
+@app.post("/api/indicators/bollinger")
+async def compute_bollinger_series(request: Request):
+    """Bollinger Bands (Faz 17 G.4) -- exact middle/variance, float upper/lower/%B."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_indicator_bollinger_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _indicators_bollinger(validated)}
+    except (BollingerBandsError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"bollinger": str(exc)}))
+
+
+@app.post("/api/risk/correlation")
+async def compute_risk_correlation(request: Request):
+    """Correlation admission gate (Faz 17 F.2) -- integer decision core, offline."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_risk_correlation_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _risk_correlation(validated)}
+    except (CorrelationRiskError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"correlation": str(exc)}))
+
+
+@app.post("/api/risk/regime")
+async def compute_risk_regime(request: Request):
+    """Regime label (Faz 17 F.1) -- ADX/DI exact-Fraction + BB-Width float64
+    bridge -> deterministic, rule-based 5-state label. AA.8's module-discovery
+    grid needs this live (previously left "opsiyonel" in AA.-1's table, since
+    unblocked by AA.8's own scope, 2026-09-23 -- no new math, only wiring the
+    already-tested `adx_series`/`bb_width_series`/`classify_regime`)."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_risk_regime_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    try:
+        return {"data": _risk_regime(validated)}
+    except (RegimeDetectionError, ValueError) as exc:
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"regime": str(exc)}))
+
+
 @app.post("/api/sweeps/optimize")
 async def optimize_sweep(request: Request):
     """Suggest bounded trials and rank them by exact net (offline, read-only)."""
@@ -5724,6 +7744,53 @@ async def optimize_sweep(request: Request):
     except (SweepOptimizeError, SweepError, TrialSamplerError) as exc:
         code = getattr(exc, "code", "SWEEP_OPTIMIZE_INVALID")
         return JSONResponse(status_code=422, content=_error(str(exc), fields={"optimize": code}))
+    finally:
+        HISTORICAL_EXECUTION_LOCK.release()
+    return {
+        "data": {
+            **result,
+            "dataset_id": validated["dataset_id"],
+            "profile_id": validated["profile_id"],
+        }
+    }
+
+
+@app.post("/api/sweeps/overfitting")
+async def assess_sweep_overfitting_endpoint(request: Request):
+    """AA.7c (WF/MC, 2026-09-23): overfitting assessment (PBO/CSCV + per-
+    trial DSR, Bailey et al.) across one parameter sweep -- offline, read-
+    only. Wires three already-tested modules (`sweep_optimize`'s recipe
+    suggestion, `equity_curve_scores`' bar returns, `overfitting_
+    probability`'s PBO/DSR); no new statistics."""
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_sweep_overfitting_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    assert validated is not None
+    preflight = _dataset_preflight(str(validated["dataset_id"]))
+    if isinstance(preflight, JSONResponse):
+        return preflight
+    loaded, _preflight = preflight
+    try:
+        _profile, raw_config = load_historical_profile_config(ROOT, str(validated["profile_id"]))
+    except HistoricalProfileError as exc:
+        return _problem(404, "PROFILE_NOT_FOUND", "Profil bulunamadı", str(exc))
+    if not HISTORICAL_EXECUTION_LOCK.acquire(blocking=False):
+        return _problem(
+            409,
+            "SWEEP_EXECUTION_BUSY",
+            "Sweep meşgul",
+            "Başka bir tarihsel koşu sürüyor; tekrar deneyin.",
+        )
+    try:
+        result = _sweep_overfitting_compute(validated, loaded, raw_config)
+    except (SweepOverfittingError, SweepError, TrialSamplerError) as exc:
+        code = getattr(exc, "code", "SWEEP_OVERFITTING_INVALID")
+        return JSONResponse(status_code=422, content=_error(str(exc), fields={"overfitting": code}))
     finally:
         HISTORICAL_EXECUTION_LOCK.release()
     return {
@@ -6248,7 +8315,7 @@ _BACKUP_FILE_RE = re.compile(r"[A-Za-z0-9_.-]{1,80}\.sqlite3\Z", re.ASCII)
 def _backup_store_paths() -> dict[str, Path]:
     return {
         "historical_runs": HISTORICAL_RUNS_PATH,
-        "two_leg_journal": ROOT / "data" / "two_leg_journal.db",
+        "two_leg_journal": DATA_DIR / "two_leg_journal.db",
     }
 
 
@@ -6539,6 +8606,112 @@ async def list_events(limit: int = 50):
             return {"data": _events_list(EVENT_LOG, limit)}
     except (KeyError, TypeError, ValueError) as exc:
         return JSONResponse(status_code=422, content=_error(str(exc), fields={"events": str(exc)}))
+STREAM_PING_INTERVAL = 15.0
+
+
+def _parse_stream_cursor(header: str | None, param: str | None) -> int:
+    """Resolve the SSE replay cursor: Last-Event-ID wins, then query param."""
+    raw = header if header is not None else param
+    if raw is None:
+        return 0
+    if type(raw) is not str or not raw.isdigit():
+        raise ValueError("last_event_id negatif olmayan integer olmalıdır.")
+    return int(raw)
+
+
+def _sse_frame(entry: dict[str, object]) -> str:
+    """Render one landmark as an SSE event frame (multiline-safe data)."""
+    payload = json.dumps(entry, ensure_ascii=False)
+    lines = ["event: landmark", f"id: {entry['seq']}"]
+    lines.extend(f"data: {chunk}" for chunk in payload.split("\n"))
+    return "\n".join(lines) + "\n\n"
+
+
+async def _stream_landmarks(log: EventLog, start_seq: int, is_disconnected, *, ping_interval: float = STREAM_PING_INTERVAL):
+    """Replay landmarks after `start_seq`, then push live ones with pings.
+
+    The blocking wait runs in a worker thread so the event loop stays
+    free; entries evicted between wait and read are skipped, never spun on."""
+    last = start_seq
+    loop = asyncio.get_running_loop()
+    # First byte at once: proxies may hold headers until the body starts,
+    # and EventSource reports open only after headers arrive.
+    yield ": connected\n\n"
+    while not await is_disconnected():
+        with EVENT_LOCK:
+            batch = log.list_after(last)
+        if not batch:
+            current = await loop.run_in_executor(None, lambda _last=last, _t=ping_interval: log.wait_for(_last, timeout=_t))
+            if current <= last:
+                yield ": ping\n\n"
+                continue
+            with EVENT_LOCK:
+                batch = log.list_after(last)
+            if not batch:
+                last = current  # evicted between wait and read; skip the gap
+                continue
+        for entry in batch:
+            last = int(entry["seq"])
+            yield _sse_frame(entry)
+
+
+def register_stream_route(app, log: EventLog) -> None:
+    """SSE landmark channel: replay, live push, heartbeat pings."""
+
+    @app.get("/api/stream")
+    async def stream_events(request: Request, last_event_id: str | None = None):
+        try:
+            start = _parse_stream_cursor(request.headers.get("last-event-id"), last_event_id)
+        except ValueError as exc:
+            return JSONResponse(status_code=422, content=_error(str(exc), fields={"last_event_id": str(exc)}))
+        return StreamingResponse(
+            _stream_landmarks(log, start, request.is_disconnected),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+        )
+
+
+register_stream_route(app, EVENT_LOG)
+
+def _validate_read_payload(payload: object) -> tuple[dict[str, int] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON object olmalıdır."}
+    upto = payload.get("upto_seq")
+    if type(upto) is not int or upto < 0:
+        return None, {"upto_seq": "upto_seq negatif olmayan integer olmalıdır."}
+    assert isinstance(upto, int)
+    return {"upto_seq": upto}, {}
+
+
+def _notification_state(log: EventLog) -> dict[str, int]:
+    return {"last_seen_seq": log.get_last_seen(), "unread_count": log.unread_count()}
+
+
+def register_notification_routes(app, log: EventLog) -> None:
+    """Notification read-state: unread badge source and mark-read."""
+
+    @app.get("/api/notifications/state")
+    async def notification_state():
+        with EVENT_LOCK:
+            return {"data": _notification_state(log)}
+
+    @app.post("/api/notifications/read")
+    async def notification_read(request: Request):
+        try:
+            payload = await request.json()
+        except json.JSONDecodeError:
+            return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+        validated, fields = _validate_read_payload(payload)
+        if fields:
+            return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+        assert validated is not None
+        with EVENT_LOCK:
+            seen = log.set_last_seen(min(validated["upto_seq"], log.latest_seq))
+            data = {"last_seen_seq": seen, "unread_count": log.unread_count()}
+        return {"data": data}
+
+
+register_notification_routes(app, EVENT_LOG)
 
 
 RISK_EXPLAIN_FIELDS = {"session_id", "bot_id", "symbol", "deal_id"}
@@ -6627,6 +8800,107 @@ async def explain_trade_risk(request: Request):
                     )}
     except (KeyError, TypeError, ValueError) as exc:
         return JSONResponse(status_code=422, content=_error(str(exc), fields={"risk": str(exc)}))
+
+
+def _validate_kill_switch_payload(payload: object) -> tuple[dict[str, object] | None, dict[str, str]]:
+    if not isinstance(payload, dict):
+        return None, {"body": "JSON object olmalıdır."}
+    fields: dict[str, str] = {}
+    engaged = payload.get("engaged")
+    if type(engaged) is not bool:
+        fields["engaged"] = "engaged boolean olmalıdır."
+    reason = payload.get("reason", "")
+    if engaged is True and (not isinstance(reason, str) or not reason or len(reason) > 200):
+        fields["reason"] = "reason 1..200 karakter olmalıdır."
+    if fields:
+        return None, fields
+    assert isinstance(payload, dict)
+    return {"engaged": bool(engaged), "reason": reason if isinstance(reason, str) else ""}, {}
+
+
+@app.get("/api/risk/canary")
+async def get_canary_status():
+    """Live canary verdict from real trigger inputs (B.3, read-only)."""
+    with PAPER_LOCK:
+        data = canary_status(
+            spec_path=CANARY_SPEC_PATH,
+            kill_switch_path=KILL_SWITCH_PATH,
+            approval_path=CANARY_APPROVAL_PATH,
+            paper_store=PAPER_STORE,
+            now_iso=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        )
+    return {"data": data}
+
+
+@app.post("/api/risk/kill-switch")
+async def set_kill_switch(request: Request):
+    """Engage/disengage the local kill-switch marker (B.3, no orders)."""
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content=_error("JSON gövdesi okunamadı."))
+    validated, fields = _validate_kill_switch_payload(payload)
+    if fields:
+        return JSONResponse(status_code=422, content=_error("İstek doğrulanamadı.", fields=fields))
+    assert validated is not None
+    with CANARY_LOCK:
+        if validated["engaged"]:
+            engage_kill_switch(KILL_SWITCH_PATH, str(validated["reason"]))
+        else:
+            disengage_kill_switch(KILL_SWITCH_PATH)
+        engaged = read_kill_switch(KILL_SWITCH_PATH)
+    return {"data": {"engaged": engaged}}
+
+
+LIQUIDATION_STATUS_SERVICE = LiquidationStatusService()
+
+
+def _futures_testnet_credential_id() -> str | None:
+    raw = os.getenv("DCABOT_FUTURES_TESTNET_CREDENTIAL_ID")
+    return raw.strip() if raw and raw.strip() else None
+
+
+@app.get("/api/risk/liquidation-status/{symbol}", response_model=None)
+def get_liquidation_status(response: Response, symbol: str):
+    """Venue-reported position risk for one symbol (D.2, read-only, no-store).
+
+    Always 200 with an honest state unless the symbol itself is invalid
+    (422) or the read fails without cache (502 upstream / 500 unrepresentable).
+    """
+
+    response.headers["Cache-Control"] = "no-store"
+    if (
+        not isinstance(symbol, str)
+        or not 1 <= len(symbol) <= 32
+        or symbol != symbol.strip()
+        or any(ord(char) < 0x20 or ord(char) == 0x7F for char in symbol)
+    ):
+        return JSONResponse(status_code=422, content=_error("Symbol değeri geçersiz.", fields={"symbol": "Symbol değeri geçersiz."}))
+    credential_id = _futures_testnet_credential_id()
+    provider = WindowsCredentialManagerProvider() if credential_id is not None else None
+    try:
+        status = LIQUIDATION_STATUS_SERVICE.get_status(
+            symbol,
+            credential_id=credential_id,
+            provider=provider,
+            now_us=time.time_ns() // 1000,
+        )
+    except LiquidationStatusServiceError as exc:
+        http_status = 502 if exc.code == "ALC_UPSTREAM_UNAVAILABLE" else 500
+        return _problem(http_status, exc.code, "Pozisyon riski okunamadı", str(exc))
+    return {
+        "data": {
+            "environment": "BINANCE_FUTURES_TESTNET",
+            "symbol": symbol,
+            "state": status.state,
+            "liquidation_price": status.liquidation_price,
+            "margin_ratio": status.margin_ratio,
+            "is_fast_move": status.is_fast_move,
+            "reason": status.reason,
+            "observed_at_us": status.observed_at_us,
+            "read_only": True,
+        }
+    }
 
 
 @app.get("/api/settlement")

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BOT_ARCHITECTURE_PLAN_V2 · Proje Özeti</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/500.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/700.css">
+<script>
+tailwind.config = {
+  theme: { extend: {
+    fontFamily: { sans:['"Space Grotesk"','sans-serif'], mono:['"JetBrains Mono"','monospace'] },
+    colors: { ink:{950:'#06080d',900:'#0a0e16',800:'#101623',700:'#182032'}, gold:{300:'#fcd34d',400:'#fbbf24',500:'#f59e0b'} }
+  }}
+}
+</script>
+<style>
+  html{scroll-behavior:smooth}
+  body{background:#06080d}
+  .bg-grid{background-image:linear-gradient(rgba(251,191,36,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(251,191,36,.04) 1px,transparent 1px);background-size:46px 46px;mask-image:radial-gradient(ellipse 90% 80% at 50% 0%,black 30%,transparent 100%)}
+  .panel{background:rgba(16,22,35,.78);border:1px solid rgba(148,163,184,.12);border-radius:16px;backdrop-filter:blur(10px)}
+  .kicker{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+  .navlink{transition:color .2s}
+  .navlink.on{color:#fbbf24}
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
+  .reveal.visible{opacity:1;transform:translateY(0)}
+  .tabbtn{transition:all .25s}
+  .tabbtn.on{background:rgba(251,191,36,.12);color:#fcd34d;border-color:rgba(251,191,36,.45)}
+  .tabpanel{display:none}
+  .tabpanel.on{display:block;animation:fadeUp .45s cubic-bezier(.22,1,.36,1)}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  .acc-body{max-height:0;overflow:hidden;transition:max-height .45s cubic-bezier(.22,1,.36,1)}
+  .acc.open .acc-body{max-height:420px}
+  .acc .chev{transition:transform .3s}
+  .acc.open .chev{transform:rotate(180deg)}
+  .chip{font-size:11px;padding:4px 10px;border-radius:9999px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.15);color:#cbd5e1}
+  .flowarrow{animation:pulseArrow 1.6s ease-in-out infinite}
+  @keyframes pulseArrow{0%,100%{opacity:.35}50%{opacity:1}}
+  .candle{animation:candleGrow 1.2s cubic-bezier(.22,1,.36,1) both}
+  @keyframes candleGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:8px}
+  .heroimg{mask-image:linear-gradient(to bottom,black 60%,transparent 100%)}
+  .tl-line{background:linear-gradient(to bottom,transparent,#f59e0b 8%,#22d3ee 92%,transparent)}
+</style>
+</head>
+<body class="text-slate-200 font-sans antialiased">
+
+<div class="fixed inset-0 pointer-events-none z-0 bg-grid"></div>
+
+<!-- NAV -->
+<header class="fixed top-0 inset-x-0 z-40 bg-ink-950/85 backdrop-blur-xl border-b border-slate-800/60">
+  <div class="max-w-6xl mx-auto px-4 h-14 flex items-center gap-4">
+    <a href="#top" class="flex items-center gap-2 font-bold text-slate-100">
+      <span class="w-7 h-7 rounded-lg bg-gold-500/15 border border-gold-500/40 text-gold-400 flex items-center justify-center font-mono text-xs">v2</span>
+      <span class="hidden sm:block">BOT_ARCHITECTURE_PLAN</span>
+    </a>
+    <nav class="ml-auto flex items-center gap-4 md:gap-6 text-xs md:text-sm text-slate-400 overflow-x-auto">
+      <a class="navlink on shrink-0" href="#nedir">Nedir?</a>
+      <a class="navlink shrink-0" href="#moduller">Modüller</a>
+      <a class="navlink shrink-0" href="#gelismis">3Commas Ötesi</a>
+      <a class="navlink shrink-0" href="#backtest">Backtest</a>
+      <a class="navlink shrink-0" href="#mimari">Mimari</a>
+      <a class="navlink shrink-0" href="#roadmap">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top" class="relative z-10">
+
+<!-- HERO -->
+<section class="max-w-6xl mx-auto px-4 pt-28 pb-16 grid lg:grid-cols-2 gap-10 items-center">
+  <div>
+    <div class="flex flex-wrap gap-2 mb-5">
+      <span class="chip text-gold-300 border-gold-500/40 bg-gold-500/10">Binance Futures Testnet · USDT-M</span>
+      <span class="chip text-cyan-300 border-cyan-500/40 bg-cyan-500/10">DCA + Infinity Grid Hibrit</span>
+    </div>
+    <h1 class="text-3xl md:text-5xl font-bold text-slate-50 leading-tight">
+      Bu belge, <span class="text-gold-400">uçtan uca bir kripto işlem botu</span> mimari planıdır.
+    </h1>
+    <p class="mt-5 text-slate-400 leading-relaxed">
+      <strong class="text-slate-200">“Gelişmiş Binance Futures Testnet Hybrid DCA &amp; Infinity Grid Bot”</strong> —
+      3Commas DCA botunun tüm özelliklerini birebir karşılayan, Pionex/Bitsgap tarzı
+      <em>Sonsuz Grid</em> algoritmasıyla hibritleşen, kurumsal seviyede bir
+      <em>Backtest &amp; Strateji Optimizasyon Motoru</em> içeren, çift yönlü (Long &amp; Short)
+      özel bir trading botunun sistem mimarisi ve uygulama yol haritası (v2.0).
+    </p>
+    <div class="mt-7 flex flex-wrap gap-3">
+      <a href="#nedir" class="px-5 py-2.5 rounded-lg bg-gold-500/15 border border-gold-500/40 text-gold-300 text-sm font-semibold hover:bg-gold-500/25 transition">Hızlı Özet ↓</a>
+      <a href="#roadmap" class="px-5 py-2.5 rounded-lg bg-slate-800/70 border border-slate-700 text-slate-300 text-sm font-semibold hover:bg-slate-700/70 transition">8 Fazlı Roadmap</a>
+    </div>
+    <div class="mt-9 grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="panel p-3 text-center"><div class="text-2xl font-bold text-gold-400 font-mono" data-count="100" data-suffix="%">0</div><div class="text-[10px] text-slate-500 mt-1">3Commas Paritesi</div></div>
+      <div class="panel p-3 text-center"><div class="text-2xl font-bold text-cyan-400 font-mono" data-count="11">0</div><div class="text-[10px] text-slate-500 mt-1">Gelişmiş Modül</div></div>
+      <div class="panel p-3 text-center"><div class="text-2xl font-bold text-emerald-400 font-mono" data-count="2">0</div><div class="text-[10px] text-slate-500 mt-1">Katmanlı Backtest</div></div>
+      <div class="panel p-3 text-center"><div class="text-2xl font-bold text-violet-400 font-mono" data-count="8">0</div><div class="text-[10px] text-slate-500 mt-1">Geliştirme Fazı</div></div>
+    </div>
+  </div>
+  <div class="relative">
+    <img src="https://image.qwenlm.ai/public_source/8c15eb31-c77d-4860-89a7-f934d91dc1ae/19ae56898-5392-4a4d-8a89-a9bc14cc1e44.png" alt="Trading bot konsepti" class="heroimg rounded-2xl border border-slate-800/70 w-full object-cover shadow-[0_0_60px_rgba(245,158,11,.12)]">
+    <div class="absolute bottom-4 left-4 right-4 panel px-4 py-3 flex items-center justify-between">
+      <span class="font-mono text-[11px] text-slate-400">BTCUSDT · PERP</span>
+      <span class="font-mono text-[11px] text-emerald-400">HYBRID: DCA ⇄ GRID</span>
+      <span class="font-mono text-[11px] text-gold-400">TESTNET</span>
+    </div>
+  </div>
+</section>
+
+<!-- NEDİR -->
+<section id="nedir" class="max-w-6xl mx-auto px-4 py-14 scroll-mt-20">
+  <div class="reveal">
+    <div class="kicker text-gold-400 mb-2">01 · Özet</div>
+    <h2 class="text-2xl md:text-3xl font-bold text-slate-50">Tek cümleyle: ne bu?</h2>
+    <p class="mt-3 text-slate-400 max-w-3xl">Kendi sunucunuzda çalışan, 3Commas’ın arayüz/mantık paritesine sahip ama ondan daha yetenekli,
+    backtest ile doğrulanmış stratejileri testnet’te otomatik işleten <span class="text-slate-200">özel (private) bir futures trading botu</span> projesi.</p>
+  </div>
+  <div class="grid md:grid-cols-3 gap-4 mt-8">
+    <div class="reveal panel p-6 border-t-2 border-t-gold-500/60">
+      <div class="text-gold-400 font-mono text-xs mb-3">ÖNCELİK #1</div>
+      <h3 class="font-bold text-slate-100">%100 3Commas DCA Paritesi</h3>
+      <p class="text-sm text-slate-400 mt-2 leading-relaxed">Ekran, ayar ve iş mantığı düzeyinde birebir örtüşme: Base/Safety Order, ölçekleme, TP/Trailing, SL/BE, Deals tablosu, Smart Trade Terminal…</p>
+    </div>
+    <div class="reveal panel p-6 border-t-2 border-t-cyan-500/60" style="transition-delay:.1s">
+      <div class="text-cyan-400 font-mono text-xs mb-3">ÖNCELİK #2</div>
+      <h3 class="font-bold text-slate-100">Sektörün Ötesine Geçen Modüller</h3>
+      <p class="text-sm text-slate-400 mt-2 leading-relaxed">3Commas’ta olmayan adaptif/AI destekli, risk-farkında 11 yeni yetenek: ATR-adaptif DCA, rejim algılama, korelasyon riski, anti-likidasyon…</p>
+    </div>
+    <div class="reveal panel p-6 border-t-2 border-t-emerald-500/60" style="transition-delay:.2s">
+      <div class="text-emerald-400 font-mono text-xs mb-3">ÖNCELİK #3</div>
+      <h3 class="font-bold text-slate-100">Kurumsal Backtest Motoru</h3>
+      <p class="text-sm text-slate-400 mt-2 leading-relaxed">Gerçek geçmiş veriyle doğrulama, Optuna/Genetik optimizasyon, Walk-Forward, Monte Carlo — parasını riske atmadan önce stratejiyi kanıtla.</p>
+    </div>
+  </div>
+  <div class="reveal panel mt-4 p-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-mono text-slate-400">
+    <span class="text-slate-500">DAĞITIM AKIŞI:</span>
+    <span class="text-slate-200">💻 Local</span><span class="text-gold-400 flowarrow">→</span>
+    <span class="text-slate-200">🐳 Docker Compose</span><span class="text-gold-400 flowarrow">→</span>
+    <span class="text-slate-200">🖥️ VPS (7/24, Nginx + SSL)</span>
+  </div>
+</section>
+
+<!-- MODÜLLER -->
+<section id="moduller" class="max-w-6xl mx-auto px-4 py-14 scroll-mt-20">
+  <div class="reveal">
+    <div class="kicker text-gold-400 mb-2">02 · Çekirdek Modüller</div>
+    <h2 class="text-2xl md:text-3xl font-bold text-slate-50">Strateji motorları</h2>
+  </div>
+  <div class="reveal flex flex-wrap gap-2 mt-6" id="tabbar">
+    <button class="tabbtn on px-4 py-2 rounded-lg border border-slate-700 text-sm text-slate-400" data-tab="dca">📊 DCA Bot (3Commas)</button>
+    <button class="tabbtn px-4 py-2 rounded-lg border border-slate-700 text-sm text-slate-400" data-tab="grid">♾️ Infinity Grid</button>
+    <button class="tabbtn px-4 py-2 rounded-lg border border-slate-700 text-sm text-slate-400" data-tab="hybrid">🔀 Hibrit Motor</button>
+    <button class="tabbtn px-4 py-2 rounded-lg border border-slate-700 text-sm text-slate-400" data-tab="scanner">🛡️ Maliyet &amp; Likidasyon</button>
+  </div>
+
+  <!-- DCA -->
+  <div class="tabpanel on mt-5" id="tp-dca">
+    <div class="grid md:grid-cols-2 gap-3" id="dcaAcc"></div>
+  </div>
+
+  <!-- GRID -->
+  <div class="tabpanel mt-5" id="tp-grid">
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="panel p-6">
+        <h3 class="font-bold text-slate-100 mb-3">Sonsuz Grid (Infinity Grid) Futures</h3>
+        <pre class="font-mono text-[11px] leading-relaxed text-slate-400 bg-ink-950/70 border border-slate-800 rounded-xl p-4 overflow-x-auto">   ▲ Fiyat
+   │  ─── [ DİNAMİK ÜST TAVAN ] ───  Kar Satışı &amp; Tabanı Yukarı Taşı
+   │        ▲  Sonsuz Yükseliş Kanalı (No Upper Limit)
+   │  ─── [ GRID ADIMI % (Örn: %0.8) ] ───  Kar Rebalancing
+   │  ─── [ DİNAMİK ALT TABAN ] ───  DCA Kademeli Alım
+   └──────────────────────────────────────────► Zaman</pre>
+      </div>
+      <div class="space-y-3">
+        <div class="panel p-5"><h4 class="font-semibold text-gold-300 text-sm">Geometrik Grid Yüzdesi</h4><p class="text-sm text-slate-400 mt-1.5">Sabit fiyat farkı yerine oransal (geometrik) adım — bileşik büyüyen fiyat kanalına uyum.</p></div>
+        <div class="panel p-5"><h4 class="font-semibold text-gold-300 text-sm">Dynamic Floor Auto-Adjustment</h4><p class="text-sm text-slate-400 mt-1.5">Alt taban, fiyat yükseldikçe otomatik yukarı taşınır; düşüşte DCA kademeli alımla desteklenir.</p></div>
+        <div class="panel p-5"><h4 class="font-semibold text-gold-300 text-sm">Futures Rebalancing &amp; Dynamic Margin</h4><p class="text-sm text-slate-400 mt-1.5">Kar realize edildikçe marjin dinamik çekilir/beslenir; futures için özel rebalancing mantığı.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HYBRID -->
+  <div class="tabpanel mt-5" id="tp-hybrid">
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="panel p-6 relative"><div class="font-mono text-xs text-cyan-400 mb-2">FAZ 1</div><h4 class="font-bold text-slate-100">DCA Fazı</h4><p class="text-sm text-slate-400 mt-2">Düşüşte kademeli Safety Order’larla ortalama maliyet düşürülür, pozisyon inşa edilir.</p></div>
+      <div class="panel p-6 relative"><div class="font-mono text-xs text-gold-400 mb-2">FAZ 2</div><h4 class="font-bold text-slate-100">Infinity Grid Fazı</h4><p class="text-sm text-slate-400 mt-2">Pozisyon kara geçince grid devreye girer; yükselişte sonsuz kanal boyunca kademeli kar satışı.</p></div>
+      <div class="panel p-6 relative"><div class="font-mono text-xs text-emerald-400 mb-2">FAZ 3</div><h4 class="font-bold text-slate-100">Kar Realizasyonu &amp; Dinamik Çıkış</h4><p class="text-sm text-slate-400 mt-2">Trailing TP + dinamik taban ile kar kilitlenir; rejim değişiminde motor fazlar arası geçiş yapar.</p></div>
+    </div>
+    <div class="panel mt-4 p-4 text-center font-mono text-sm text-slate-300">
+      DCA <span class="text-cyan-400 flowarrow inline-block">⇄</span> GRID <span class="text-gold-400 flowarrow inline-block">→</span> <span class="text-emerald-400">PROFIT</span>
+      <span class="block text-[11px] text-slate-500 mt-1">Rejim algılama (trend/range) hangi fazın aktif olacağını besler</span>
+    </div>
+  </div>
+
+  <!-- SCANNER -->
+  <div class="tabpanel mt-5" id="tp-scanner">
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="panel p-6"><h4 class="font-bold text-slate-100 mb-3">💰 İşlem Maliyet Engine</h4><ul class="text-sm text-slate-400 space-y-2"><li>· Maker: <span class="font-mono text-gold-300">%0.02</span></li><li>· Taker: <span class="font-mono text-gold-300">%0.05</span></li><li>· Net Realized PnL hesabı (komisyon dahil)</li></ul></div>
+      <div class="panel p-6"><h4 class="font-bold text-slate-100 mb-3">⚠️ Liquidation Engine</h4><ul class="text-sm text-slate-400 space-y-2"><li>· Cross/Isolated marjin modeli</li><li>· Tiered MMR bazlı dinamik likidasyon fiyatı</li><li>· Auto-Deleverage + Anti-Likidasyon koruması</li></ul></div>
+      <div class="panel p-6"><h4 class="font-bold text-slate-100 mb-3">📡 Arbitrage &amp; Funding</h4><ul class="text-sm text-slate-400 space-y-2"><li>· 8 saatlik Funding Rate takipçisi</li><li>· Spot–Futures spread tarayıcı</li><li>· Negatif rate alarmı (fırsat bildirimi)</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- GELİŞMİŞ -->
+<section id="gelismis" class="max-w-6xl mx-auto px-4 py-14 scroll-mt-20">
+  <div class="reveal">
+    <div class="kicker text-cyan-400 mb-2">03 · 3Commas Ötesi</div>
+    <h2 class="text-2xl md:text-3xl font-bold text-slate-50">Sektörde olmayan 11 gelişmiş modül</h2>
+    <p class="mt-3 text-slate-400 max-w-3xl text-sm">3Commas, Bitsgap, Pionex ve TradeSanta karşılaştırmalı analizinden çıkarılan; mevcut botlarda eksik veya zayıf olan yetenekler.</p>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8" id="advGrid"></div>
+</section>
+
+<!-- BACKTEST -->
+<section id="backtest" class="max-w-6xl mx-auto px-4 py-14 scroll-mt-20">
+  <div class="reveal">
+    <div class="kicker text-emerald-400 mb-2">04 · En Kritik Eklenti</div>
+    <h2 class="text-2xl md:text-3xl font-bold text-slate-50">Backtest &amp; Strateji Optimizasyon Motoru</h2>
+    <p class="mt-3 text-slate-400 max-w-3xl text-sm">Canlı/testnet parasını riske atmadan önce stratejiyi gerçek geçmiş veriyle doğrula. İki katmanlı mimari: hızlı vektörel tarama + hassas event-driven simülasyon.</p>
+  </div>
+  <div class="grid lg:grid-cols-2 gap-4 mt-8">
+    <div class="reveal panel p-6">
+      <div class="flex items-center justify-between mb-4"><h3 class="font-bold text-slate-100">Katman 1 · Vektörel (Hızlı Tarama)</h3><span class="chip text-cyan-300">vectorbt · pandas · numpy</span></div>
+      <p class="text-sm text-slate-400">Binlerce parametre kombinasyonunu saniyeler içinde array bazlı değerlendirir; kaba optimizasyon filtresi.</p>
+      <div class="mt-4 h-2 rounded-full bg-slate-800 overflow-hidden"><span class="block h-full w-[92%] bg-cyan-400/70"></span></div>
+      <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1"><span>HIZ</span><span>▮▮▮▮▮▮▮▮▮▯</span></div>
+    </div>
+    <div class="reveal panel p-6" style="transition-delay:.1s">
+      <div class="flex items-center justify-between mb-4"><h3 class="font-bold text-slate-100">Katman 2 · Event-Driven (Hassas)</h3><span class="chip text-emerald-300">asyncio · order-level</span></div>
+      <p class="text-sm text-slate-400">En iyi N kombinasyonu tick/kline event loop ile: kısmi dolum, slipaj, komisyon, funding ve likidasyon dahil. Canlı motorla <em>aynı kod tabanı</em> → backtest-live parity.</p>
+      <div class="mt-4 h-2 rounded-full bg-slate-800 overflow-hidden"><span class="block h-full w-[55%] bg-emerald-400/70"></span></div>
+      <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1"><span>GERÇEKÇİLİK</span><span>▮▮▮▮▮▮▮▮▮▮</span></div>
+    </div>
+  </div>
+  <div class="grid md:grid-cols-2 gap-4 mt-4">
+    <div class="reveal panel p-6">
+      <h3 class="font-bold text-slate-100 mb-4">🧪 Optimizasyon Yöntemleri</h3>
+      <div class="flex flex-wrap gap-2">
+        <span class="chip">Grid Search</span><span class="chip">Genetic Algorithm</span><span class="chip">Bayesian · Optuna</span><span class="chip text-gold-300 border-gold-500/40">Walk-Forward (overfitting kalkanı)</span><span class="chip text-gold-300 border-gold-500/40">Monte Carlo (bootstrap güven aralığı)</span>
+      </div>
+      <h3 class="font-bold text-slate-100 mt-6 mb-3">📈 Raporlama Metrikleri</h3>
+      <div class="flex flex-wrap gap-2">
+        <span class="chip">Equity Curve</span><span class="chip">Drawdown Chart</span><span class="chip">Sharpe</span><span class="chip">Sortino</span><span class="chip">Calmar</span><span class="chip">Win Rate</span><span class="chip">Profit Factor</span><span class="chip">Max Losing Streak</span><span class="chip">Isı Haritası</span><span class="chip">A/B Preset Karşılaştırma</span>
+      </div>
+    </div>
+    <div class="reveal panel p-6" style="transition-delay:.1s">
+      <h3 class="font-bold text-slate-100 mb-3">🖥️ Backtest Studio (UI)</h3>
+      <div class="rounded-xl border border-slate-800 bg-ink-950/70 p-4 font-mono text-[11px]">
+        <div class="text-slate-500 mb-2">BACKTEST: BTCUSDT · Hybrid DCA+Grid · 01.01.2024 – 01.08.2026</div>
+        <div class="flex items-end gap-1 h-20 mb-3" id="equityBars"></div>
+        <div class="grid grid-cols-3 gap-2 text-slate-400">
+          <span>Net Kâr: <b class="text-emerald-400">+$4,820</b></span><span>ROI: <b class="text-emerald-400">%48.2</b></span><span>Sharpe: <b class="text-cyan-300">1.85</b></span>
+          <span>MaxDD: <b class="text-rose-400">-%12.4</b></span><span>WinRate: <b class="text-gold-300">%78</b></span><span>PF: <b class="text-gold-300">2.1</b></span>
+        </div>
+      </div>
+      <button id="deployBtn" class="mt-4 w-full px-4 py-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-sm font-semibold hover:bg-emerald-500/25 transition">🚀 Bu Parametrelerle Testnet’te Başlat</button>
+      <p class="text-[11px] text-slate-500 mt-2 text-center">Backtest sonucundan tek tıkla canlı bota geçiş — parametre kopyalama derdi yok.</p>
+    </div>
+  </div>
+</section>
+
+<!-- MİMARİ -->
+<section id="mimari" class="max-w-6xl mx-auto px-4 py-14 scroll-mt-20">
+  <div class="reveal">
+    <div class="kicker text-violet-400 mb-2">05 · Sistem Mimarisi</div>
+    <h2 class="text-2xl md:text-3xl font-bold text-slate-50">Bileşen deseni</h2>
+  </div>
+  <div class="reveal space-y-3 mt-8">
+    <div class="panel p-5 border-cyan-500/30 text-center"><div class="font-bold text-slate-100">DASHBOARD FRONTEND</div><div class="text-xs font-mono text-slate-500 mt-1">React / Vite + TradingView Lightweight Charts v4 · Bot List · Active Deals · Backtest Studio · Risk Panel</div></div>
+    <div class="text-center font-mono text-cyan-400 flowarrow">▼ WebSockets &amp; REST ▲</div>
+    <div class="panel p-5 border-gold-500/30 text-center"><div class="font-bold text-slate-100">FASTAPI BACKEND GATEWAY</div><div class="text-xs font-mono text-slate-500 mt-1">REST Endpoints · Webhook Listener (TradingView) · Auth &amp; JWT</div></div>
+    <div class="text-center font-mono text-gold-400 flowarrow">▼</div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div class="panel p-4"><div class="text-xs font-bold text-cyan-300 mb-1.5">STRATEGY ENGINE</div><div class="text-[10px] font-mono text-slate-500 leading-relaxed">DCA Ctrl · Grid Eng · TV Hook · Regime Switch</div></div>
+      <div class="panel p-4"><div class="text-xs font-bold text-gold-300 mb-1.5">EXECUTION ENGINE</div><div class="text-[10px] font-mono text-slate-500 leading-relaxed">Async WS · Order SM · Rate Guard · Anti-Liq Deleverage</div></div>
+      <div class="panel p-4"><div class="text-xs font-bold text-emerald-300 mb-1.5">FEE &amp; ARB ENGINE</div><div class="text-[10px] font-mono text-slate-500 leading-relaxed">Funding Tracker · Liq Engine · Spread Scan</div></div>
+      <div class="panel p-4"><div class="text-xs font-bold text-rose-300 mb-1.5">RISK &amp; REGIME</div><div class="text-[10px] font-mono text-slate-500 leading-relaxed">Correlation Matrix · Regime Detector · Kill-Switch</div></div>
+      <div class="panel p-4"><div class="text-xs font-bold text-violet-300 mb-1.5">BACKTEST &amp; OPT</div><div class="text-[10px] font-mono text-slate-500 leading-relaxed">Vectorized · Event-Driven · Optuna/GA</div></div>
+    </div>
+    <div class="text-center font-mono text-slate-500 flowarrow">▼</div>
+    <div class="panel p-4 text-center border-rose-500/20"><div class="text-xs font-bold text-rose-300">REDIS CACHE &amp; EVENT BUS</div><div class="text-[10px] font-mono text-slate-500 mt-1">Canlı ticker · order state · pub/sub · backtest job kuyruğu</div></div>
+    <div class="text-center font-mono text-slate-500 flowarrow">▼</div>
+    <div class="panel p-4 text-center border-sky-500/20"><div class="text-xs font-bold text-sky-300">POSTGRESQL</div><div class="text-[10px] font-mono text-slate-500 mt-1">bots · deals · orders · historical_klines · funding_rates · backtest_runs · trials · presets · correlation_snapshots</div></div>
+  </div>
+  <div class="reveal panel mt-4 p-4 text-[11px] font-mono text-slate-400 flex flex-wrap gap-x-6 gap-y-1">
+    <span>🐳 docker-compose: postgres · redis · backend · frontend</span>
+    <span class="text-gold-300">+ backtest_worker (Celery, concurrency=4)</span>
+    <span class="text-cyan-300">+ regime_risk_engine</span>
+    <span class="text-slate-500">→ canlı loop backtest sırasında asla bloklanmaz</span>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="roadmap" class="max-w-6xl mx-auto px-4 py-14 scroll-mt-20">
+  <div class="reveal">
+    <div class="kicker text-gold-400 mb-2">06 · Yol Haritası</div>
+    <h2 class="text-2xl md:text-3xl font-bold text-slate-50">8 fazlı geliştirme planı</h2>
+  </div>
+  <div class="relative mt-10 pl-8 md:pl-10">
+    <div class="absolute left-[11px] md:left-[15px] top-0 bottom-0 w-0.5 tl-line"></div>
+    <div id="timeline" class="space-y-6"></div>
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<section id="tech" class="max-w-6xl mx-auto px-4 py-14 scroll-mt-20">
+  <div class="reveal">
+    <div class="kicker text-cyan-400 mb-2">07 · Tech Stack</div>
+    <h2 class="text-2xl md:text-3xl font-bold text-slate-50">Teknoloji yığını</h2>
+  </div>
+  <div class="reveal grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8" id="stackGrid"></div>
+</section>
+
+<footer class="border-t border-slate-800/60 py-8 text-center">
+  <div class="font-mono text-xs text-slate-500">BOT_ARCHITECTURE_PLAN_V2.md · Sistem Mimarisi &amp; Uygulama Planı v2.0</div>
+  <div class="text-[11px] text-slate-600 mt-2">Local → Docker Compose → VPS · Modüler &amp; konteynerize tasarım</div>
+</footer>
+</main>
+
+<div id="toast" class="fixed bottom-6 right-6 z-50 panel px-5 py-3 text-sm text-emerald-300 border-emerald-500/30 transition-all duration-500 translate-y-[150%]">✓ Parametreler kopyalandı — Testnet botu başlatılıyor…</div>
+
+<script>
+'use strict';
+/* ---------- veri ---------- */
+const dcaGroups = [
+ {t:'Sipariş Boyutları',i:'💵',f:['Base Order Size (BO)','Safety Order Size (SO)','Order Type: Market / Limit (maker avantajı)']},
+ {t:'Güvenlik Emirleri (SO)',i:'🛡️',f:['Max Safety Orders Count (örn. 10)','Max Active Safety Orders (örn. 2 — tetiklendikçe sırayla yerleşir)']},
+ {t:'Ölçekleme (Scaling)',i:'📐',f:['Price Deviation to open SO (%)','SO Volume Scale','SO Step Scale','SO Deviation Reference: son SO / ort. giriş (kritik detay)']},
+ {t:'Giriş Sinyalleri',i:'📡',f:['Deal Start Conditions: TV Webhook, RSI/MACD/BB/StochRSI/EMA Cross','Start Order Type: manuel / oto / scheduled','Conditional Start Price','Cool-down After Deal Close','Min/Max 24h Change Filter']},
+ {t:'Kar Al (Take Profit)',i:'🎯',f:['Target TP (%)','Trailing Take Profit','TP Order Type + Partial TP','Reinvest Profit (%) — bileşik büyüme']},
+ {t:'Zarar Kes (Stop Loss)',i:'🛑',f:['Dynamic SL (%)','Trailing Stop Loss','Move SL to Breakeven','SL Timeout / Confirmation (fitil koruması)','Max Deal Duration / Force Close']},
+ {t:'Yön & Marjin',i:'⚖️',f:['Isolated/Cross marjin','1x–125x dinamik kaldıraç','Bidirectional: eşzamanlı Long & Short']},
+ {t:'Bot Yönetimi (Panel Paritesi)',i:'️',f:['Max Active Deals (bot/pair/global)','Active Deals ekranı','Bot Cards ekranı','Quick Stats + kâr grafiği','Templates: Muhafazakar/Dengeli/Agresif','Manual Add Funds','Panic Sell / Force Start-Stop','Profit Currency: USDT/USDC/BTC','Smart Trade Terminal']}
+];
+const advMods = [
+ {i:'📉',t:'Volatility-Adaptive DCA',d:'SO adımları ve TP sabit % yerine ATR/son N mum volatilitesine göre dinamik genişler-daralır.',w:'3Commas’ta adımlar tamamen statik.'},
+ {i:'🧭',t:'Market Regime Detection',d:'ADX / BB Width / Hurst ile trend-range tespiti; trendde Grid, rangede DCA otomatik.',w:'3Commas’ta DCA ve Grid ayrı bot, otomatik geçiş yok.'},
+ {i:'🔗',t:'Correlation-Aware Risk Manager',d:'Korelasyon matrisi; BTC&ETH aynı anda Long ise toplam marjin otomatik kısıtlanır.',w:'Cross-bot portföy riski yönetimi yok.'},
+ {i:'🚨',t:'Anti-Liquidation Cascade',d:'Likidasyona yaklaşınca kademeli kaldıraç düşürme, partial deleverage, acil marjin transferi.',w:'3Commas sadece bildirim gönderir.'},
+ {i:'🐋',t:'Whale Wall Detection',d:'Orderbook canlı izlenir; büyük duvarlara göre SO/TP emirleri kaydırılır (slipaj önleme).',w:'Emirler sabit fiyat/% ile, orderbook yok sayılır.'},
+ {i:'🤖',t:'AI Parametre Önerici',d:'Backtest + geçmiş performanstan öğrenen auto-tune; kullanıcı onaylı şeffaf model.',w:'“AI Optimal Bot” kapalı kutu ve sınırlı.'},
+ {i:'🐍',t:'Custom Strategy Scripting',d:'Python DSL ile kendi giriş/çıkış mantığını kodla; motor native parametreye çevirir.',w:'Yalnızca TV webhook/hazır indikatör; kod yazılamaz.'},
+ {i:'⛔',t:'Circuit Breaker / Kill-Switch',d:'Günlük/haftalık drawdown eşiği aşılırsa tüm botlar otomatik güvenli moda geçer.',w:'Hesap geneli acil durdurma mekanizması yok.'},
+ {i:'🌉',t:'Multi-Exchange Abstraction',d:'Adapter deseni; Bybit/OKX plug-in olarak eklenir, tek panelden çoklu borsa.',w:'Borsalar arası fon/risk senkronu sınırlı.'},
+ {i:'🏪',t:'Strategy Marketplace',d:'Backtest-doğrulanmış presetler sürümlenir (v1, v2…), A/B karşılaştırılır, paylaşılır.',w:'Versiyonlama ve A/B backtest karşılaştırma yok.'},
+ {i:'🔮',t:'Real-Time What-If Simülatörü',d:'Parametre değişince arka planda 30/90 günlük canlı “ne olurdu” önizlemesi.',w:'Gerçek veriyle canlı simülasyon yok, statik preview var.'}
+];
+const phases = [
+ {t:'Çekirdek Bağlantı & Testnet WS Motoru',d:'Binance Futures Testnet REST & WS; fiyat/bakiye/pozisyon/emir durumu dinleyicileri.',c:'cyan'},
+ {t:'3Commas Tam Paritesi DCA Engine & Panel',d:'BO/SO, ölçekleme, TP/TTP, SL/BE mantığı + Bot List, Active Deals, Quick Stats, Smart Trade.',c:'gold'},
+ {t:'Sonsuz Grid & Hibrit Motor',d:'Geometrik grid adım motoru, dinamik taban, Hybrid Engine faz geçişleri.',c:'gold'},
+ {t:'Backtest & Optimizasyon Motoru ⭐',d:'Data pipeline, Vectorized Scanner + Event-Driven Sim, Optuna/GA, Walk-Forward, Monte Carlo, Backtest Studio.',c:'emerald'},
+ {t:'Gelişmiş Modüller (3Commas Ötesi)',d:'ATR-adaptif DCA, rejim algılama, korelasyon riski, anti-likidasyon, circuit breaker, Python DSL.',c:'violet'},
+ {t:'Maliyet, Fonlama, Likidasyon & Arbitraj',d:'Tiered MMR likidasyon motoru; funding/spread tarayıcı mikro-servisi.',c:'rose'},
+ {t:'React Dashboard & İnteraktif Grafik',d:'TradingView Lightweight Charts; sürüklenebilir TP/SL/SO seviyeleri; Backtest View sekmesi.',c:'cyan'},
+ {t:'Dockerize & VPS Deployment',d:'backtest_worker + regime_risk_engine dahil tam Compose; Nginx SSL ile 7/24 yayın.',c:'gold'}
+];
+const stack = [
+ {i:'🐍',t:'Backend',d:'Python 3.11+ · FastAPI · asyncio · SQLAlchemy 2.0 (Async)'},
+ {i:'🔌',t:'Binance',d:'binance-futures-connector / python-binance (Async) · wss://stream.binancefuture.com'},
+ {i:'🗄️',t:'Veri',d:'PostgreSQL + Redis (pub/sub, orderbook cache, job kuyruğu)'},
+ {i:'🧮',t:'Backtest',d:'vectorbt · pandas · numpy · optuna · özel genetik modül'},
+ {i:'🧠',t:'ML',d:'scikit-learn (adaptif parametre; derin öğrenmeye açık)'},
+ {i:'⚛️',t:'Frontend',d:'React (Vite) · TailwindCSS · TradingView Lightweight Charts v4'},
+ {i:'⚙️',t:'İş Kuyruğu',d:'Celery / ARQ — backtest ayrı worker havuzunda, canlı loop bloklanmaz'},
+ {i:'🔒',t:'Güvenlik',d:'API key vault · Nginx + Let’s Encrypt · TV webhook IP whitelist + secret token'}
+];
+
+/* ---------- render ---------- */
+const accHost = document.getElementById('dcaAcc');
+accHost.innerHTML = dcaGroups.map((g,idx)=>`
+ <div class="acc panel overflow-hidden ${idx<2?'open':''}">
+   <button class="accbtn w-full flex items-center gap-3 px-5 py-4 text-left">
+     <span class="text-lg">${g.i}</span><span class="font-semibold text-slate-100 text-sm flex-1">${g.t}</span>
+     <svg class="chev w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+   </button>
+   <div class="acc-body"><div class="px-5 pb-4 flex flex-wrap gap-2">${g.f.map(f=>`<span class="chip">${f}</span>`).join('')}</div></div>
+ </div>`).join('');
+accHost.querySelectorAll('.accbtn').forEach(btn=>btn.addEventListener('click',()=>btn.closest('.acc').classList.toggle('open')));
+
+document.getElementById('advGrid').innerHTML = advMods.map((m,idx)=>`
+ <div class="reveal panel p-5 hover:border-cyan-500/40 transition" style="transition-delay:${(idx%3)*0.08}s">
+   <div class="flex items-start gap-3"><span class="text-xl">${m.i}</span>
+     <div><h3 class="font-bold text-slate-100 text-sm">${m.t}</h3>
+     <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">${m.d}</p>
+     <p class="text-[10px] font-mono text-rose-300/80 mt-2">✗ ${m.w}</p></div></div>
+ </div>`).join('');
+
+document.getElementById('timeline').innerHTML = phases.map((p,idx)=>`
+ <div class="reveal relative" style="transition-delay:${idx*0.05}s">
+   <span class="absolute -left-8 md:-left-10 top-1 w-6 h-6 md:w-8 md:h-8 rounded-full bg-ink-900 border-2 border-${p.c}-400/70 text-${p.c}-300 flex items-center justify-center font-mono text-[10px] md:text-xs">${idx+1}</span>
+   <div class="panel p-5 ml-2">
+     <div class="flex flex-wrap items-center gap-2"><h3 class="font-bold text-slate-100 text-sm">Faz ${idx+1}: ${p.t}</h3>${idx===3?'<span class="chip text-emerald-300 border-emerald-500/40">YÜKSEK ÖNCELİK</span>':''}</div>
+     <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">${p.d}</p>
+   </div>
+ </div>`).join('');
+
+document.getElementById('stackGrid').innerHTML = stack.map(s=>`
+ <div class="panel p-5"><div class="flex items-center gap-2 mb-2"><span>${s.i}</span><h3 class="font-bold text-slate-100 text-sm">${s.t}</h3></div>
+ <p class="text-xs font-mono text-slate-400 leading-relaxed">${s.d}</p></div>`).join('');
+
+/* equity bars */
+const eqHost = document.getElementById('equityBars');
+let eqVal = 30;
+for(let bIdx=0;bIdx<36;bIdx++){
+  eqVal = Math.max(8, Math.min(78, eqVal + (Math.random()*14-5)));
+  const bar = document.createElement('div');
+  bar.className = 'flex-1 rounded-sm candle';
+  bar.style.height = eqVal + 'px';
+  bar.style.background = bIdx%9===4 ? 'rgba(251,113,133,.7)' : 'rgba(52,211,153,.65)';
+  bar.style.animationDelay = (bIdx*0.03)+'s';
+  bar.style.transformOrigin = 'bottom';
+  eqHost.appendChild(bar);
+}
+
+/* tabs */
+document.querySelectorAll('.tabbtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('on'));
+    document.querySelectorAll('.tabpanel').forEach(p=>p.classList.remove('on'));
+    btn.classList.add('on');
+    document.getElementById('tp-'+btn.dataset.tab).classList.add('on');
+  });
+});
+
+/* scroll reveal + counters */
+const io = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{
+    if(en.isIntersecting){
+      en.target.classList.add('visible');
+      en.target.querySelectorAll('[data-count]').forEach(runCounter);
+      if(en.target.hasAttribute('data-count')) runCounter(en.target);
+      io.unobserve(en.target);
+    }
+  });
+},{threshold:.15});
+document.querySelectorAll('.reveal, .panel').forEach(el=>io.observe(el));
+
+const counted = new WeakSet();
+function runCounter(el){
+  if(counted.has(el)) return; counted.add(el);
+  const target = +el.dataset.count, suffix = el.dataset.suffix||'';
+  const t0 = performance.now();
+  function step(nowTs){
+    const pr = Math.min(1,(nowTs-t0)/1200);
+    el.textContent = Math.round(target*(1-Math.pow(1-pr,3))) + suffix;
+    if(pr<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+/* nav aktif */
+const secIds = ['nedir','moduller','gelismis','backtest','mimari','roadmap'];
+window.addEventListener('scroll',()=>{
+  let cur = secIds[0];
+  secIds.forEach(id=>{ const s=document.getElementById(id); if(s && s.getBoundingClientRect().top < 160) cur = id; });
+  document.querySelectorAll('.navlink').forEach(a=>a.classList.toggle('on', a.getAttribute('href')==='#'+cur));
+},{passive:true});
+
+/* toast */
+document.getElementById('deployBtn').addEventListener('click',()=>{
+  const toastEl = document.getElementById('toast');
+  toastEl.classList.remove('translate-y-[150%]');
+  setTimeout(()=>toastEl.classList.add('translate-y-[150%]'), 2800);
+});
+</script>
+</body>
+</html>

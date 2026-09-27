@@ -45,6 +45,13 @@ export function isDashboardView(value: unknown): value is DashboardView {
   );
 }
 
+/* AA.2a: durum-dağılımı salt-metin birleştirme (hesap yok). */
+function formatByStatus(byStatus: Record<string, number>): string {
+  const entries = Object.entries(byStatus);
+  if (entries.length === 0) return "durum dağılımı yok";
+  return entries.map(([status, count]) => `${status}: ${count}`).join(" · ");
+}
+
 export function DashboardPanel({
   dashboard,
   busy,
@@ -73,43 +80,35 @@ export function DashboardPanel({
         Özeti yenile
       </button>
       {dashboard && (
-        <div className="table-wrap paper-result">
-          <table>
-            <tbody>
-              <tr>
-                <td>Paper session</td>
-                <td>{dashboard.paper.sessions}</td>
-              </tr>
-              <tr>
-                <td>Toplam paper nakit</td>
-                <td>{dashboard.paper.total_cash}</td>
-              </tr>
-              <tr>
-                <td>Pozisyon / açık emir</td>
-                <td>
-                  {dashboard.paper.positions} / {dashboard.paper.open_orders}
-                </td>
-              </tr>
-              <tr>
-                <td>Bot / bağlı session</td>
-                <td>
-                  {dashboard.bots.bots} / {dashboard.bots.bound_sessions}
-                </td>
-              </tr>
-              <tr>
-                <td>Deal</td>
-                <td>{dashboard.deals.deals}</td>
-              </tr>
-              <tr>
-                <td>Backup</td>
-                <td>{dashboard.backups.backups}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p className="paper-note">
-            Salt-okunur toplama; değerleme ve venue verisi içermez.
+        <>
+          <div className="quality-summary" role="list" aria-label="Portföy özeti kartları">
+            <div className="metric" role="listitem">
+              <span className="metric-label">Paper Nakit</span>
+              <strong>{dashboard.paper.total_cash}</strong>
+              <span className="metric-unit">{dashboard.paper.sessions} session · salt-okunur</span>
+            </div>
+            <div className="metric" role="listitem">
+              <span className="metric-label">Pozisyon / Açık Emir</span>
+              <strong>{dashboard.paper.positions} / {dashboard.paper.open_orders}</strong>
+              <span className="metric-unit">paper</span>
+            </div>
+            <div className="metric" role="listitem">
+              <span className="metric-label">Bot / Bağlı Session</span>
+              <strong>{dashboard.bots.bots} / {dashboard.bots.bound_sessions}</strong>
+              <span className="metric-unit">kayıtlı</span>
+            </div>
+            <div className="metric" role="listitem">
+              <span className="metric-label">Deal</span>
+              <strong>{dashboard.deals.deals}</strong>
+              <span className="metric-unit">{formatByStatus(dashboard.deals.by_status)}</span>
+            </div>
+          </div>
+          <p className="paper-note" role="status">
+            Değerleme kartları (yatırılan · uPnL · bugünkü kâr): portföy-özet
+            ucu bekleniyor (AA.-1). Salt-okunur toplama; değerleme ve venue
+            verisi içermez.
           </p>
-        </div>
+        </>
       )}
     </section>
   );

@@ -1,0 +1,1 @@
+{"type":"urn:local-api:problem:SECTOR-CONFIG-INVALID","title":"Bot ayarları geçersiz","status":422,"detail":"Safety order borsa minimumunun altında ya da kademe çok sık; tutarı ya da sapmayı artırın.","code":"SECTOR_CONFIG_INVALID","errors":[{"field":"strategy","code":"SECTOR_CONFIG_INVALID"}]}

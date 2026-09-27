@@ -1,0 +1,1 @@
+{"type":"urn:local-api:problem:BOT-RUNNER-UNAVAILABLE","title":"Bot çalıştırıcı henüz yok","status":409,"detail":"Botları otomatik çalıştıran servis henüz devrede değil; bot kaydedildi ama başlatılamaz.","code":"BOT_RUNNER_UNAVAILABLE"}

@@ -1,0 +1,1 @@
+{"type":"urn:local-api:problem:SECTOR-FIELD-OUT-OF-RANGE","title":"Bot ayarları geçersiz","status":422,"detail":"Bütçe pozitif olmalıdır.","code":"SECTOR_FIELD_OUT_OF_RANGE","errors":[{"field":"budget","code":"SECTOR_FIELD_OUT_OF_RANGE"}]}

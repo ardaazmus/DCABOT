@@ -17,6 +17,12 @@ class EventsApiTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             _events_list(EventLog(), 0)
 
+    def test_real_app_wires_landmarks_to_event_log(self):
+        from dcabot.server import api as api_module
+
+        self.assertIs(api_module.V2_BOT_DEPS.record_event, api_module._record_v2_event)
+        self.assertIs(api_module.PAPER_BOT_RUNNER.deps.record_event, api_module._record_v2_event)
+
 
 if __name__ == "__main__":
     unittest.main()

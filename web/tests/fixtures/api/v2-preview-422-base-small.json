@@ -1,0 +1,1 @@
+{"type":"urn:local-api:problem:SECTOR-BASE-ORDER-TOO-SMALL","title":"Bot ayarları geçersiz","status":422,"detail":"Base order borsa minimumunun altında (en az 5 USDT).","code":"SECTOR_BASE_ORDER_TOO_SMALL","errors":[{"field":"strategy.base_order","code":"SECTOR_BASE_ORDER_TOO_SMALL"}]}

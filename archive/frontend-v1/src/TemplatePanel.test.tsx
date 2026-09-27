@@ -131,3 +131,44 @@ describe("TemplatePanel", () => {
     expect(handlers.onDiff).toHaveBeenCalledWith("t1", "t2");
   });
 });
+
+describe("TemplatePanel galeri (B.4)", () => {
+  const gallery: TemplateMeta[] = [
+    { template_id: "t1", payload_sha256: "a".repeat(64), declared_capabilities: ["DCA"] },
+    { template_id: "t2", payload_sha256: "b".repeat(64), declared_capabilities: [] },
+  ];
+
+  function renderGallery() {
+    const onSelect = vi.fn();
+    const result = render(
+      <TemplatePanel
+        templates={gallery}
+        detail={detail}
+        bindResult={null}
+        diffRows={[]}
+        busy={false}
+        error=""
+        onImport={vi.fn()}
+        onSelect={onSelect}
+        onBind={vi.fn()}
+        onDiff={vi.fn()}
+      />,
+    );
+    return { onSelect, ...result };
+  }
+
+  it("kart galerisi + sürüm rozeti + kapsam notu gösterir", () => {
+    const { container } = renderGallery();
+    expect(container.querySelector(".botcard-grid")).toBeInTheDocument();
+    expect(screen.getByText("Yerel preset galerisi — harici market yok; sürüm = SHA-256.")).toBeInTheDocument();
+    expect(screen.getByText("vaaaaaaaa")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /t1/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /t2/ })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("karta tıklamak seçimi çağırır", () => {
+    const { onSelect } = renderGallery();
+    fireEvent.click(screen.getByRole("button", { name: /t2/ }));
+    expect(onSelect).toHaveBeenCalledWith("t2");
+  });
+});

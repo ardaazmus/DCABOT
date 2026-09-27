@@ -84,6 +84,7 @@ export function DealPanel({
   onAppend,
   onReplay,
   onBulk,
+  onOpenDetail,
 }: {
   dealId: string;
   lifecycle: DealLifecycleView | null;
@@ -96,6 +97,8 @@ export function DealPanel({
   onAppend: (payload: DealAppendPayload) => void;
   onReplay: () => void;
   onBulk: (actions: DealBulkAction[]) => void;
+  /** Faz 17 A.4: tam sayfa deal detayına geçiş (verilmezse düğme çıkmaz). */
+  onOpenDetail?: () => void;
 }) {
   const [deal, setDeal] = useState(dealId);
   const [revision, setRevision] = useState("rev-1");
@@ -194,6 +197,11 @@ export function DealPanel({
       <button className="secondary-button" type="button" disabled={busy} onClick={onReplay}>
         Replay
       </button>
+      {onOpenDetail && (
+        <button className="secondary-button" type="button" disabled={busy} onClick={onOpenDetail}>
+          Detayı aç
+        </button>
+      )}
 
       <h3 className="paper-subheading">Lifecycle olayı</h3>
       <div className="paper-order-form">

@@ -729,7 +729,7 @@ export function FuturesPanel({
         </div>
       )}
 
-      <h3 className="paper-subheading">Pozisyon ve marjin projeksiyonu</h3>
+      <h3 className="paper-subheading" id="futures-margin-projection">Pozisyon ve marjin projeksiyonu</h3>
       <div className="paper-order-form">
         <label className="field">
           <span className="field-label">Pozisyon yönü</span>

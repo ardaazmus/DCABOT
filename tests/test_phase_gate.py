@@ -17,34 +17,34 @@ class NoRawColorsTests(unittest.TestCase):
             "/* === TOKEN BLOCK END === */\n"
             ".a { color: var(--color-text); background: transparent; }\n"
         )
-        path = ROOT / "frontend/src/styles.css"
+        path = ROOT / "archive/frontend-v1/src/styles.css"
         original = path.read_text(encoding="utf-8")
         try:
             path.write_text("/* x */\n" + css, encoding="utf-8")
             self.assertEqual(
-                phase_gate.check_no_raw_colors("frontend/src/styles.css"), []
+                phase_gate.check_no_raw_colors("archive/frontend-v1/src/styles.css"), []
             )
         finally:
             path.write_text(original, encoding="utf-8")
 
     def test_hex_outside_block_fails(self):
         css = "/* === TOKEN BLOCK END === */\n.a { color: #ff0000; }\n"
-        path = ROOT / "frontend/src/styles.css"
+        path = ROOT / "archive/frontend-v1/src/styles.css"
         original = path.read_text(encoding="utf-8")
         try:
             path.write_text(css, encoding="utf-8")
-            errors = phase_gate.check_no_raw_colors("frontend/src/styles.css")
+            errors = phase_gate.check_no_raw_colors("archive/frontend-v1/src/styles.css")
             self.assertEqual(len(errors), 1)
             self.assertIn("#ff0000", errors[0])
         finally:
             path.write_text(original, encoding="utf-8")
 
     def test_missing_marker_fails(self):
-        path = ROOT / "frontend/src/styles.css"
+        path = ROOT / "archive/frontend-v1/src/styles.css"
         original = path.read_text(encoding="utf-8")
         try:
             path.write_text(".a { color: red; }\n", encoding="utf-8")
-            errors = phase_gate.check_no_raw_colors("frontend/src/styles.css")
+            errors = phase_gate.check_no_raw_colors("archive/frontend-v1/src/styles.css")
             self.assertEqual(len(errors), 1)
             self.assertIn("marker", errors[0])
         finally:
@@ -55,11 +55,11 @@ class NoRawColorsTests(unittest.TestCase):
             "/* === TOKEN BLOCK END === */\n"
             ".a { color: var(--color-nope); }\n"
         )
-        path = ROOT / "frontend/src/styles.css"
+        path = ROOT / "archive/frontend-v1/src/styles.css"
         original = path.read_text(encoding="utf-8")
         try:
             path.write_text(":root { --color-ok: red; }\n" + css, encoding="utf-8")
-            errors = phase_gate.check_no_raw_colors("frontend/src/styles.css")
+            errors = phase_gate.check_no_raw_colors("archive/frontend-v1/src/styles.css")
             self.assertEqual(len(errors), 1)
             self.assertIn("--color-nope", errors[0])
         finally:
@@ -67,7 +67,7 @@ class NoRawColorsTests(unittest.TestCase):
 
     def test_real_stylesheet_passes(self):
         self.assertEqual(
-            phase_gate.check_no_raw_colors("frontend/src/styles.css"), []
+            phase_gate.check_no_raw_colors("archive/frontend-v1/src/styles.css"), []
         )
 
 

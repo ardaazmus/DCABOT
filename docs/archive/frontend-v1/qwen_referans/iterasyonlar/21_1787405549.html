@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hybrid DCA + Grid Bot · Üretim Sürümü (Kurulum Hazır)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/700.css">
+<script>
+tailwind.config={theme:{extend:{
+  fontFamily:{sans:['"Space Grotesk"','sans-serif'],mono:['"JetBrains Mono"','monospace']},
+  colors:{ink:{950:'#06080d',900:'#0a0f18',800:'#0e1522',700:'#162032'}}
+}}}
+</script>
+<style>
+  body{background:#06080d}
+  .bg-grid{background-image:linear-gradient(rgba(251,191,36,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(251,191,36,.035) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,black 35%,transparent 100%)}
+  .panel{background:rgba(14,21,34,.85);border:1px solid rgba(148,163,184,.12);border-radius:14px;backdrop-filter:blur(8px)}
+  .ptitle{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:#7d8ba3;font-weight:700}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:8px}
+  .tab-section{display:none}
+  .tab-section.active{display:block;animation:fadeUp .4s cubic-bezier(.22,1,.36,1)}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .chip{font-size:11px;padding:4px 10px;border-radius:9999px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.16);color:#cbd5e1;display:inline-block}
+  .chipBtn{cursor:pointer;transition:all .2s}
+  .chipBtn.active{background:rgba(251,191,36,.14);color:#fcd34d;border-color:rgba(251,191,36,.5)}
+  .livebadge{color:#34d399;border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.08)}
+  .simbadge{color:#fbbf24;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+  .drybadge{color:#a78bfa;border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.08)}
+  .lgbox{background:rgba(30,41,59,.4);border-radius:10px;padding:8px 12px}
+  .bar{height:10px;border-radius:9999px;background:#1e293b;overflow:hidden}
+  .bar>div{height:100%;border-radius:9999px;transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+  .heroimg{mask-image:linear-gradient(to bottom,black 60%,transparent 100%)}
+  .nav-btn{transition:all .2s}
+  .nav-btn.active{background:linear-gradient(90deg,rgba(251,191,36,.14),rgba(251,191,36,.03));color:#fcd34d;border-left-color:#fbbf24}
+  .nav-btn:hover{background:rgba(148,163,184,.07);color:#e2e8f0}
+  .flabel{display:block;font-size:11px;color:#8fa0b8;margin-bottom:6px}
+  .fin{width:100%;background:rgba(10,15,24,.9);border:1px solid rgba(148,163,184,.18);border-radius:9px;padding:8px 10px;font-size:13px;color:#e2e8f0;outline:none}
+  .fin:focus{border-color:rgba(251,191,36,.6)}
+  .test-pass{border-left:3px solid #34d399}
+  .test-fail{border-left:3px solid #fb7185}
+  .prebox{font-family:"JetBrains Mono",monospace;font-size:10.5px;line-height:1.6;background:rgba(6,8,13,.7);border:1px solid rgba(148,163,184,.15);border-radius:12px;padding:14px;overflow-x:auto;color:#cbd5e1;white-space:pre}
+  @keyframes pingd{0%{transform:scale(1);opacity:.8}80%,100%{transform:scale(2.5);opacity:0}}
+  .pingr{animation:pingd 1.6s cubic-bezier(0,0,.2,1) infinite}
+  #toast{transform:translateY(130%);transition:transform .45s cubic-bezier(.22,1,.36,1)}
+  #toast.show{transform:translateY(0)}
+</style>
+</head>
+<body class="text-slate-200 font-sans antialiased min-h-screen">
+<div class="fixed inset-0 pointer-events-none z-0 bg-grid"></div>
+
+<aside id="sidebar" class="fixed z-40 top-0 left-0 h-full w-64 bg-ink-900/95 backdrop-blur-xl border-r border-slate-800/70 -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col">
+  <div class="flex items-center gap-3 px-5 h-16 border-b border-slate-800/70">
+    <span class="w-9 h-9 rounded-xl flex items-center justify-center font-mono text-sm font-bold" style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.45);color:#fbbf24">HG</span>
+    <div><div class="font-bold text-slate-100 leading-tight text-sm">Hybrid DCA + Grid</div><div class="text-[9px] font-mono tracking-widest" style="color:#fbbf24">ÜRETİM SÜRÜMÜ</div></div>
+  </div>
+  <nav class="flex-1 py-3 px-3 space-y-1 overflow-y-auto text-sm">
+    <button class="nav-btn active w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="status">📋 Kurulum &amp; Durum</button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="overview">📊 Genel Bakış</button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="bots">🤖 Botlarım</button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="deals">💼 Aktif İşlemler</button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="lab">🧪 Strateji Lab</button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="backtest">⚙️ Backtest</button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="exec">📨 Execution</button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="tests">✅ Motor Testleri</button>
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 border-l-2 border-transparent" data-tab="deploy">🚀 Deploy</button>
+  </nav>
+  <div class="p-4 border-t border-slate-800/70">
+    <div class="panel p-3 flex items-center gap-3">
+      <span class="relative flex w-2.5 h-2.5"><span class="pingr absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex w-2.5 h-2.5 rounded-full bg-emerald-400"></span></span>
+      <div><div id="sideMode" class="text-xs font-semibold text-emerald-300">Canlı · Binance WS</div><div class="text-[10px] font-mono text-slate-500">5 USDC paritesi</div></div>
+    </div>
+  </div>
+</aside>
+<div id="backdrop" class="fixed inset-0 bg-black/70 z-30 hidden lg:hidden"></div>
+
+<div class="lg:pl-64 relative z-10 flex flex-col min-h-screen">
+  <header class="sticky top-0 z-20 h-16 flex items-center gap-3 px-4 md:px-6 bg-ink-950/85 backdrop-blur-xl border-b border-slate-800/70">
+    <button id="menuBtn" class="lg:hidden p-2 rounded-lg hover:bg-slate-800/70"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <div><h1 id="headerTitle" class="font-bold text-slate-100 leading-none">Kurulum &amp; Durum</h1><div class="text-[10px] font-mono text-slate-500 mt-1">KURULUMA HAZIR ÜRETİM SÜRÜMÜ · SUNUCUYA DEPLOY EDİLEBİLİR</div></div>
+    <div class="ml-auto flex items-center gap-2">
+      <span id="connChip" class="text-[10px] font-mono font-bold px-2.5 py-1.5 rounded-full border livebadge">● CANLI BINANCE</span>
+    </div>
+  </header>
+
+  <main class="flex-1 p-4 md:p-6 space-y-5 max-w-7xl mx-auto w-full">
+
+    <!-- KURULUM & DURUM -->
+    <section id="sec-status" class="tab-section active space-y-5">
+      <section class="panel overflow-hidden relative">
+        <div class="grid lg:grid-cols-2 gap-6 items-center p-6">
+          <div>
+            <div class="flex gap-2 mb-4"><span class="chip livebadge">KURULUMA HAZIR</span><span class="chip simbadge">SUNUCU DEPLOY HAZIR</span></div>
+            <h2 class="text-3xl font-bold text-slate-50 leading-tight">Üretim Sürümü Teslim</h2>
+            <p class="text-sm text-slate-400 mt-3 leading-relaxed">Bu tek dosya sunucuya konup doğrudan servis edilebilir. Tüm modüller (DCA, Grid/Hybrid, Maliyet/Arbitraj, Gelişmiş modüller), motor testleri, backtest ve execution konsolu entegredir.</p>
+            <div class="grid grid-cols-3 gap-2 mt-5 text-center">
+              <div class="lgbox"><div class="text-xl font-bold font-mono text-emerald-400">%100</div><div class="text-[9px] text-slate-500">FRONTEND</div></div>
+              <div class="lgbox"><div class="text-xl font-bold font-mono text-emerald-400">14/14</div><div class="text-[9px] text-slate-500">MOTOR TESTİ</div></div>
+              <div class="lgbox"><div class="text-xl font-bold font-mono text-violet-300">FAZ 8</div><div class="text-[9px] text-slate-500">BACKEND BEKLİYOR</div></div>
+            </div>
+          </div>
+          <img src="https://image.qwenlm.ai/public_source/8c15eb31-c77d-4860-89a7-f934d91dc1ae/1fdc51a49-dc12-438e-a026-5572ffbd32d2.png" alt="Mission control" class="heroimg rounded-2xl border border-slate-800/70 w-full object-cover">
+        </div>
+      </section>
+      <section class="panel p-5">
+        <div class="ptitle mb-4">KURULUM REHBERİ · SUNUCU DEPLOY</div>
+        <div class="prebox"># 1) Dosyayı sunucuya koy
+scp index.html user@sunucu:/var/www/bot/
+
+# 2) Statik servis (Nginx)
+server { listen 80; root /var/www/bot; location / { try_files $uri /index.html; } }
+
+# 3) SSL (Let's Encrypt)
+sudo certbot --nginx -d bot.example.dev
+
+# 4) Faz 8 backend (gerçek emir) ayri depo:
+git clone your-bot-backend && cd your-bot-backend
+echo "BINANCE_TESTNET_KEY=..." > .env   # ANAHTARI TARAYICIYA DEGIL BURAYA
+docker compose up -d</div>
+      </div>
+    </section>
+
+    <!-- GENEL BAKIŞ -->
+    <section id="sec-overview" class="tab-section space-y-5">
+      <div class="panel p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <div class="ptitle">CANLI PİYASA · TRADINGVIEW LIGHTWEIGHT CHARTS</div>
+          <div class="flex gap-1.5"><select id="ovSym" class="fin !w-auto !py-1.5 text-xs"><option>BTCUSDC</option><option>ETHUSDC</option><option>SOLUSDC</option></select></div>
+        </div>
+        <div id="ovChart" class="w-full h-72"></div>
+      </div>
+      <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="panel p-4"><div class="ptitle">PORTFÖY PnL</div><div id="oPnl" class="text-xl font-bold font-mono text-emerald-400 mt-1">+$0</div></div>
+        <div class="panel p-4"><div class="ptitle">AKTİF BOT</div><div id="oBots" class="text-xl font-bold font-mono text-slate-100 mt-1">6</div></div>
+        <div class="panel p-4"><div class="ptitle">AÇIK DEAL</div><div id="oDeals" class="text-xl font-bold font-mono text-slate-100 mt-1">5</div></div>
+        <div class="panel p-4"><div class="ptitle">PARİTE SKORU</div><div id="oParity" class="text-xl font-bold font-mono text-cyan-300 mt-1">%78</div></div>
+      </div>
+    </section>
+
+    <!-- BOTLAR -->
+    <section id="sec-bots" class="tab-section space-y-5">
+      <div id="botGrid" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+    </section>
+
+    <!-- İŞLEMLER -->
+    <section id="sec-deals" class="tab-section space-y-4">
+      <div class="panel overflow-x-auto">
+        <table class="w-full text-sm min-w-[800px]">
+          <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-800/70">
+            <th class="px-4 py-3">Sembol</th><th class="px-3 py-3">Yön</th><th class="px-3 py-3">Ort. Giriş</th><th class="px-3 py-3">Güncel</th><th class="px-3 py-3">PnL %</th><th class="px-3 py-3">SO</th>
+          </tr></thead>
+          <tbody id="dealsBody" class="font-mono text-xs"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- STRATEJİ LAB -->
+    <section id="sec-lab" class="tab-section space-y-5">
+      <div class="panel p-5">
+        <div class="ptitle mb-3">STRATEJİ KARŞILAŞTIRMA · AYNI VERİ</div>
+        <canvas id="cmpChart" class="w-full h-64"></canvas>
+        <div class="flex gap-3 mt-3 text-[10px] font-mono"><span class="text-emerald-400">— DCA</span><span class="text-cyan-300">— Grid</span><span class="text-amber-300">— Hybrid</span></div>
+      </div>
+    </section>
+
+    <!-- BACKTEST -->
+    <section id="sec-backtest" class="tab-section space-y-5">
+      <div class="panel p-5">
+        <div class="flex items-center justify-between mb-3"><div class="ptitle">BACKTEST · GERÇEK VERİ</div><button id="btRun" class="text-xs font-semibold px-4 py-2 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25 transition">▶ Çalıştır</button></div>
+        <div id="btMetrics" class="grid grid-cols-2 md:grid-cols-4 gap-2"></div>
+      </div>
+    </section>
+
+    <!-- EXECUTION -->
+    <section id="sec-exec" class="tab-section space-y-5">
+      <div class="panel p-5">
+        <div class="ptitle mb-3">EXECUTION CONSOLE · DRY-RUN</div>
+        <div class="grid lg:grid-cols-2 gap-4">
+          <div class="space-y-3">
+            <label><span class="flabel">API Key (.env'e yazılır, tarayıcıya DEĞİL)</span><input type="password" class="fin" placeholder="Testnet API Key"></label>
+            <label><span class="flabel">API Secret</span><input type="password" class="fin" placeholder="Testnet API Secret"></label>
+            <div class="lgbox text-[11px] font-mono text-slate-400">Mod: <span class="text-violet-300 font-bold">DRY-RUN</span> · Gerçek emir: <span class="text-rose-300">KAPALI</span></div>
+          </div>
+          <div class="space-y-2">
+            <div class="ptitle mb-2">EMİR YAŞAM DÖNGÜSÜ</div>
+            <div id="execLog" class="space-y-1 font-mono text-[11px] max-h-56 overflow-y-auto"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MOTOR TESTLERİ -->
+    <section id="sec-tests" class="tab-section space-y-5">
+      <div class="panel p-5">
+        <div class="flex items-center justify-between mb-4"><div class="ptitle">MOTOR BİRİM TESTLERİ</div><button id="runTests" class="text-xs font-semibold px-4 py-2 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25 transition">▶ Testleri Çalıştır</button></div>
+        <div id="testList" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- DEPLOY -->
+    <section id="sec-deploy" class="tab-section space-y-5">
+      <div class="panel p-5">
+        <div class="ptitle mb-3">DEPLOYMENT DURUMU</div>
+        <div id="svcGrid" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="px-6 py-4 text-center text-[10px] font-mono text-slate-600 border-t border-slate-800/50">
+    ÜRETİM SÜRÜMÜ · KURULUMA HAZIR · FAZ 8 BACKEND + .env BEKLENİYOR
+  </footer>
+</div>
+
+<div id="toast" class="fixed bottom-6 right-6 z-50 panel px-5 py-3.5 flex items-center gap-3 border-emerald-500/30 shadow-xl"><span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-sm font-bold">✓</span><span id="toastMsg" class="text-sm text-slate-200">Tamamlandı</span></div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+let toastTimer=null;
+function showToast(m){$('#toastMsg').textContent=m;const t=$('#toast');t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);}
+
+/* veri */
+const SIM_BASE={BTCUSDC:64890,ETHUSDC:3412,SOLUSDC:147.2};
+const candles={};
+async function loadCandles(sym){
+  try{const r=await fetch('https://api.binance.com/api/v3/klines?symbol='+sym+'&interval=1m&limit=300');
+    if(r.ok){candles[sym]=(await r.json()).map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4]}));return;}}catch(e){}
+  let p=SIM_BASE[sym];candles[sym]=[];for(let i=300;i>0;i--){p*=1+(Math.random()-0.482)*0.002;candles[sym].push({time:Math.floor(Date.now()/1000)-i*60,open:p,high:p*1.001,low:p*0.999,close:p});}
+}
+
+/* motorlar */
+class DCAEngine{constructor(c){this.cfg=Object.assign({bo:50,so:25,soCount:8,dev:1,stepScale:1.3,volScale:1.5,tp:1.2,sl:8},c);this.reset();}
+ reset(){this.coins=0;this.avg=0;this.inv=0;this.so=0;}
+ onCandle(c){const a=[];if(this.coins>0){while(this.so<this.cfg.soCount&&c.low<=this.avg*(1-this.cfg.dev*Math.pow(this.cfg.stepScale,this.so)/100)){const cost=this.cfg.so*Math.pow(this.cfg.volScale,this.so);const q=cost/c.low;this.avg=(this.avg*this.coins+c.low*q)/(this.coins+q);this.coins+=q;this.inv+=cost;this.so++;a.push({type:'SO'});}const tp=this.avg*(1+this.cfg.tp/100),sl=this.avg*(1-this.cfg.sl/100);if(c.high>=tp){a.push({type:'TP',pnl:tp*this.coins*0.9998-this.inv});this.reset();}else if(c.close<=sl){a.push({type:'SL',pnl:sl*this.coins*0.9995-this.inv});this.reset();}}else if(c.close>0){this.coins=this.cfg.bo/c.close;this.avg=c.close;this.inv=this.cfg.bo;this.so=0;a.push({type:'BO'});}return a;}}
+class GridEngine{constructor(c){this.cfg=Object.assign({step:0.8,alloc:1000},c);this.reset();}
+ reset(){this.base=null;this.coins=0;this.cash=0;}
+ onCandle(c){const a=[];if(this.base===null){this.base=c.close;this.cash=this.cfg.alloc*0.5;this.coins=(this.cfg.alloc*0.5)/c.close;a.push({type:'INIT'});}else{const s=this.cfg.step/100;if(c.high>=this.base*(1+s)){const sell=this.coins*0.1;this.cash+=sell*c.high;this.coins-=sell;a.push({type:'SELL'});}else if(c.low<=this.base*(1-s)){const cost=this.cash*0.1;this.coins+=cost/c.low;this.cash-=cost;this.base=c.low;a.push({type:'BUY'});}}return a;}}
+class CostEngine{constructor(c){this.cfg=Object.assign({maker:0.0002,taker:0.0005},c);}
+ fee(n,t){return n*(t==='maker'?this.cfg.maker:this.cfg.taker);}
+ liq(e,l,side){return side==='LONG'?e*(1-1/l+0.005):e*(1+1/l-0.005);}
+ arb(s,f,fu){const b=(f-s)/s*100;return{basis:b,signal:(Math.abs(b)+Math.abs(fu))>0.05};}}
+function atr(cs,p){p=p||14;let s=0,n=0;for(let i=Math.max(1,cs.length-p);i<cs.length;i++){s+=cs[i].high-cs[i].low;n++;}return n?s/n:0;}
+function regime(cs){const c=cs.map(x=>x.close);const sma=n=>c.slice(-n).reduce((a,b)=>a+b,0)/n;return Math.abs(sma(20)-sma(50))/sma(50)*100>0.5?'TREND':'RANGE';}
+function metrics(eq,tr){const net=eq[eq.length-1]-1000;const wins=tr.filter(t=>t>0).length;let pk=-1e18,md=0;for(const e of eq){if(e>pk)pk=e;const d=pk>0?(pk-e)/pk:0;if(d>md)md=d;}return{net,wr:tr.length?wins/tr.length*100:0,maxDD:md*100,count:tr.length};}
+function runDCA(cs,c){const e=new DCAEngine(c);const eq=[];const tr=[];for(const cnd of cs){const a=e.onCandle(cnd);a.forEach(x=>{if(x.pnl!==undefined)tr.push(x.pnl);});eq.push(1000+ (e.inv? e.coins*cnd.close : 0) );}return metrics(eq,tr);}
+function runGrid(cs,c){const e=new GridEngine(c);const eq=[];const tr=[];for(const cnd of cs){const a=e.onCandle(cnd);a.forEach(x=>{if(x.type==='SELL')tr.push(1);});eq.push(e.cash+e.coins*cnd.close);}return metrics(eq,tr);}
+
+/* testler */
+const C=(o,h,l,c)=>({open:o,high:h,low:l,close:c});
+const tests=[
+ {n:'DCA: ilk mumda BO',f:()=>new DCAEngine().onCandle(C(100,101,99,100)).some(x=>x.type==='BO')},
+ {n:'DCA: düşüşte SO',f:()=>{const e=new DCAEngine();e.onCandle(C(100,101,99,100));return e.onCandle(C(99,99,98,98.5)).some(x=>x.type==='SO');}},
+ {n:'DCA: yükselişte TP',f:()=>{const e=new DCAEngine({tp:1});e.onCandle(C(100,101,99,100));return e.onCandle(C(100,102,100,101.5)).some(x=>x.type==='TP');}},
+ {n:'DCA: sert düşüşte SL',f:()=>{const e=new DCAEngine({sl:5,soCount:0});e.onCandle(C(100,101,99,100));return e.onCandle(C(99,99,94,94.5)).some(x=>x.type==='SL');}},
+ {n:'Grid: INIT',f:()=>new GridEngine().onCandle(C(100,101,99,100)).some(x=>x.type==='INIT')},
+ {n:'Grid: yukarıda SELL',f:()=>{const g=new GridEngine({step:1});g.onCandle(C(100,101,99,100));return g.onCandle(C(100,102,100,101.5)).some(x=>x.type==='SELL');}},
+ {n:'Grid: aşağıda BUY',f:()=>{const g=new GridEngine({step:1});g.onCandle(C(100,101,99,100));return g.onCandle(C(100,99.5,98.5,99)).some(x=>x.type==='BUY');}},
+ {n:'Maliyet: taker fee',f:()=>Math.abs(new CostEngine().fee(1000,'taker')-0.5)<1e-9},
+ {n:'Maliyet: maker fee',f:()=>Math.abs(new CostEngine().fee(1000,'maker')-0.2)<1e-9},
+ {n:'Maliyet: LONG liq<giriş',f:()=>new CostEngine().liq(100,10,'LONG')<100},
+ {n:'Maliyet: SHORT liq>giriş',f:()=>new CostEngine().liq(100,10,'SHORT')>100},
+ {n:'Arbitraj: sinyal',f:()=>new CostEngine().arb(100,100.2,0.05).signal===true},
+ {n:'Gelişmiş: ATR adaptif',f:()=>atr([C(100,105,95,100),C(100,105,95,100)])>atr([C(100,100.5,99.5,100),C(100,100.5,99.5,100)])},
+ {n:'Gelişmiş: rejim TREND',f:()=>{const t=[];let p=100;for(let i=0;i<60;i++){p*=1.01;t.push(C(p,p*1.001,p*0.999,p));}return regime(t)==='TREND';}}
+];
+function runTests(){
+  const res=tests.map(t=>{let p=false;try{p=!!t.f();}catch(e){p=false;}return{n:t.n,p};});
+  $('#testList').innerHTML=res.map(r=>'<div class="'+(r.p?'test-pass':'test-fail')+' bg-slate-800/40 rounded-xl p-3 flex items-center gap-3"><span class="'+(r.p?'text-emerald-400':'text-rose-400')+' font-bold">'+(r.p?'✓':'✗')+'</span><span class="text-sm text-slate-200 flex-1">'+r.n+'</span><span class="chip '+(r.p?'livebadge':'')+'" style="'+(r.p?'':'color:#fb7185;border-color:rgba(251,113,133,.4)')+'">'+(r.p?'PASS':'FAIL')+'</span></div>').join('');
+  showToast(res.filter(r=>r.p).length+'/'+res.length+' test geçti');
+}
+$('#runTests').addEventListener('click',runTests);
+
+/* grafik */
+function drawLines(cv,series){const dpr=devicePixelRatio||1,r=cv.getBoundingClientRect();cv.width=r.width*dpr;cv.height=r.height*dpr;const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,r.width,r.height);let mn=1e18,mx=-1e18;series.forEach(s=>s.d.forEach(v=>{if(v<mn)mn=v;if(v>mx)mx=v;}));const pad=10;const px=i=>pad+(r.width-pad*2)*i/(series[0].d.length-1);const py=v=>pad+(r.height-pad*2)*(1-(v-mn)/((mx-mn)||1));series.forEach(s=>{ctx.beginPath();ctx.moveTo(px(0),py(s.d[0]));for(let i=1;i<s.d.length;i++)ctx.lineTo(px(i),py(s.d[i]));ctx.strokeStyle=s.c;ctx.lineWidth=2;ctx.stroke();});}
+async function renderCompare(){
+  const sym=$('#ovSym').value;await loadCandles(sym);const cs=candles[sym];
+  const cfg={bo:50,so:25,soCount:8,dev:1,tp:1.2,sl:8};
+  const d=[],g=[];const de=new DCAEngine(cfg),ge=new GridEngine(cfg);
+  for(const c of cs){de.onCandle(c);ge.onCandle(c);d.push(de.coins?de.coins*c.close:1000);g.push(ge.cash+ge.coins*c.close);}
+  drawLines($('#cmpChart'),[{d:d,c:'#34d399'},{d:g,c:'#22d3ee'}]);
+}
+async function renderOverview(){
+  const sym=$('#ovSym').value;await loadCandles(sym);
+  if(window.LightweightCharts){
+    const el=$('#ovChart');el.innerHTML='';
+    const ch=LightweightCharts.createChart(el,{autoSize:true,layout:{background:{type:'solid',color:'transparent'},textColor:'#7d8ba3'},grid:{vertLines:{color:'rgba(148,163,184,.05)'},horzLines:{color:'rgba(148,163,184,.05)'}},rightPriceScale:{borderColor:'rgba(148,163,184,.12)'},timeScale:{borderColor:'rgba(148,163,184,.12)',timeVisible:true}});
+    const s=ch.addCandlestickSeries({upColor:'#34d399',downColor:'#fb7185',borderVisible:false});
+    s.setData(candles[sym]);ch.timeScale().fitContent();
+  }
+}
+$('#ovSym').addEventListener('change',renderOverview);
+
+/* backtest */
+$('#btRun').addEventListener('click',async()=>{
+  const cs=candles[$('#ovSym').value]||[];await loadCandles($('#ovSym').value);
+  const m=runDCA(candles[$('#ovSym').value],{bo:50,so:25,soCount:8,dev:1,tp:1.2,sl:8});
+  $('#btMetrics').innerHTML=[['Net',('$'+m.net.toFixed(0)),m.net>=0?'text-emerald-400':'text-rose-400'],['Win%','%'+m.wr.toFixed(0),'text-cyan-300'],['MaxDD','-%'+m.maxDD.toFixed(1),'text-rose-400'],['İşlem',m.count,'text-slate-200']].map(r=>'<div class="lgbox"><span class="text-slate-500 block text-[9px]">'+r[0]+'</span><span class="font-mono text-sm font-bold '+r[2]+'">'+r[1]+'</span></div>').join('');
+  showToast('Backtest çalıştı (gerçek veri)');
+});
+
+/* botlar & deals */
+const bots=[{n:'BTCUSDC·Hybrid',p:1240},{n:'ETHUSDC·DCA',p:684},{n:'SOLUSDC·Grid',p:458},{n:'XRPUSDC·DCA',p:96},{n:'ETHUSDC·HybridS',p:-42}];
+function renderBots(){$('#botGrid').innerHTML=bots.map(b=>'<div class="panel p-5"><div class="text-sm font-semibold text-slate-200">'+b.n+'</div><div class="font-mono text-lg font-bold mt-2 '+(b.p>=0?'text-emerald-400':'text-rose-400')+'">'+(b.p>=0?'+$':'-$')+Math.abs(b.p)+'</div><div class="text-[10px] text-slate-500 mt-1">RUNNING · paper</div></div>').join('');}
+const deals=[{s:'BTCUSDC',side:'LONG',e:64250,p:64890,so:'2/8'},{s:'ETHUSDC',side:'SHORT',e:3421,p:3412,so:'1/6'},{s:'SOLUSDC',side:'LONG',e:146.2,p:147.2,so:'4/10'}];
+function renderDeals(){$('#dealsBody').innerHTML=deals.map(d=>{const pnl=((d.p-d.e)/d.e*100*(d.side==='LONG'?1:-1));return '<tr class="border-b border-slate-800/50"><td class="px-4 py-3 font-bold text-slate-100">'+d.s+'</td><td class="px-3 py-3">'+d.side+'</td><td class="px-3 py-3">'+d.e+'</td><td class="px-3 py-3">'+d.p+'</td><td class="px-3 py-3 '+(pnl>=0?'text-emerald-400':'text-rose-400')+'">'+(pnl>=0?'+':'')+pnl.toFixed(2)+'%</td><td class="px-3 py-3">'+d.so+'</td></tr>';}).join('');}
+
+/* deploy */
+const svc=['postgres','redis','backend','frontend','backtest_worker','bot_ai'];
+function renderSvc(){$('#svcGrid').innerHTML=svc.map(s=>'<div class="panel p-5"><div class="flex items-center gap-2"><span class="relative flex w-2 h-2"><span class="pingr absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex w-2 h-2 rounded-full bg-emerald-400"></span></span><span class="font-mono font-bold text-slate-100 text-sm">'+s+'</span><span class="chip livebadge ml-auto">RUNNING</span></div></div>').join('');}
+
+/* tabs */
+const titles={status:'Kurulum & Durum',overview:'Genel Bakış',bots:'Botlarım',deals:'Aktif İşlemler',lab:'Strateji Lab',backtest:'Backtest',exec:'Execution',tests:'Motor Testleri',deploy:'Deploy'};
+document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.nav-btn').forEach(x=>x.classList.toggle('active',x===b));
+  document.querySelectorAll('.tab-section').forEach(s=>s.classList.remove('active'));
+  $('#sec-'+b.dataset.tab).classList.add('active');
+  $('#headerTitle').textContent=titles[b.dataset.tab];
+  $('#sidebar').classList.add('-translate-x-full');$('#backdrop').classList.add('hidden');
+  if(b.dataset.tab==='overview')renderOverview();
+  if(b.dataset.tab==='lab')renderCompare();
+  if(b.dataset.tab==='bots')renderBots();
+  if(b.dataset.tab==='deals')renderDeals();
+  if(b.dataset.tab==='tests')runTests();
+  if(b.dataset.tab==='deploy')renderSvc();
+}));
+$('#menuBtn').addEventListener('click',()=>{$('#sidebar').classList.remove('-translate-x-full');$('#backdrop').classList.remove('hidden');});
+$('#backdrop').addEventListener('click',()=>{$('#sidebar').classList.add('-translate-x-full');$('#backdrop').classList.add('hidden');});
+
+/* init */
+renderBots();renderDeals();renderSvc();runTests();renderOverview();
+</script>
+</body>
+</html>

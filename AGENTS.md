@@ -23,11 +23,10 @@ Amaç: gerçekten çalışan bir DCA/grid trading ürünü. Sıra: P1 yerel demo
 - `OZELLIK_MATRISI` hücresi tek satır durum tutar (PLAN / KISMEN / LOCAL / TESTNET). Dilim günlüğü oraya yazılmaz.
 
 ## Durma ve sorma
-Dur ve Arda'ya kısa, tek soru sor: credential/hesap gerektiğinde; ürün veya ekonomi kararı gerektiğinde; gerçek emir gerektiğinde; bir araştırma oturumundan sonra kanıt hâlâ yetersizse.
-Araştırma kutusu: bir belirsizlik için en fazla bir oturum. Çıktı: ≤ 10 satır karar notu (`docs/KARARLAR.md`) + soru. Belirsizliği kapatmak için yeni "güvenli dilim" üretme. `NO-GO` / `DEFERRED` "durdum, karar bekliyor" demektir.
+**Yetki (Arda, 2026-09-26, bağlayıcı):** Proje bitene kadar tüm ürün, ekonomi ve kapı kararlarını Muse verir; Arda'ya soru sorulmaz. Her karar `docs/KARARLAR.md`ye yazılır ve uygulanır. Araştırma kutusu: belirsizlik başına bir oturum, çıktı ≤ 10 satır karar notu. Fiziksel sınır soru değildir: credential/anahtar yoksa paper/kayıtlı-fixture ile devam edilir, eksik belgeye not edilir. Yetki ≠ emir: gerçek emir için ayrıca açık emir gerekir; anahtar yokken mainnet/testnet mutation kapıları kapalı tutulur.
 
-## Ajanlar arası işbölümü
-Kritik dosyalar (`src/dcabot/domain/`, `application/historical_simulation.py`, `application/historical_run_contract.py`, `persistence/`, her Decimal/Fraction/hash hesabı) yalnız Claude değiştirir. UI-only, backend'e dokunmayan dilimler başka bir ajana (ör. Codex) TASK.md üzerinden, dosya allowlist'li bir brief ile devredilebilir; devralan ajan STATE.md/TASK.md/docs/KARARLAR.md'yi değiştirmez, yalnız kodu+testini yazar ve brief'teki durma koşullarına uyar. Claude her devirden sonra diff + tam checker + frontend tsc/vitest ile kontrol eder, belgeleri kendisi günceller.
+## Çalışma düzeni (tek yapay zeka)
+**Bağlayıcı (Arda, 2026-09-26):** Tek yapay zeka Muse'dur; backend, arayüz, test ve belgelerin tümü ondadır. 2026-09-23 işbölümü (Claude/muse brief/devret döngüsü) GEÇERSİZDİR. Kritik-dosya kısıtı kalktı; finans disiplini (Güvenlik çizgileri m.3) aynen sürer. "Kim yaptı" bilgisinin tek doğru kaynağı `docs/KARARLAR.md`dir.
 
 ## Boyut limiti
 Bayt olarak `tools/check_workspace.py` zorlar: AGENTS/STATE/TASK/WORKFLOW ≤ 6 KB, docs/YOL_HARITASI ≤ 10 KB, CLAUDE/GEMINI/OPENCODE ≤ 1 KB. Limit aşılırsa içeriği kısalt, limiti büyütme.

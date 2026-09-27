@@ -1,37 +1,40 @@
-# Durum — 2026-09-21 (Faz 15 kapalı + 15.10 düzeltme, P4 hariç)
+# Durum — 2026-09-27 (tek yapay zeka: Muse)
 
-Aktif iş: **yok — Faz 15 + 15.10 bitti.** 15/15 kapı PASS + F15 görsel kabul.
-Doğrulanan: checker 1432/1432 PASS (1 skip=optuna-yok), tsc temiz,
-vitest 234/234. Kanıt: `evidence/F15.*/SONUC.md` + ekran görüntüleri.
-Eksenler: implementation=COMPLETE · verification=PASS ·
+**Yetki (Arda, bağlayıcı):** Proje bitene kadar tüm kararlar Muse'da;
+soru sorulmaz. Hedef: minimum 3Commas/Bitsgap spot/futures DCA+grid
+paritesi. Sınır: gerçek emir için ayrıca açık emir gerekir; anahtar
+yokken mutation kapıları kapalı.
+
+Aktif iş: **Q1 kapalı; sırada Q2.**
+- **KAPALI (bu oturum): Q1** backtest fiyat+işlem grafiği + PF.
+- **KAPALI (bu oturum): F09a** DCA trailing TP (motor+API+UI+e2e).
+- **KAPALI (bu oturum): F20a** bot-copy; **F10a** deal brüt/net.
+- **KAPALI (bu oturum): B** replay; **A** tek-sayfa form; **G4**
+  COMBO-lite; **G3-d** multi-pair; **N2-impl**.
+- HAZIR: N2 Telegram (canlı kanıt en sonda, Arda kararı).
+- Kalan: G3 canlı likidasyon (NO-GO, credential+venue kararı).
+Doğrulanan: checker **2516/2516 OK** (1 skip), vitest 265/265,
+tsc+lint temiz, e2e 79/79.
+Eksenler: implementation=COMPLETE (Q1) · verification=PASS ·
 evidence_scope=LOCAL_INTEGRATION · review=NOT_RUN ·
 deployment=NOT_DEPLOYED
 
-## Kapanış (bu oturum)
-F15 (15.1–15.9, muse): hero grafik, sektör form kontrolleri, Exit/TwoLeg
-i18n, Bot Oluştur, Futures Pionex sırası, Hedge kartları, native
-rozetler, başlatma-koşulu akışı, Optimize→sweep. **15.10 (Claude, doğrudan
-düzeltme):** Arda canlı ekranda "ana sayfa tümüyle eski" bulgusunu
-bildirdi — eski Bot stüdyosu/Ladder/Ekonomik özet/BotPanel/DealPanel/
-ExitPanel panelleri 15.3'ün "varsayılan kapalı" kuralına dahil edilmemiş,
-yeni akışla üst üste kalmıştı. Ayrıca iki `:8000/:8001` öksüz sunucu
-süreci eski kodu çalıştırıyordu (öldürüldü). Düzeltme: bu paneller
-`AdvancedTools` "Klasik Görünüm" grubuna taşındı; varsayılan sayfa artık
-yalnız Hero Chart + Yeni Bot + Bot Fleet. Kanıt: `evidence/F15.10/SONUC.md`.
-
 ## Bilinen sınırlar
-- DCA/paper/bot session RAM'de; şablon/two-leg/deal/webhook dosyada.
-- Mainnet kesin NO-GO. NVDA/JAWS/HCM NOT_RUN. Dış LLM DEFERRED.
-- Pine-parity DEFERRED. Hedge/Sonsuz kapıda kapalı.
-- DEFERRED: PBO satırı, Canary rozeti, 15.9 risk toggle'ları, 15.8 pair
-  keşfi → Faz 16 adayı.
-- **Grafik kalitesi (yeni, dürüst not):** `CandleChart.tsx` salt-SVG,
-  TradingView-tarzı crosshair/zoom/indikatör yok; demo veri seti 24 düz
-  bar. Gerçek kütüphane entegrasyonu (`lightweight-charts`) Faz 16 adayı.
-- Motor `average_entry_price` exactness tuzağı sürüyor.
-- review=NOT_RUN (F12–F15 bağımsız incelemesi yapılmadı).
+- Bot + paper runtime/deals/events/snapshot + sistem olay kaydı
+  SQLite'da (WAL); v1 deal'ler ve webhook dosyada.
+- Mainnet kesin NO-GO; testnet mutation kapalı (anahtar yok).
+  Venue likidasyon (canlı) NO-GO — credential+venue kararı bekler.
+  Fiyat tick SSE'de yok (DEFERRED). Reverse/Infinity DEFERRED.
+  Backtest tek-sembol; combo-kapanışı modellemez.
+  Replay max 7 gün, tek koşu; kurallar güncel venue kuralları.
+  İptal deal'de brüt tanımsız; DCA paper'da funding yok.
+  Trailing: bar-kapanışı modeli; testnet `decision()` sabit TP.
+- Portföy grid botunu bütçeden sayar; canlı grid P&L portföyde yok.
+- review=NOT_RUN. `web/` + Faz W/G çalışması commitli değil.
 
-## Arda kararları (açık)
-Canary değerleri + onay formatı; dış LLM; P4 kapsamı; Pine indikatörü;
-NVDA/JAWS/HCM; 15.8 keşif metriği; Faz 16 kapsamı (grafik kütüphanesi +
-motor esnekliği).
+## Arda kararları (hepsi Muse'a devredildi, kapalı)
+Grid (yapılacak), bildirim (Telegram+uygulama-içi), testnet bot başına
+onay (evet), masaüstü öncelikli, canary DRAFT değerleri, P4 (OKX+Bybit),
+Pine DEFERRED, HCM W-F9'da, ADX/marjin defaultları. Bkz. KARARLAR.md.
+P4 + Qwen taraması + N2 canlı kanıt en sonda (2026-09-27).
+Sıra: Q2 → Q3 → F31-bulk (aday) → en son P4+N2-canlı.

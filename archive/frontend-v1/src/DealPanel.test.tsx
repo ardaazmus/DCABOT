@@ -107,4 +107,15 @@ describe("DealPanel", () => {
     );
     expect(screen.getByText("UNKNOWN — inceleniyor").className).toMatch(/badge-warn/);
   });
+  it("17.4: detay düğmesi geçiş çağırır", () => {
+    const onOpenDetail = vi.fn();
+    renderPanel({ onOpenDetail });
+    fireEvent.click(screen.getByRole("button", { name: "Detayı aç" }));
+    expect(onOpenDetail).toHaveBeenCalledTimes(1);
+  });
+
+  it("17.4: handler verilmezse detay düğmesi çıkmaz", () => {
+    renderPanel();
+    expect(screen.queryByRole("button", { name: "Detayı aç" })).not.toBeInTheDocument();
+  });
 });

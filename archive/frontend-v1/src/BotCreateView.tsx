@@ -5,6 +5,7 @@ import type { HistoricalChartBar } from "./datasetCatalog";
 import { SegmentedControl } from "./forms";
 import { HeroChartPanel } from "./HeroChartPanel";
 import { useI18n } from "./i18n";
+import type { ChartPriceLine } from "./TradingChart";
 
 export type BotCreateType = "DCA" | "GRID" | "FUTURES" | "SIGNAL";
 
@@ -31,6 +32,9 @@ export function BotCreateView({
   dataRange,
   backtestReady,
   renderForm,
+  overlayLines,
+  overlayNote,
+  aiRecommenderReady,
 }: {
   botType: BotCreateType;
   onBotTypeChange: (next: BotCreateType) => void;
@@ -47,6 +51,12 @@ export function BotCreateView({
   dataRange: string | null;
   backtestReady: boolean;
   renderForm: (botType: BotCreateType) => ReactNode;
+  /** Faz 17 A.3: form parametrelerinden hesaplanan overlay çizgileri. */
+  overlayLines?: ChartPriceLine[];
+  /** Overlay durum notu (yoksa gösterilmez). */
+  overlayNote?: string | null;
+  /** Faz 17 B.2: AI Önerici rozeti (optimize bağlamı hazırsa). */
+  aiRecommenderReady?: boolean;
 }) {
   const { t } = useI18n();
   return (
@@ -83,7 +93,9 @@ export function BotCreateView({
             canLoad={canLoadChart}
             loadBusy={chartLoading}
             onLoad={onLoadChart}
+            overlayLines={overlayLines}
           />
+          {overlayNote ? <p className="helper-text" role="status">{overlayNote}</p> : null}
         </div>
       </div>
       <div className="bot-create-footer">
@@ -95,6 +107,7 @@ export function BotCreateView({
         ) : (
           <span className="state-label" role="status">{t("create.notready.label")}</span>
         )}
+        {aiRecommenderReady && <span className="state-label ready">{t("wizard.airecommender.title")}</span>}
         <button className="secondary-button" type="button" onClick={onOpenBacktest}>
           {t("backtest.button.label")}
         </button>

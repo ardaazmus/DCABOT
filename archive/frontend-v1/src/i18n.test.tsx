@@ -4,7 +4,7 @@ import { I18nProvider, LANGUAGE_STORAGE_KEY, parseStringsXml, useI18n } from "./
 
 const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <resources>
-  <string key="nav.bots.label"><tr>Botlar &amp; Stratejiler</tr><en>Bots &amp; Strategies</en></string>
+  <string key="nav.bots.label"><tr>Botlarım</tr><en>My Bots</en></string>
   <string key="only.tr"><tr>Yalnızca TR</tr></string>
 </resources>`;
 
@@ -27,7 +27,7 @@ function Probe({ storageKey }: { storageKey?: string }) {
 describe("parseStringsXml", () => {
   it("parses tr/en children per key", () => {
     const table = parseStringsXml(SAMPLE_XML);
-    expect(table["nav.bots.label"]).toEqual({ tr: "Botlar & Stratejiler", en: "Bots & Strategies" });
+    expect(table["nav.bots.label"]).toEqual({ tr: "Botlarım", en: "My Bots" });
     expect(table["only.tr"]).toEqual({ tr: "Yalnızca TR" });
   });
 
@@ -49,7 +49,7 @@ describe("I18nProvider", () => {
         <Probe />
       </I18nProvider>,
     );
-    expect(screen.getByTestId("probed")).toHaveTextContent("Botlar & Stratejiler");
+    expect(screen.getByTestId("probed")).toHaveTextContent("Botlarım");
   });
 
   it("switches language and persists the choice", () => {
@@ -60,7 +60,7 @@ describe("I18nProvider", () => {
       </I18nProvider>,
     );
     fireEvent.click(screen.getByRole("button", { name: "switch" }));
-    expect(screen.getByTestId("probed")).toHaveTextContent("Bots & Strategies");
+    expect(screen.getByTestId("probed")).toHaveTextContent("My Bots");
     expect(window.localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe("en");
   });
 
@@ -91,6 +91,6 @@ describe("I18nProvider", () => {
 describe("useI18n without provider", () => {
   it("fails closed to Turkish defaults", () => {
     render(<Probe />);
-    expect(screen.getByTestId("probed")).toHaveTextContent("Botlar & Stratejiler");
+    expect(screen.getByTestId("probed")).toHaveTextContent("Botlarım");
   });
 });

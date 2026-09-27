@@ -84,6 +84,10 @@ class EphemeralCredentialProvider:
             raise SignedRequestError("CREDENTIAL_NOT_FOUND", "Credential bulunamadı.")
         return material
 
+    def delete(self, credential_id: str) -> None:
+        if self._items.pop(credential_id, None) is None:
+            raise SignedRequestError("CREDENTIAL_NOT_FOUND", "Credential bulunamadı.")
+
     def __repr__(self) -> str:
         return "EphemeralCredentialProvider(<redacted>)"
 

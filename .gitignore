@@ -11,10 +11,21 @@ __pycache__/
 .ruff_cache/
 .tmp/
 .cluster/
-frontend/node_modules/
-frontend/dist/
+archive/frontend-v1/node_modules/
+archive/frontend-v1/dist/
+web/node_modules/
+web/.next/
+web/.next-e2e/
+web/.e2e-data*/
+web/tests/.e2e-data*/
+web/out/
+web/playwright-report/
+web/test-results/
 .uv-cache/
 .npm-cache/
 *.db
 *.db-wal
 *.db-shm
+
+# Kişisel sohbet dökümü — herkese açık depoya girmez (Arda 2026-10-14)
+/docs/archive/frontend-v1/qwen_referans/qwen-sohbet-export.json

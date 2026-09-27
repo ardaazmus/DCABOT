@@ -1,0 +1,1 @@
+{"type":"urn:local-api:problem:BOT-REVISION-CONFLICT","title":"Bot işlemi yapılamadı","status":409,"detail":"Bot başka bir yerde değişti; sayfayı yenileyin.","code":"BOT_REVISION_CONFLICT"}

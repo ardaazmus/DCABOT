@@ -1,6 +1,8 @@
 import { type HTMLAttributes, type KeyboardEvent, type MouseEvent, useEffect, useRef, useState } from "react";
+import { useWhatIfAutoRun } from "./useWhatIfAutoRun";
 import { HistoricalChart } from "./HistoricalChart";
 import { CandleChart, type CandleMarker } from "./CandleChart";
+import { EquityCurveChart } from "./EquityCurveChart";
 import { ExplanationSection } from "./ExplanationSection";
 import { WindowExpander, useWindowedList } from "./renderWindow";
 import { HistoricalProfileSelector, HistoricalProfileStatus } from "./HistoricalProfileSelector";
@@ -21,6 +23,7 @@ import {
   HistoricalSimulationResult,
   HistoricalProfile,
   isActiveDownloadJob,
+  isEquityCurve,
   shortSha256,
 } from "./datasetCatalog";
 
@@ -94,6 +97,14 @@ function downloadJobLabel(status: DatasetDownloadJob["status"]): string {
 
 function ResultValue({ label, value, note }: { label: string; value: string; note?: string }) {
   return <div className="historical-result-value"><span>{label}</span><strong><code>{value}</code></strong>{note && <small>{note}</small>}</div>;
+}
+
+/* Faz 17 AA.7a-v1: türetilmiş metriklerin daraltması — string aynen, tamsayı
+ * String() ile, null/yok/bozuk "—" (fixed-slice'ta alan hiç gelmez). */
+function metricText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" && Number.isInteger(value)) return String(value);
+  return "—";
 }
 
 function CopyValue({ label, value }: { label: string; value: string }) {
@@ -198,7 +209,7 @@ export function ActionTable({ actions, fixedSlice, title = "AKSİYON GEÇMİŞİ
   </section>;
 }
 
-function PreflightCard({
+export function PreflightCard({
   preflight,
   status,
   error,
@@ -265,7 +276,15 @@ function PreflightCard({
   const [selectedBarIndex, setSelectedBarIndex] = useState<number | null>(null);
   const [draftPrice, setDraftPrice] = useState<string | null>(null);
   const [draftVerdict, setDraftVerdict] = useState("");
+  const [whatIfEnabled, setWhatIfEnabled] = useState(false);
   const simulationExecutionId = simulation?.execution_id ?? null;
+  // B.5 What-If: yalnızca çalıştırılabilir, onaylanmış bir plan varken ve
+  // simülasyon boşta/hatalıyken otomatik tetiklenir; anahtar plan değişimini
+  // (dataset + profil + config hash) yakalar, anahtar kapalıyken null'dur.
+  const whatIfPlanKey = whatIfEnabled && runPlan !== null && runPlanStatus === "ready" && !simulationScopeExceeded && (simulationStatus === "idle" || simulationStatus === "error") && (!fixedSliceSelected || fixedSliceAcknowledged)
+    ? `${runPlan.dataset.dataset_id}|${runPlan.profile.profile_id}|${runPlan.config.config_hash}`
+    : null;
+  const { pending: whatIfPending } = useWhatIfAutoRun({ enabled: whatIfEnabled, planKey: whatIfPlanKey, onAutoRun: onStartHistoricalSimulation });
 
   useEffect(() => {
     if (confirmationOpen) confirmationRef.current?.focus();
@@ -382,7 +401,8 @@ function PreflightCard({
           <div className={`simulation-status ${simulationScopeExceeded ? "error" : simulationStatus}`} role={simulationScopeExceeded || simulationStatus === "error" ? "alert" : "status"} aria-live="polite"><strong>{simulationStatusLabel()}</strong><p>{simulationMessage}</p></div>
           {simulation && simulationStatus === "completed" && economicSummary && <div className="historical-result-summary" aria-labelledby="historical-result-title">
             <p className="preflight-section-label" id="historical-result-title">SONUÇ ÖZETİ</p>
-            <div className="historical-result-values"><ResultValue label={`Brüt gerçekleşen sonuç · ${quoteAsset}`} value={economicSummary.realized_gross} note="Backend modelinden gelir; UI yeniden hesaplamaz." /><ResultValue label={`İşlem ücretleri · ${quoteAsset}`} value={economicSummary.fees} note="Backend’in quote-asset fee toplamıdır." /><ResultValue label={`Model net gerçekleşen sonuç · ${quoteAsset}`} value={economicSummary.realized_net_after_all_costs} note="Backend model sonucudur; funding bu tarihsel modelde işlenmez." /><ResultValue label="Pozisyon durumu" value={economicSummary.position_status === "OPEN_AT_END" ? "OPEN_AT_END" : "CLOSED"} note={economicSummary.position_status === "OPEN_AT_END" ? "Dönem sonunda açık kaldı; forced close uygulanmadı. Exchange mark olmadığı için gerçekleşmemiş sonuç ve equity sayısal olarak gösterilmiyor." : "Dönem sonunda pozisyon kapalı."} /></div>
+            <div className="historical-result-values"><ResultValue label={`Brüt gerçekleşen sonuç · ${quoteAsset}`} value={economicSummary.realized_gross} note="Backend modelinden gelir; UI yeniden hesaplamaz." /><ResultValue label={`İşlem ücretleri · ${quoteAsset}`} value={economicSummary.fees} note="Backend’in quote-asset fee toplamıdır." /><ResultValue label={`Model net gerçekleşen sonuç · ${quoteAsset}`} value={economicSummary.realized_net_after_all_costs} note="Backend model sonucudur; funding bu tarihsel modelde işlenmez." /><ResultValue label="Pozisyon durumu" value={economicSummary.position_status === "OPEN_AT_END" ? "OPEN_AT_END" : "CLOSED"} note={economicSummary.position_status === "OPEN_AT_END" ? "Dönem sonunda açık kaldı; forced close uygulanmadı. Exchange mark olmadığı için gerçekleşmemiş sonuç ve equity sayısal olarak gösterilmiyor." : "Dönem sonunda pozisyon kapalı."} /><ResultValue label="Kazanan deal" value={metricText(economicSummary.win_count)} note="Sunucu exact sayacıdır." /><ResultValue label="Win rate" value={metricText(economicSummary.win_rate)} note="Sunucu exact oranıdır (kazanan/tamamlanan); fixed-slice modelinde yoktur." /><ResultValue label="Profit factor" value={metricText(economicSummary.profit_factor)} note="Sunucu exact oranıdır (brüt-kazanç/brüt-kayıp)." /><ResultValue label="ROI" value={metricText(economicSummary.roi)} note="Sunucu exact oranıdır (net/tepe-equity)." /><ResultValue label="SO dolum" value={metricText(economicSummary.safety_order_fill_count)} note="Sunucu exact sayacıdır." /><ResultValue label="SO dolum oranı" value={metricText(economicSummary.safety_order_fill_rate)} note="Sunucu exact oranıdır (dolum/deal×kapasite)." /><ResultValue label="Sharpe oranı" value={metricText(economicSummary.sharpe_ratio)} note="Sunucu Sharpe istatistiğidir (float64-sınırı); tanımsızsa —." /></div>
+            {isEquityCurve(economicSummary.equity_curve) ? <EquityCurveChart points={economicSummary.equity_curve} /> : <div className="empty-state" role="status">Equity eğrisi yok (eğrisiz model).</div>}
              <dl className="preflight-facts historical-result-meta"><div><dt>İşlenen bar</dt><dd>{simulation.dataset.processed_bar_count.toLocaleString("tr-TR")}</dd></div><div><dt>Dönem</dt><dd>{simulation.dataset.period_start} → {simulation.dataset.period_end}</dd></div><div><dt>Model</dt><dd>{simulation.assumptions.model}</dd></div><div><dt>Config</dt><dd><code>{shortSha256(simulation.config.config_hash)}</code></dd></div><div><dt>Artifact</dt><dd><code>{shortSha256(simulation.dataset.artifact_sha256)}</code></dd></div></dl>
              <ExplanationSection explanations={simulation.explanations} />
              <CandleChart bars={chartData?.bars ?? []} status={chartStatus} error={chartError} markers={simulation.actions.map((action): CandleMarker => ({ barIndex: action.bar_index, kind: action.role === "EXIT" || action.role === "SELL" ? "sell" : "buy", label: action.role }))} selectedBarIndex={selectedBarIndex} onSelectBarIndex={setSelectedBarIndex} />
@@ -400,6 +420,7 @@ function PreflightCard({
             <div className="historical-save-actions"><button className="catalog-select-button" type="button" disabled={historicalSaveStatus === "saving" || historicalSaveStatus === "saved" || historicalSaveStatus === "already_saved"} onClick={onSaveHistoricalRun}>{historicalSaveStatus === "saving" ? "Kaydediliyor…" : historicalSaveStatus === "saved" ? "Koşu kaydedildi" : historicalSaveStatus === "already_saved" ? "Koşu zaten kayıtlı" : "Koşuyu kaydet"}</button>{(historicalSaveStatus === "saved" || historicalSaveStatus === "already_saved") && <button className="catalog-secondary-button" type="button" onClick={onOpenSavedRuns}>Saved Runs’ı aç</button>}</div>
             {historicalSaveError && <div className="form-error" role="alert">{historicalSaveError}</div>}
           </div>)}
+          {!simulationScopeExceeded && (simulationStatus === "idle" || simulationStatus === "error") && <div className="whatif-opt-in"><label htmlFor="whatif-auto-run"><input id="whatif-auto-run" type="checkbox" checked={whatIfEnabled} onChange={(event) => setWhatIfEnabled(event.target.checked)} /> <span>What-If: plan değişince simülasyonu otomatik çalıştır</span></label><p>Açıkken her yeni koşu planı kısa bir beklemeden sonra onay sorulmadan çalışır; fixed-slice onayı hâlâ gerekir. Manuel başlatma her zaman kullanılabilir.</p>{whatIfPending && <p className="whatif-pending" role="status">Otomatik çalıştırma bekleniyor…</p>}</div>}
           {!simulationScopeExceeded && (simulationStatus === "idle" || simulationStatus === "error") && <button ref={launchRef} className="catalog-select-button simulation-start-button" type="button" onClick={() => { if (fixedSliceSelected && !fixedSliceAcknowledged) { setFixedSliceError("Devam etmek için fixed-slice model onayını işaretleyin."); fixedSliceCheckboxRef.current?.focus(); return; } if (fixedSliceSelected) { onStartHistoricalSimulation(); return; } setConfirmationOpen(true); }}>Offline tarihsel simülasyonu başlat</button>}
           {simulationStatus === "starting" && <button className="catalog-select-button simulation-start-button" type="button" disabled>Simülasyon çalıştırılıyor…</button>}
           {(simulationStatus === "completed" || simulationStatus === "indeterminate") && <p className="simulation-follow-up">{isFixedSliceUi ? "İlk fixed-slice koşu özeti hazırlandı; bu aşamada sonuç yalnızca salt okunur gösterilir." : "İlk koşu özeti hazırlandı. Kalıcı kayıt oluşturulduğunda ayrıntıları Saved Runs ekranından salt okunur açabilirsiniz."}</p>}

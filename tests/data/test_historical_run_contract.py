@@ -190,3 +190,93 @@ class HistoricalRunContractTests(unittest.TestCase):
         self.assertIn("max_drawdown", summary)
         self.assertIn("peak_equity", summary)
         self.assertIn("current_drawdown", summary)
+
+    def test_capture_exposes_aa7a_deal_pnls_and_derived_metrics(self):
+        """AA.7a (v1): per-deal net is `report()`'s own cumulative
+        realized_net_after_all_costs delta at each deal close -- both the
+        mid-loop close (deal 1) and the trailing final-bar close (deal 2,
+        no further bar exists to trigger the loop's own flush) are covered
+        by this same two-deal scenario already used above."""
+        from dcabot.application.historical import build_historical_run_plan
+        from dcabot.application.historical_run_contract import build_historical_run_capture
+        from dcabot.application.historical_simulation import simulate_historical_ohlcv
+        from fractions import Fraction
+
+        raw_config = _raw_config()
+        metadata = _dataset().metadata
+        prices = (
+            ("100", "100", "100", "100"),
+            ("95", "100", "89", "90"),
+            ("97", "98", "97", "97"),
+            ("110", "110", "110", "110"),
+            ("113", "113", "113", "113"),
+        )
+        dataset = HistoricalDatasetInput(
+            metadata=metadata,
+            bars=tuple(
+                CanonicalBar(
+                    index * 3_600_000_000,
+                    index * 3_600_000_000 + 3_599_999_999,
+                    open_price,
+                    high,
+                    low,
+                    close,
+                    "1",
+                    True,
+                )
+                for index, (open_price, high, low, close) in enumerate(prices, start=1)
+            ),
+        )
+        config = Config.parse(raw_config)
+        config_hash = build_historical_run_plan(dataset, raw_config).config.config_hash
+        result = simulate_historical_ohlcv(dataset, config, config_hash=config_hash)
+
+        capture = build_historical_run_capture(dataset, raw_config, result, config_hash=config_hash)
+        summary = json.loads(capture.result_json)["summary"]
+
+        self.assertEqual(len(summary["deal_pnls"]), 2)
+        # Deltas must reconcile exactly with the run's total net (no funding
+        # here, so the sum of per-deal deltas is the same cumulative value).
+        self.assertEqual(
+            sum(Fraction(value) for value in summary["deal_pnls"]),
+            Fraction(summary["realized_net_after_all_costs"]),
+        )
+        self.assertEqual(summary["win_count"], 2)
+        self.assertEqual(summary["win_rate"], "1")
+        self.assertIsNone(summary["profit_factor"])  # no losing deal -> no gross_loss denominator
+        from dcabot.domain.numbers import text as _text
+
+        self.assertEqual(
+            summary["roi"],
+            _text(Fraction(summary["realized_net_after_all_costs"]) / Fraction(summary["peak_equity"])),
+        )
+        self.assertEqual(summary["safety_order_fill_count"], 1)
+        self.assertIsNotNone(summary["safety_order_fill_rate"])
+        # AA.7a-2 (2026-09-23): one equity point per processed bar -- exact
+        # `state.equity()` sampled after each bar's MARK, zero new math.
+        self.assertEqual(len(summary["equity_curve"]), 5)
+        for value in summary["equity_curve"]:
+            Fraction(value)  # must round-trip as an exact decimal
+        # Sharpe over 5 equity points (>=4 bar returns) should be computable.
+        self.assertIsNotNone(summary["sharpe_ratio"])
+        float(summary["sharpe_ratio"])  # plain float-quality text, not exact
+
+    def test_open_deal_at_run_end_is_excluded_from_deal_pnls(self):
+        from dcabot.application.historical import build_historical_run_plan
+        from dcabot.application.historical_run_contract import build_historical_run_capture
+        from dcabot.application.historical_simulation import simulate_historical_ohlcv
+
+        raw_config = _raw_config()
+        dataset = _dataset()  # two flat bars, no exit -- position stays open
+        config = Config.parse(raw_config)
+        config_hash = build_historical_run_plan(dataset, raw_config).config.config_hash
+        result = simulate_historical_ohlcv(dataset, config, config_hash=config_hash)
+
+        capture = build_historical_run_capture(dataset, raw_config, result, config_hash=config_hash)
+        summary = json.loads(capture.result_json)["summary"]
+
+        self.assertEqual(summary["position_status"], "OPEN_AT_END")
+        self.assertEqual(summary["completed_deal_count"], 0)
+        self.assertEqual(summary["deal_pnls"], [])
+        self.assertIsNone(summary["win_rate"])
+        self.assertIsNone(summary["profit_factor"])

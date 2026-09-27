@@ -17,12 +17,24 @@ from dcabot.application.historical_fixed_slice import (
 )
 from dcabot.domain.config import Config
 from dcabot.domain.engine import State, apply, decision, report, target
-from dcabot.domain.numbers import Q, align, exact_text, number, round_quantum
+from dcabot.domain.numbers import Q, align, exact_text, number, round_quantum, text
 
 
 MAX_HISTORICAL_SIMULATION_BARS = 1_000
 MAX_HISTORICAL_SIMULATION_SECONDS = 5.0
-EXPECTED_INTERVAL_US = {"1h": 3_600_000_000}
+# Faz W v2 backtests fetch venue klines on demand; measured ~5,000 bars/s,
+# so the cap keeps a run near 4 s. Stored/legacy runs keep the 1,000 cap.
+MAX_SECTOR_BACKTEST_BARS = 20_000
+EXPECTED_INTERVAL_US = {
+    "1m": 60_000_000,
+    "5m": 300_000_000,
+    "15m": 900_000_000,
+    "30m": 1_800_000_000,
+    "1h": 3_600_000_000,
+    "4h": 14_400_000_000,
+    "1d": 86_400_000_000,
+}
+AVERAGE_PRICE_PLACES = 12
 
 
 class HistoricalSimulationError(ValueError):
@@ -76,6 +88,8 @@ def simulate_historical_fixed_slice(
 
     if len(dataset.bars) > MAX_HISTORICAL_SIMULATION_BARS:
         raise HistoricalSimulationError("BAR_SCOPE_EXCEEDED", "Dataset bar kapsamı server sınırını aşıyor.")
+    if config.base_sizing != "BASE" and slice_qty is not None:
+        raise HistoricalSimulationError("CONFIG_INVALID", "Fixed-slice model QUOTE base sizing desteklemez.")
     if not dataset.bars:
         raise HistoricalSimulationError("BAR_SCOPE_TOO_SMALL", "Dataset içinde simüle edilecek bar yok.")
     if timeout_seconds <= 0:
@@ -121,8 +135,13 @@ def simulate_historical_fixed_slice(
 
         safety = _next_safety(state, config)
         take_profit = target(state, config) if state.position.qty else None
-        safety_reachable = safety is not None and _buy_reachable(bar, safety.price)
-        take_profit_reachable = take_profit is not None and _sell_reachable(bar, take_profit)
+        short = config.direction == "SHORT"
+        safety_reachable = safety is not None and (
+            _sell_reachable(bar, safety.price) if short else _buy_reachable(bar, safety.price)
+        )
+        take_profit_reachable = take_profit is not None and (
+            _buy_reachable(bar, take_profit) if short else _sell_reachable(bar, take_profit)
+        )
         if safety_reachable and take_profit_reachable:
             return fixed_slice_result(
                 dataset,
@@ -136,7 +155,10 @@ def simulate_historical_fixed_slice(
                 first_ambiguous_bar_index=index,
             )
         if safety_reachable and safety is not None:
-            raw_reference = bar.open if number(bar.open) <= safety.price else exact_text(safety.price)
+            if short:
+                raw_reference = bar.open if number(bar.open) >= safety.price else exact_text(safety.price)
+            else:
+                raw_reference = bar.open if number(bar.open) <= safety.price else exact_text(safety.price)
             state = _start_fixed_slice_order(
                 state,
                 config,
@@ -149,7 +171,10 @@ def simulate_historical_fixed_slice(
                 raw_reference=raw_reference,
             )
         elif take_profit_reachable and take_profit is not None:
-            raw_reference = bar.open if number(bar.open) >= take_profit else exact_text(take_profit)
+            if short:
+                raw_reference = bar.open if number(bar.open) <= take_profit else exact_text(take_profit)
+            else:
+                raw_reference = bar.open if number(bar.open) >= take_profit else exact_text(take_profit)
             state = _start_fixed_slice_order(
                 state,
                 config,
@@ -228,10 +253,13 @@ def simulate_historical_ohlcv(
     config_hash: str,
     timeout_seconds: float = MAX_HISTORICAL_SIMULATION_SECONDS,
     feature_binding: HistoricalFeatureRunBinding | None = None,
+    max_bars: int = MAX_HISTORICAL_SIMULATION_BARS,
 ) -> HistoricalSimulationResult:
     """Run the first closed-bar model without network, persistence, or randomness."""
 
-    if len(dataset.bars) > MAX_HISTORICAL_SIMULATION_BARS:
+    if type(max_bars) is not int or not 1 <= max_bars <= MAX_SECTOR_BACKTEST_BARS:
+        raise HistoricalSimulationError("BAR_SCOPE_EXCEEDED", "Bar kapsamı sınırı geçersiz.")
+    if len(dataset.bars) > max_bars:
         raise HistoricalSimulationError("BAR_SCOPE_EXCEEDED", "Dataset bar kapsamı server sınırını aşıyor.")
     if not dataset.bars:
         raise HistoricalSimulationError("BAR_SCOPE_TOO_SMALL", "Dataset içinde simüle edilecek bar yok.")
@@ -241,64 +269,48 @@ def simulate_historical_ohlcv(
     _validate_dataset(dataset)
     first_bar_index = _feature_start_index(dataset, config_hash, feature_binding)
     started_at = monotonic()
-    state = State()
+    cursor = DealCursor(state=State(), deal_sequence=0, prev_net=Q(0))
     actions: list[HistoricalSimulationAction] = []
-    deal_sequence = 1
-    first_bar = dataset.bars[first_bar_index]
-    state = _apply_action(state, config, first_bar, first_bar_index + 1, "BASE", config.base_qty, first_bar.open, actions, deal_sequence)
-    state = apply(state, {"type": "MARK", "price": first_bar.close}, config)
+    deal_pnls: list[str] = []
+    equity_points: list[str] = []
 
-    for index, bar in enumerate(dataset.bars[first_bar_index + 1 :], start=first_bar_index + 2):
+    for index, bar in enumerate(dataset.bars[first_bar_index:], start=first_bar_index + 1):
         _check_budget(started_at, timeout_seconds)
-        if (
-            not state.position.qty
-            and state.orders
-            and not state.unsettled
-            and not state.halted
-            and not state.blockers
-        ):
-            state = _start_new_deal(state)
-            deal_sequence += 1
-            state = _apply_action(state, config, bar, index, "BASE", config.base_qty, bar.open, actions, deal_sequence)
-            state = apply(state, {"type": "MARK", "price": bar.close}, config)
-            continue
-        safety = _next_safety(state, config)
-        take_profit = target(state, config) if state.position.qty else None
-        safety_reachable = safety is not None and _buy_reachable(bar, safety.price)
-        take_profit_reachable = take_profit is not None and _sell_reachable(bar, take_profit)
-        if safety_reachable and take_profit_reachable:
+        step = step_closed_bar(cursor, config, bar, index, actions, on_ambiguous="HALT")
+        if step.ambiguous:
             return _result(
                 dataset,
                 config,
                 config_hash,
-                state,
+                cursor.state,
                 actions,
                 execution_status="INDETERMINATE",
                 application_code="AMBIGUOUS_OHLC_PATH",
                 processed_bar_count=index - 1,
                 first_ambiguous_bar_index=index,
                 feature_binding=feature_binding,
+                deal_pnls=deal_pnls,
+                equity_points=equity_points,
             )
-        if safety_reachable and safety is not None:
-            raw_reference = bar.open if number(bar.open) <= safety.price else exact_text(safety.price)
-            state = _apply_action(state, config, bar, index, f"SAFETY:{_next_safety_index(state) + 1}", safety.qty, raw_reference, actions, deal_sequence)
-        elif take_profit_reachable and take_profit is not None:
-            raw_reference = bar.open if number(bar.open) >= take_profit else exact_text(take_profit)
-            state = _apply_action(state, config, bar, index, "EXIT", state.position.qty, raw_reference, actions, deal_sequence)
-        state = apply(state, {"type": "MARK", "price": bar.close}, config)
+        cursor = step.cursor
+        if step.closed_deal_pnl is not None:
+            deal_pnls.append(step.closed_deal_pnl)
+        equity_points.append(exact_text(cursor.state.equity(config)))
 
     _check_budget(started_at, timeout_seconds)
     return _result(
         dataset,
         config,
         config_hash,
-        state,
+        cursor.state,
         actions,
         execution_status="COMPLETED",
         application_code=None,
         processed_bar_count=len(dataset.bars),
         first_ambiguous_bar_index=None,
         feature_binding=feature_binding,
+        deal_pnls=deal_pnls,
+        equity_points=equity_points,
     )
 
 
@@ -312,8 +324,10 @@ def _apply_action(
     raw_reference: str,
     actions: list[HistoricalSimulationAction],
     deal_sequence: int,
+    id_suffix: str = "",
 ) -> State:
-    buy = role not in ("EXIT", "STOP")
+    opening = role not in ("EXIT", "STOP") and not role.startswith("EXIT:")
+    buy = opening if config.direction == "LONG" else not opening
     try:
         raw_price = number(raw_reference)
         fill_price = align(
@@ -321,9 +335,15 @@ def _apply_action(
             config.tick,
             up=buy,
         )
+        if role == "BASE":
+            # Faz W: under QUOTE base sizing the quantity depends on the
+            # order's own fill price; identical to config.base_qty otherwise.
+            quantity = config.base_order_qty(fill_price)
         fill_text = exact_text(fill_price)
         state = apply(state, {"type": "MARK", "price": raw_reference}, config)
-        order_id = f"historical:{bar_index}:order"
+        # A bar-close exit can follow an intrabar fill on the same bar, so it
+        # carries a suffix; every other id keeps its historical form.
+        order_id = f"historical:{bar_index}{id_suffix}:order"
         state = apply(
             state,
             {
@@ -340,7 +360,7 @@ def _apply_action(
             state,
             {
                 "type": "FILL",
-                "execution_id": f"historical:{bar_index}:fill",
+                "execution_id": f"historical:{bar_index}{id_suffix}:fill",
                 "order_id": order_id,
                 "side": "BUY" if buy else "SELL",
                 "qty": exact_text(quantity),
@@ -419,7 +439,10 @@ def _average_entry_price(actions: list[HistoricalSimulationAction]) -> str | Non
             qty = number(action.quantity)
             total_qty += qty
             total_cost += qty * number(action.fill_price)
-    return exact_text(total_cost / total_qty) if total_qty else None
+    # A quantity-weighted average is generally non-terminating (e.g. 1/3);
+    # it is a display metric, so it is rounded half-even like every other
+    # ratio shown, instead of crashing exact_text on real market data.
+    return text(total_cost / total_qty, AVERAGE_PRICE_PLACES) if total_qty else None
 
 
 def _time_in_position_us(actions: list[HistoricalSimulationAction]) -> int:
@@ -433,6 +456,179 @@ def _time_in_position_us(actions: list[HistoricalSimulationAction]) -> int:
         elif action.role == "EXIT" and action.deal_sequence in deal_start_us:
             total += action.open_time_us - deal_start_us[action.deal_sequence]
     return total
+
+
+@dataclass(frozen=True, slots=True)
+class DealCursor:
+    """Where a bot stands between closed bars: engine state, the current
+    deal's sequence number, and the cumulative net at the last deal close."""
+
+    state: State
+    deal_sequence: int
+    prev_net: Q
+    # Faz G1-kalan/a: no new deal opens on a bar whose open_time_us
+    # is below this exclusive bound. Set from each deal close and
+    # seeded from the store by the paper runner.
+    cooldown_until_us: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class BarStep:
+    cursor: DealCursor
+    closed_deal_pnl: str | None
+    ambiguous: bool
+    resolved_ambiguity: bool = False
+
+
+def step_closed_bar(
+    cursor: DealCursor,
+    config: Config,
+    bar: CanonicalBar,
+    bar_index: int,
+    actions: list[HistoricalSimulationAction],
+    *,
+    on_ambiguous: str,
+    allow_new_deal: bool = True,
+) -> BarStep:
+    """Advance one closed bar under the closed-bar model -- the single rule
+    shared by backtests and the paper bot runner.
+
+    A flat, settled, unhalted cursor opens a new deal at the bar's open.
+    Otherwise at most one safety order OR the take profit fills inside the
+    bar; if both are reachable the intrabar order is unknown: "HALT" returns
+    `ambiguous` untouched (backtests stop honestly), "SAFETY_FIRST" takes the
+    conservative path (live paper keeps running). The bar's close then marks
+    the position and feeds the stop-loss confirmation. A deal that ends on
+    this bar reports its exact net (fees included) immediately.
+    """
+
+    if on_ambiguous not in ("HALT", "SAFETY_FIRST"):
+        raise ValueError("on_ambiguous must be HALT or SAFETY_FIRST")
+    state = cursor.state
+    deal_sequence = cursor.deal_sequence
+    resolved_ambiguity = False
+    opens_deal = (
+        not state.position.qty
+        and not state.unsettled
+        and not state.halted
+        and not state.blockers
+    )
+    if opens_deal:
+        blocked = not allow_new_deal or bar.open_time_us < cursor.cooldown_until_us
+        if not blocked:
+            entry_price = number(bar.open)
+            blocked = (config.min_entry_price is not None and entry_price < config.min_entry_price) or (
+                config.max_entry_price is not None and entry_price > config.max_entry_price
+            )
+        if blocked:
+            return BarStep(
+                DealCursor(
+                    apply(state, {"type": "MARK", "price": bar.close}, config),
+                    deal_sequence,
+                    cursor.prev_net,
+                    cursor.cooldown_until_us,
+                ),
+                None,
+                False,
+            )
+        if state.orders:
+            state = _start_new_deal(state)
+        deal_sequence += 1
+        state = _apply_action(state, config, bar, bar_index, "BASE", config.base_qty, bar.open, actions, deal_sequence)
+    else:
+        # A halted engine (drawdown guard) accepts no new risk, only an exit.
+        safety = None if state.halted else _next_safety(state, config)
+        # F09a: with trailing configured the fixed intrabar TP exit is OFF
+        # (3Commas never exits at the fixed target once trailing is on);
+        # the exit is a bar-close decision in _close_bar instead.
+        take_profit = (
+            target(state, config)
+            if state.position.qty and config.trailing_take_profit_rate is None
+            else None
+        )
+        short = config.direction == "SHORT"
+        safety_reachable = safety is not None and (
+            _sell_reachable(bar, safety.price) if short else _buy_reachable(bar, safety.price)
+        )
+        take_profit_reachable = take_profit is not None and (
+            _buy_reachable(bar, take_profit) if short else _sell_reachable(bar, take_profit)
+        )
+        resolved_ambiguity = safety_reachable and take_profit_reachable
+        if resolved_ambiguity and on_ambiguous == "HALT":
+            return BarStep(cursor, None, True)
+        if safety_reachable and safety is not None:
+            if short:
+                raw_reference = bar.open if number(bar.open) >= safety.price else exact_text(safety.price)
+            else:
+                raw_reference = bar.open if number(bar.open) <= safety.price else exact_text(safety.price)
+            state = _apply_action(state, config, bar, bar_index, f"SAFETY:{_next_safety_index(state) + 1}", safety.qty, raw_reference, actions, deal_sequence)
+        elif take_profit_reachable and take_profit is not None:
+            if short:
+                raw_reference = bar.open if number(bar.open) <= take_profit else exact_text(take_profit)
+            else:
+                raw_reference = bar.open if number(bar.open) >= take_profit else exact_text(take_profit)
+            state = _apply_action(state, config, bar, bar_index, "EXIT", state.position.qty, raw_reference, actions, deal_sequence)
+    state = _close_bar(state, config, bar, bar_index, actions, deal_sequence)
+    prev_net = cursor.prev_net
+    closed_pnl = None
+    cooldown_until_us = cursor.cooldown_until_us
+    was_in_deal = opens_deal or cursor.state.position.qty > 0
+    if was_in_deal and not state.position.qty and not state.unsettled:
+        current_net = state.realized - state.fees - state.funding
+        closed_pnl = exact_text(current_net - prev_net)
+        prev_net = current_net
+        if config.cooldown_seconds:
+            cooldown_until_us = bar.close_time_us + config.cooldown_seconds * 1_000_000
+    return BarStep(DealCursor(state, deal_sequence, prev_net, cooldown_until_us), closed_pnl, False, resolved_ambiguity)
+
+
+def _close_bar(
+    state: State,
+    config: Config,
+    bar: CanonicalBar,
+    bar_index: int,
+    actions: list[HistoricalSimulationAction],
+    deal_sequence: int,
+) -> State:
+    """Mark the bar's close and, when a stop loss is configured, feed the
+    engine's bar-close confirmation; a confirmed stop exits the whole
+    position at that close. Without this the simulator silently ignored
+    `stop_loss_rate`."""
+
+    state = apply(state, {"type": "MARK", "price": bar.close}, config)
+    if state.halted and state.position.qty and not state.unsettled:
+        # The engine's own rule when its drawdown guard trips: close out.
+        state = _apply_action(state, config, bar, bar_index, "STOP", state.position.qty, bar.close, actions, deal_sequence, ":close")
+        return apply(state, {"type": "MARK", "price": bar.close}, config)
+    if not state.position.qty:
+        return state
+    if config.stop_loss_rate is not None or config.trailing_take_profit_rate is not None:
+        state = apply(state, {"type": "BAR_CLOSE", "close": bar.close}, config)
+    else:
+        return state
+    if (
+        config.stop_loss_rate is not None
+        and state.sl_breach_streak >= config.stop_loss_confirmation_bars
+        and not state.unsettled
+    ):
+        state = _apply_action(state, config, bar, bar_index, "STOP", state.position.qty, bar.close, actions, deal_sequence, ":close")
+        state = apply(state, {"type": "MARK", "price": bar.close}, config)
+        return state
+    # F09a: trailing take-profit exit at the close. Division-free trigger
+    # (water*(1-trail) / water*(1+trail), Fraction-exact): LONG exits
+    # below the trigger, SHORT above it. Unarmed water (None) holds.
+    trail = config.trailing_take_profit_rate
+    if trail is not None and state.position.qty and not state.unsettled:
+        water = state.trail_water
+        close = number(bar.close)
+        short = config.direction == "SHORT"
+        triggered = water is not None and (
+            close > water * (1 + trail) if short else close < water * (1 - trail)
+        )
+        if triggered:
+            state = _apply_action(state, config, bar, bar_index, "EXIT", state.position.qty, bar.close, actions, deal_sequence, ":close")
+            state = apply(state, {"type": "MARK", "price": bar.close}, config)
+    return state
 
 
 def _next_safety(state: State, config: Config):
@@ -516,6 +712,8 @@ def _result(
     processed_bar_count: int,
     first_ambiguous_bar_index: int | None,
     feature_binding: HistoricalFeatureRunBinding | None = None,
+    deal_pnls: list[str] = (),
+    equity_points: list[str] = (),
 ) -> HistoricalSimulationResult:
     summary = report(state, config)
     position_status = "OPEN_AT_END" if state.position.qty else "CLOSED"
@@ -531,6 +729,8 @@ def _result(
             "action_count": len(actions),
             "average_entry_price": _average_entry_price(actions),
             "time_in_position_us": _time_in_position_us(actions),
+            "deal_pnls": list(deal_pnls),
+            "equity_curve": list(equity_points),
         }
     )
     return HistoricalSimulationResult(

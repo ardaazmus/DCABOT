@@ -119,13 +119,18 @@ def optimize_parameters(
             )
             continue
         metric = _metric_of(result["summary"])
+        summary = result["summary"]
         trials.append(
             {
                 "recipe_id": result["recipe_id"],
                 "overrides": recipe["overrides"],
                 "execution_status": result["execution_status"],
-                "realized_net_after_all_costs": result["summary"]["realized_net_after_all_costs"],
+                "realized_net_after_all_costs": summary["realized_net_after_all_costs"],
                 "config_hash": result["config_hash"],
+                "win_rate": summary.get("win_rate"),
+                "profit_factor": summary.get("profit_factor"),
+                "roi": summary.get("roi"),
+                "safety_order_fill_rate": summary.get("safety_order_fill_rate"),
                 "_metric": metric,
             }
         )

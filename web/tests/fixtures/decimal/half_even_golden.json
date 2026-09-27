@@ -1,0 +1,8005 @@
+{
+"generator": "dcabot.domain.numbers.text (ROUND_HALF_EVEN)",
+"cases": [
+{
+"value": "0",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 2,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 4,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 8,
+"expected": "0"
+},
+{
+"value": "0.5",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.5",
+"places": 2,
+"expected": "0.5"
+},
+{
+"value": "0.5",
+"places": 4,
+"expected": "0.5"
+},
+{
+"value": "0.5",
+"places": 8,
+"expected": "0.5"
+},
+{
+"value": "1.5",
+"places": 0,
+"expected": "2"
+},
+{
+"value": "1.5",
+"places": 2,
+"expected": "1.5"
+},
+{
+"value": "1.5",
+"places": 4,
+"expected": "1.5"
+},
+{
+"value": "1.5",
+"places": 8,
+"expected": "1.5"
+},
+{
+"value": "2.5",
+"places": 0,
+"expected": "2"
+},
+{
+"value": "2.5",
+"places": 2,
+"expected": "2.5"
+},
+{
+"value": "2.5",
+"places": 4,
+"expected": "2.5"
+},
+{
+"value": "2.5",
+"places": 8,
+"expected": "2.5"
+},
+{
+"value": "-0.5",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.5",
+"places": 2,
+"expected": "-0.5"
+},
+{
+"value": "-0.5",
+"places": 4,
+"expected": "-0.5"
+},
+{
+"value": "-0.5",
+"places": 8,
+"expected": "-0.5"
+},
+{
+"value": "-1.5",
+"places": 0,
+"expected": "-2"
+},
+{
+"value": "-1.5",
+"places": 2,
+"expected": "-1.5"
+},
+{
+"value": "-1.5",
+"places": 4,
+"expected": "-1.5"
+},
+{
+"value": "-1.5",
+"places": 8,
+"expected": "-1.5"
+},
+{
+"value": "-2.5",
+"places": 0,
+"expected": "-2"
+},
+{
+"value": "-2.5",
+"places": 2,
+"expected": "-2.5"
+},
+{
+"value": "-2.5",
+"places": 4,
+"expected": "-2.5"
+},
+{
+"value": "-2.5",
+"places": 8,
+"expected": "-2.5"
+},
+{
+"value": "0.125",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.125",
+"places": 2,
+"expected": "0.12"
+},
+{
+"value": "0.125",
+"places": 4,
+"expected": "0.125"
+},
+{
+"value": "0.125",
+"places": 8,
+"expected": "0.125"
+},
+{
+"value": "0.135",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.135",
+"places": 2,
+"expected": "0.14"
+},
+{
+"value": "0.135",
+"places": 4,
+"expected": "0.135"
+},
+{
+"value": "0.135",
+"places": 8,
+"expected": "0.135"
+},
+{
+"value": "-0.0000001",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.0000001",
+"places": 2,
+"expected": "0"
+},
+{
+"value": "-0.0000001",
+"places": 4,
+"expected": "0"
+},
+{
+"value": "-0.0000001",
+"places": 8,
+"expected": "-0.0000001"
+},
+{
+"value": "999.995",
+"places": 0,
+"expected": "1000"
+},
+{
+"value": "999.995",
+"places": 2,
+"expected": "1000"
+},
+{
+"value": "999.995",
+"places": 4,
+"expected": "999.995"
+},
+{
+"value": "999.995",
+"places": 8,
+"expected": "999.995"
+},
+{
+"value": "1234567.891",
+"places": 0,
+"expected": "1234568"
+},
+{
+"value": "1234567.891",
+"places": 2,
+"expected": "1234567.89"
+},
+{
+"value": "1234567.891",
+"places": 4,
+"expected": "1234567.891"
+},
+{
+"value": "1234567.891",
+"places": 8,
+"expected": "1234567.891"
+},
+{
+"value": "84506.01",
+"places": 0,
+"expected": "84506"
+},
+{
+"value": "84506.01",
+"places": 2,
+"expected": "84506.01"
+},
+{
+"value": "84506.01",
+"places": 4,
+"expected": "84506.01"
+},
+{
+"value": "84506.01",
+"places": 8,
+"expected": "84506.01"
+},
+{
+"value": "0.000000015",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.000000015",
+"places": 2,
+"expected": "0"
+},
+{
+"value": "0.000000015",
+"places": 4,
+"expected": "0"
+},
+{
+"value": "0.000000015",
+"places": 8,
+"expected": "0.00000002"
+},
+{
+"value": "0",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 2,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 4,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 8,
+"expected": "0"
+},
+{
+"value": "7.043401957514",
+"places": 0,
+"expected": "7"
+},
+{
+"value": "7.043401957514",
+"places": 2,
+"expected": "7.04"
+},
+{
+"value": "7.043401957514",
+"places": 4,
+"expected": "7.0434"
+},
+{
+"value": "7.043401957514",
+"places": 8,
+"expected": "7.04340196"
+},
+{
+"value": "57778844018.4082869",
+"places": 0,
+"expected": "57778844018"
+},
+{
+"value": "57778844018.4082869",
+"places": 2,
+"expected": "57778844018.41"
+},
+{
+"value": "57778844018.4082869",
+"places": 4,
+"expected": "57778844018.4083"
+},
+{
+"value": "57778844018.4082869",
+"places": 8,
+"expected": "57778844018.4082869"
+},
+{
+"value": "72182852001.8310739461275",
+"places": 0,
+"expected": "72182852002"
+},
+{
+"value": "72182852001.8310739461275",
+"places": 2,
+"expected": "72182852001.83"
+},
+{
+"value": "72182852001.8310739461275",
+"places": 4,
+"expected": "72182852001.8311"
+},
+{
+"value": "72182852001.8310739461275",
+"places": 8,
+"expected": "72182852001.83107395"
+},
+{
+"value": "581945.973",
+"places": 0,
+"expected": "581946"
+},
+{
+"value": "581945.973",
+"places": 2,
+"expected": "581945.97"
+},
+{
+"value": "581945.973",
+"places": 4,
+"expected": "581945.973"
+},
+{
+"value": "581945.973",
+"places": 8,
+"expected": "581945.973"
+},
+{
+"value": "0.19375",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.19375",
+"places": 2,
+"expected": "0.19"
+},
+{
+"value": "0.19375",
+"places": 4,
+"expected": "0.1938"
+},
+{
+"value": "0.19375",
+"places": 8,
+"expected": "0.19375"
+},
+{
+"value": "-531313.014931",
+"places": 0,
+"expected": "-531313"
+},
+{
+"value": "-531313.014931",
+"places": 2,
+"expected": "-531313.01"
+},
+{
+"value": "-531313.014931",
+"places": 4,
+"expected": "-531313.0149"
+},
+{
+"value": "-531313.014931",
+"places": 8,
+"expected": "-531313.014931"
+},
+{
+"value": "-659743.510813945",
+"places": 0,
+"expected": "-659744"
+},
+{
+"value": "-659743.510813945",
+"places": 2,
+"expected": "-659743.51"
+},
+{
+"value": "-659743.510813945",
+"places": 4,
+"expected": "-659743.5108"
+},
+{
+"value": "-659743.510813945",
+"places": 8,
+"expected": "-659743.51081394"
+},
+{
+"value": "-620407.05761766657270",
+"places": 0,
+"expected": "-620407"
+},
+{
+"value": "-620407.05761766657270",
+"places": 2,
+"expected": "-620407.06"
+},
+{
+"value": "-620407.05761766657270",
+"places": 4,
+"expected": "-620407.0576"
+},
+{
+"value": "-620407.05761766657270",
+"places": 8,
+"expected": "-620407.05761767"
+},
+{
+"value": "86431924212.2127",
+"places": 0,
+"expected": "86431924212"
+},
+{
+"value": "86431924212.2127",
+"places": 2,
+"expected": "86431924212.21"
+},
+{
+"value": "86431924212.2127",
+"places": 4,
+"expected": "86431924212.2127"
+},
+{
+"value": "86431924212.2127",
+"places": 8,
+"expected": "86431924212.2127"
+},
+{
+"value": "944895.4",
+"places": 0,
+"expected": "944895"
+},
+{
+"value": "944895.4",
+"places": 2,
+"expected": "944895.4"
+},
+{
+"value": "944895.4",
+"places": 4,
+"expected": "944895.4"
+},
+{
+"value": "944895.4",
+"places": 8,
+"expected": "944895.4"
+},
+{
+"value": "0",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 2,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 4,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 8,
+"expected": "0"
+},
+{
+"value": "-52913900950.465",
+"places": 0,
+"expected": "-52913900950"
+},
+{
+"value": "-52913900950.465",
+"places": 2,
+"expected": "-52913900950.46"
+},
+{
+"value": "-52913900950.465",
+"places": 4,
+"expected": "-52913900950.465"
+},
+{
+"value": "-52913900950.465",
+"places": 8,
+"expected": "-52913900950.465"
+},
+{
+"value": "7.165",
+"places": 0,
+"expected": "7"
+},
+{
+"value": "7.165",
+"places": 2,
+"expected": "7.16"
+},
+{
+"value": "7.165",
+"places": 4,
+"expected": "7.165"
+},
+{
+"value": "7.165",
+"places": 8,
+"expected": "7.165"
+},
+{
+"value": "94340877385.575",
+"places": 0,
+"expected": "94340877386"
+},
+{
+"value": "94340877385.575",
+"places": 2,
+"expected": "94340877385.58"
+},
+{
+"value": "94340877385.575",
+"places": 4,
+"expected": "94340877385.575"
+},
+{
+"value": "94340877385.575",
+"places": 8,
+"expected": "94340877385.575"
+},
+{
+"value": "15177636948.089470257605",
+"places": 0,
+"expected": "15177636948"
+},
+{
+"value": "15177636948.089470257605",
+"places": 2,
+"expected": "15177636948.09"
+},
+{
+"value": "15177636948.089470257605",
+"places": 4,
+"expected": "15177636948.0895"
+},
+{
+"value": "15177636948.089470257605",
+"places": 8,
+"expected": "15177636948.08947026"
+},
+{
+"value": "0.8601622797",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.8601622797",
+"places": 2,
+"expected": "0.86"
+},
+{
+"value": "0.8601622797",
+"places": 4,
+"expected": "0.8602"
+},
+{
+"value": "0.8601622797",
+"places": 8,
+"expected": "0.86016228"
+},
+{
+"value": "-0.2876541",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.2876541",
+"places": 2,
+"expected": "-0.29"
+},
+{
+"value": "-0.2876541",
+"places": 4,
+"expected": "-0.2877"
+},
+{
+"value": "-0.2876541",
+"places": 8,
+"expected": "-0.2876541"
+},
+{
+"value": "-0.545",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.545",
+"places": 2,
+"expected": "-0.54"
+},
+{
+"value": "-0.545",
+"places": 4,
+"expected": "-0.545"
+},
+{
+"value": "-0.545",
+"places": 8,
+"expected": "-0.545"
+},
+{
+"value": "4.1047202",
+"places": 0,
+"expected": "4"
+},
+{
+"value": "4.1047202",
+"places": 2,
+"expected": "4.1"
+},
+{
+"value": "4.1047202",
+"places": 4,
+"expected": "4.1047"
+},
+{
+"value": "4.1047202",
+"places": 8,
+"expected": "4.1047202"
+},
+{
+"value": "0.710506",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.710506",
+"places": 2,
+"expected": "0.71"
+},
+{
+"value": "0.710506",
+"places": 4,
+"expected": "0.7105"
+},
+{
+"value": "0.710506",
+"places": 8,
+"expected": "0.710506"
+},
+{
+"value": "6.85",
+"places": 0,
+"expected": "7"
+},
+{
+"value": "6.85",
+"places": 2,
+"expected": "6.85"
+},
+{
+"value": "6.85",
+"places": 4,
+"expected": "6.85"
+},
+{
+"value": "6.85",
+"places": 8,
+"expected": "6.85"
+},
+{
+"value": "-156460.04232497777546",
+"places": 0,
+"expected": "-156460"
+},
+{
+"value": "-156460.04232497777546",
+"places": 2,
+"expected": "-156460.04"
+},
+{
+"value": "-156460.04232497777546",
+"places": 4,
+"expected": "-156460.0423"
+},
+{
+"value": "-156460.04232497777546",
+"places": 8,
+"expected": "-156460.04232498"
+},
+{
+"value": "0.704",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.704",
+"places": 2,
+"expected": "0.7"
+},
+{
+"value": "0.704",
+"places": 4,
+"expected": "0.704"
+},
+{
+"value": "0.704",
+"places": 8,
+"expected": "0.704"
+},
+{
+"value": "866824.73454",
+"places": 0,
+"expected": "866825"
+},
+{
+"value": "866824.73454",
+"places": 2,
+"expected": "866824.73"
+},
+{
+"value": "866824.73454",
+"places": 4,
+"expected": "866824.7345"
+},
+{
+"value": "866824.73454",
+"places": 8,
+"expected": "866824.73454"
+},
+{
+"value": "0.896765891",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.896765891",
+"places": 2,
+"expected": "0.9"
+},
+{
+"value": "0.896765891",
+"places": 4,
+"expected": "0.8968"
+},
+{
+"value": "0.896765891",
+"places": 8,
+"expected": "0.89676589"
+},
+{
+"value": "94704179641.2",
+"places": 0,
+"expected": "94704179641"
+},
+{
+"value": "94704179641.2",
+"places": 2,
+"expected": "94704179641.2"
+},
+{
+"value": "94704179641.2",
+"places": 4,
+"expected": "94704179641.2"
+},
+{
+"value": "94704179641.2",
+"places": 8,
+"expected": "94704179641.2"
+},
+{
+"value": "78588489445.1095821",
+"places": 0,
+"expected": "78588489445"
+},
+{
+"value": "78588489445.1095821",
+"places": 2,
+"expected": "78588489445.11"
+},
+{
+"value": "78588489445.1095821",
+"places": 4,
+"expected": "78588489445.1096"
+},
+{
+"value": "78588489445.1095821",
+"places": 8,
+"expected": "78588489445.1095821"
+},
+{
+"value": "-29084681890.4429012627794",
+"places": 0,
+"expected": "-29084681890"
+},
+{
+"value": "-29084681890.4429012627794",
+"places": 2,
+"expected": "-29084681890.44"
+},
+{
+"value": "-29084681890.4429012627794",
+"places": 4,
+"expected": "-29084681890.4429"
+},
+{
+"value": "-29084681890.4429012627794",
+"places": 8,
+"expected": "-29084681890.44290126"
+},
+{
+"value": "887361.6519971224409",
+"places": 0,
+"expected": "887362"
+},
+{
+"value": "887361.6519971224409",
+"places": 2,
+"expected": "887361.65"
+},
+{
+"value": "887361.6519971224409",
+"places": 4,
+"expected": "887361.652"
+},
+{
+"value": "887361.6519971224409",
+"places": 8,
+"expected": "887361.65199712"
+},
+{
+"value": "-91781346160.24963654",
+"places": 0,
+"expected": "-91781346160"
+},
+{
+"value": "-91781346160.24963654",
+"places": 2,
+"expected": "-91781346160.25"
+},
+{
+"value": "-91781346160.24963654",
+"places": 4,
+"expected": "-91781346160.2496"
+},
+{
+"value": "-91781346160.24963654",
+"places": 8,
+"expected": "-91781346160.24963654"
+},
+{
+"value": "39336022034.10015655",
+"places": 0,
+"expected": "39336022034"
+},
+{
+"value": "39336022034.10015655",
+"places": 2,
+"expected": "39336022034.1"
+},
+{
+"value": "39336022034.10015655",
+"places": 4,
+"expected": "39336022034.1002"
+},
+{
+"value": "39336022034.10015655",
+"places": 8,
+"expected": "39336022034.10015655"
+},
+{
+"value": "-343624.059278",
+"places": 0,
+"expected": "-343624"
+},
+{
+"value": "-343624.059278",
+"places": 2,
+"expected": "-343624.06"
+},
+{
+"value": "-343624.059278",
+"places": 4,
+"expected": "-343624.0593"
+},
+{
+"value": "-343624.059278",
+"places": 8,
+"expected": "-343624.059278"
+},
+{
+"value": "0.6985259381",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.6985259381",
+"places": 2,
+"expected": "0.7"
+},
+{
+"value": "0.6985259381",
+"places": 4,
+"expected": "0.6985"
+},
+{
+"value": "0.6985259381",
+"places": 8,
+"expected": "0.69852594"
+},
+{
+"value": "21893.9924435",
+"places": 0,
+"expected": "21894"
+},
+{
+"value": "21893.9924435",
+"places": 2,
+"expected": "21893.99"
+},
+{
+"value": "21893.9924435",
+"places": 4,
+"expected": "21893.9924"
+},
+{
+"value": "21893.9924435",
+"places": 8,
+"expected": "21893.9924435"
+},
+{
+"value": "45943370762",
+"places": 0,
+"expected": "45943370762"
+},
+{
+"value": "45943370762",
+"places": 2,
+"expected": "45943370762"
+},
+{
+"value": "45943370762",
+"places": 4,
+"expected": "45943370762"
+},
+{
+"value": "45943370762",
+"places": 8,
+"expected": "45943370762"
+},
+{
+"value": "-0.6204690",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.6204690",
+"places": 2,
+"expected": "-0.62"
+},
+{
+"value": "-0.6204690",
+"places": 4,
+"expected": "-0.6205"
+},
+{
+"value": "-0.6204690",
+"places": 8,
+"expected": "-0.620469"
+},
+{
+"value": "664801.1029300123",
+"places": 0,
+"expected": "664801"
+},
+{
+"value": "664801.1029300123",
+"places": 2,
+"expected": "664801.1"
+},
+{
+"value": "664801.1029300123",
+"places": 4,
+"expected": "664801.1029"
+},
+{
+"value": "664801.1029300123",
+"places": 8,
+"expected": "664801.10293001"
+},
+{
+"value": "782610.9482",
+"places": 0,
+"expected": "782611"
+},
+{
+"value": "782610.9482",
+"places": 2,
+"expected": "782610.95"
+},
+{
+"value": "782610.9482",
+"places": 4,
+"expected": "782610.9482"
+},
+{
+"value": "782610.9482",
+"places": 8,
+"expected": "782610.9482"
+},
+{
+"value": "0.385334895",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.385334895",
+"places": 2,
+"expected": "0.39"
+},
+{
+"value": "0.385334895",
+"places": 4,
+"expected": "0.3853"
+},
+{
+"value": "0.385334895",
+"places": 8,
+"expected": "0.3853349"
+},
+{
+"value": "-14492098792.63312304425848",
+"places": 0,
+"expected": "-14492098793"
+},
+{
+"value": "-14492098792.63312304425848",
+"places": 2,
+"expected": "-14492098792.63"
+},
+{
+"value": "-14492098792.63312304425848",
+"places": 4,
+"expected": "-14492098792.6331"
+},
+{
+"value": "-14492098792.63312304425848",
+"places": 8,
+"expected": "-14492098792.63312304"
+},
+{
+"value": "8.03179",
+"places": 0,
+"expected": "8"
+},
+{
+"value": "8.03179",
+"places": 2,
+"expected": "8.03"
+},
+{
+"value": "8.03179",
+"places": 4,
+"expected": "8.0318"
+},
+{
+"value": "8.03179",
+"places": 8,
+"expected": "8.03179"
+},
+{
+"value": "0.76",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.76",
+"places": 2,
+"expected": "0.76"
+},
+{
+"value": "0.76",
+"places": 4,
+"expected": "0.76"
+},
+{
+"value": "0.76",
+"places": 8,
+"expected": "0.76"
+},
+{
+"value": "-0.8865",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.8865",
+"places": 2,
+"expected": "-0.89"
+},
+{
+"value": "-0.8865",
+"places": 4,
+"expected": "-0.8865"
+},
+{
+"value": "-0.8865",
+"places": 8,
+"expected": "-0.8865"
+},
+{
+"value": "64783477271.9475",
+"places": 0,
+"expected": "64783477272"
+},
+{
+"value": "64783477271.9475",
+"places": 2,
+"expected": "64783477271.95"
+},
+{
+"value": "64783477271.9475",
+"places": 4,
+"expected": "64783477271.9475"
+},
+{
+"value": "64783477271.9475",
+"places": 8,
+"expected": "64783477271.9475"
+},
+{
+"value": "-801258.70714297462",
+"places": 0,
+"expected": "-801259"
+},
+{
+"value": "-801258.70714297462",
+"places": 2,
+"expected": "-801258.71"
+},
+{
+"value": "-801258.70714297462",
+"places": 4,
+"expected": "-801258.7071"
+},
+{
+"value": "-801258.70714297462",
+"places": 8,
+"expected": "-801258.70714297"
+},
+{
+"value": "8.348228808703",
+"places": 0,
+"expected": "8"
+},
+{
+"value": "8.348228808703",
+"places": 2,
+"expected": "8.35"
+},
+{
+"value": "8.348228808703",
+"places": 4,
+"expected": "8.3482"
+},
+{
+"value": "8.348228808703",
+"places": 8,
+"expected": "8.34822881"
+},
+{
+"value": "0",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 2,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 4,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 8,
+"expected": "0"
+},
+{
+"value": "8.909846134061",
+"places": 0,
+"expected": "9"
+},
+{
+"value": "8.909846134061",
+"places": 2,
+"expected": "8.91"
+},
+{
+"value": "8.909846134061",
+"places": 4,
+"expected": "8.9098"
+},
+{
+"value": "8.909846134061",
+"places": 8,
+"expected": "8.90984613"
+},
+{
+"value": "0.66424700684",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.66424700684",
+"places": 2,
+"expected": "0.66"
+},
+{
+"value": "0.66424700684",
+"places": 4,
+"expected": "0.6642"
+},
+{
+"value": "0.66424700684",
+"places": 8,
+"expected": "0.66424701"
+},
+{
+"value": "60086500271.869184700009",
+"places": 0,
+"expected": "60086500272"
+},
+{
+"value": "60086500271.869184700009",
+"places": 2,
+"expected": "60086500271.87"
+},
+{
+"value": "60086500271.869184700009",
+"places": 4,
+"expected": "60086500271.8692"
+},
+{
+"value": "60086500271.869184700009",
+"places": 8,
+"expected": "60086500271.8691847"
+},
+{
+"value": "-60753383864.1412551724",
+"places": 0,
+"expected": "-60753383864"
+},
+{
+"value": "-60753383864.1412551724",
+"places": 2,
+"expected": "-60753383864.14"
+},
+{
+"value": "-60753383864.1412551724",
+"places": 4,
+"expected": "-60753383864.1413"
+},
+{
+"value": "-60753383864.1412551724",
+"places": 8,
+"expected": "-60753383864.14125517"
+},
+{
+"value": "544081.37134377725",
+"places": 0,
+"expected": "544081"
+},
+{
+"value": "544081.37134377725",
+"places": 2,
+"expected": "544081.37"
+},
+{
+"value": "544081.37134377725",
+"places": 4,
+"expected": "544081.3713"
+},
+{
+"value": "544081.37134377725",
+"places": 8,
+"expected": "544081.37134378"
+},
+{
+"value": "-15149010333.64552011497427",
+"places": 0,
+"expected": "-15149010334"
+},
+{
+"value": "-15149010333.64552011497427",
+"places": 2,
+"expected": "-15149010333.65"
+},
+{
+"value": "-15149010333.64552011497427",
+"places": 4,
+"expected": "-15149010333.6455"
+},
+{
+"value": "-15149010333.64552011497427",
+"places": 8,
+"expected": "-15149010333.64552011"
+},
+{
+"value": "0.36288042",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.36288042",
+"places": 2,
+"expected": "0.36"
+},
+{
+"value": "0.36288042",
+"places": 4,
+"expected": "0.3629"
+},
+{
+"value": "0.36288042",
+"places": 8,
+"expected": "0.36288042"
+},
+{
+"value": "67925669763.812",
+"places": 0,
+"expected": "67925669764"
+},
+{
+"value": "67925669763.812",
+"places": 2,
+"expected": "67925669763.81"
+},
+{
+"value": "67925669763.812",
+"places": 4,
+"expected": "67925669763.812"
+},
+{
+"value": "67925669763.812",
+"places": 8,
+"expected": "67925669763.812"
+},
+{
+"value": "-9.773185715795",
+"places": 0,
+"expected": "-10"
+},
+{
+"value": "-9.773185715795",
+"places": 2,
+"expected": "-9.77"
+},
+{
+"value": "-9.773185715795",
+"places": 4,
+"expected": "-9.7732"
+},
+{
+"value": "-9.773185715795",
+"places": 8,
+"expected": "-9.77318572"
+},
+{
+"value": "7.51656",
+"places": 0,
+"expected": "8"
+},
+{
+"value": "7.51656",
+"places": 2,
+"expected": "7.52"
+},
+{
+"value": "7.51656",
+"places": 4,
+"expected": "7.5166"
+},
+{
+"value": "7.51656",
+"places": 8,
+"expected": "7.51656"
+},
+{
+"value": "3.780",
+"places": 0,
+"expected": "4"
+},
+{
+"value": "3.780",
+"places": 2,
+"expected": "3.78"
+},
+{
+"value": "3.780",
+"places": 4,
+"expected": "3.78"
+},
+{
+"value": "3.780",
+"places": 8,
+"expected": "3.78"
+},
+{
+"value": "8.4",
+"places": 0,
+"expected": "8"
+},
+{
+"value": "8.4",
+"places": 2,
+"expected": "8.4"
+},
+{
+"value": "8.4",
+"places": 4,
+"expected": "8.4"
+},
+{
+"value": "8.4",
+"places": 8,
+"expected": "8.4"
+},
+{
+"value": "4.92918702569",
+"places": 0,
+"expected": "5"
+},
+{
+"value": "4.92918702569",
+"places": 2,
+"expected": "4.93"
+},
+{
+"value": "4.92918702569",
+"places": 4,
+"expected": "4.9292"
+},
+{
+"value": "4.92918702569",
+"places": 8,
+"expected": "4.92918703"
+},
+{
+"value": "90639878507.5",
+"places": 0,
+"expected": "90639878508"
+},
+{
+"value": "90639878507.5",
+"places": 2,
+"expected": "90639878507.5"
+},
+{
+"value": "90639878507.5",
+"places": 4,
+"expected": "90639878507.5"
+},
+{
+"value": "90639878507.5",
+"places": 8,
+"expected": "90639878507.5"
+},
+{
+"value": "-9103764682.225616",
+"places": 0,
+"expected": "-9103764682"
+},
+{
+"value": "-9103764682.225616",
+"places": 2,
+"expected": "-9103764682.23"
+},
+{
+"value": "-9103764682.225616",
+"places": 4,
+"expected": "-9103764682.2256"
+},
+{
+"value": "-9103764682.225616",
+"places": 8,
+"expected": "-9103764682.225616"
+},
+{
+"value": "440136.1720972",
+"places": 0,
+"expected": "440136"
+},
+{
+"value": "440136.1720972",
+"places": 2,
+"expected": "440136.17"
+},
+{
+"value": "440136.1720972",
+"places": 4,
+"expected": "440136.1721"
+},
+{
+"value": "440136.1720972",
+"places": 8,
+"expected": "440136.1720972"
+},
+{
+"value": "435808.8126",
+"places": 0,
+"expected": "435809"
+},
+{
+"value": "435808.8126",
+"places": 2,
+"expected": "435808.81"
+},
+{
+"value": "435808.8126",
+"places": 4,
+"expected": "435808.8126"
+},
+{
+"value": "435808.8126",
+"places": 8,
+"expected": "435808.8126"
+},
+{
+"value": "2.4094905737445",
+"places": 0,
+"expected": "2"
+},
+{
+"value": "2.4094905737445",
+"places": 2,
+"expected": "2.41"
+},
+{
+"value": "2.4094905737445",
+"places": 4,
+"expected": "2.4095"
+},
+{
+"value": "2.4094905737445",
+"places": 8,
+"expected": "2.40949057"
+},
+{
+"value": "-5",
+"places": 0,
+"expected": "-5"
+},
+{
+"value": "-5",
+"places": 2,
+"expected": "-5"
+},
+{
+"value": "-5",
+"places": 4,
+"expected": "-5"
+},
+{
+"value": "-5",
+"places": 8,
+"expected": "-5"
+},
+{
+"value": "-240652.10829819968",
+"places": 0,
+"expected": "-240652"
+},
+{
+"value": "-240652.10829819968",
+"places": 2,
+"expected": "-240652.11"
+},
+{
+"value": "-240652.10829819968",
+"places": 4,
+"expected": "-240652.1083"
+},
+{
+"value": "-240652.10829819968",
+"places": 8,
+"expected": "-240652.1082982"
+},
+{
+"value": "0.1040",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.1040",
+"places": 2,
+"expected": "0.1"
+},
+{
+"value": "0.1040",
+"places": 4,
+"expected": "0.104"
+},
+{
+"value": "0.1040",
+"places": 8,
+"expected": "0.104"
+},
+{
+"value": "68125969430.029825",
+"places": 0,
+"expected": "68125969430"
+},
+{
+"value": "68125969430.029825",
+"places": 2,
+"expected": "68125969430.03"
+},
+{
+"value": "68125969430.029825",
+"places": 4,
+"expected": "68125969430.0298"
+},
+{
+"value": "68125969430.029825",
+"places": 8,
+"expected": "68125969430.029825"
+},
+{
+"value": "5.00409237",
+"places": 0,
+"expected": "5"
+},
+{
+"value": "5.00409237",
+"places": 2,
+"expected": "5"
+},
+{
+"value": "5.00409237",
+"places": 4,
+"expected": "5.0041"
+},
+{
+"value": "5.00409237",
+"places": 8,
+"expected": "5.00409237"
+},
+{
+"value": "-0.6755893",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.6755893",
+"places": 2,
+"expected": "-0.68"
+},
+{
+"value": "-0.6755893",
+"places": 4,
+"expected": "-0.6756"
+},
+{
+"value": "-0.6755893",
+"places": 8,
+"expected": "-0.6755893"
+},
+{
+"value": "3.84",
+"places": 0,
+"expected": "4"
+},
+{
+"value": "3.84",
+"places": 2,
+"expected": "3.84"
+},
+{
+"value": "3.84",
+"places": 4,
+"expected": "3.84"
+},
+{
+"value": "3.84",
+"places": 8,
+"expected": "3.84"
+},
+{
+"value": "0",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 2,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 4,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 8,
+"expected": "0"
+},
+{
+"value": "4",
+"places": 0,
+"expected": "4"
+},
+{
+"value": "4",
+"places": 2,
+"expected": "4"
+},
+{
+"value": "4",
+"places": 4,
+"expected": "4"
+},
+{
+"value": "4",
+"places": 8,
+"expected": "4"
+},
+{
+"value": "-57698650484.0625738",
+"places": 0,
+"expected": "-57698650484"
+},
+{
+"value": "-57698650484.0625738",
+"places": 2,
+"expected": "-57698650484.06"
+},
+{
+"value": "-57698650484.0625738",
+"places": 4,
+"expected": "-57698650484.0626"
+},
+{
+"value": "-57698650484.0625738",
+"places": 8,
+"expected": "-57698650484.0625738"
+},
+{
+"value": "0.71490723871225",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.71490723871225",
+"places": 2,
+"expected": "0.71"
+},
+{
+"value": "0.71490723871225",
+"places": 4,
+"expected": "0.7149"
+},
+{
+"value": "0.71490723871225",
+"places": 8,
+"expected": "0.71490724"
+},
+{
+"value": "0.19841346216160",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.19841346216160",
+"places": 2,
+"expected": "0.2"
+},
+{
+"value": "0.19841346216160",
+"places": 4,
+"expected": "0.1984"
+},
+{
+"value": "0.19841346216160",
+"places": 8,
+"expected": "0.19841346"
+},
+{
+"value": "0.5",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.5",
+"places": 2,
+"expected": "0.5"
+},
+{
+"value": "0.5",
+"places": 4,
+"expected": "0.5"
+},
+{
+"value": "0.5",
+"places": 8,
+"expected": "0.5"
+},
+{
+"value": "0.3359455",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.3359455",
+"places": 2,
+"expected": "0.34"
+},
+{
+"value": "0.3359455",
+"places": 4,
+"expected": "0.3359"
+},
+{
+"value": "0.3359455",
+"places": 8,
+"expected": "0.3359455"
+},
+{
+"value": "-5.571932912867",
+"places": 0,
+"expected": "-6"
+},
+{
+"value": "-5.571932912867",
+"places": 2,
+"expected": "-5.57"
+},
+{
+"value": "-5.571932912867",
+"places": 4,
+"expected": "-5.5719"
+},
+{
+"value": "-5.571932912867",
+"places": 8,
+"expected": "-5.57193291"
+},
+{
+"value": "6.4196786",
+"places": 0,
+"expected": "6"
+},
+{
+"value": "6.4196786",
+"places": 2,
+"expected": "6.42"
+},
+{
+"value": "6.4196786",
+"places": 4,
+"expected": "6.4197"
+},
+{
+"value": "6.4196786",
+"places": 8,
+"expected": "6.4196786"
+},
+{
+"value": "9.84926712745",
+"places": 0,
+"expected": "10"
+},
+{
+"value": "9.84926712745",
+"places": 2,
+"expected": "9.85"
+},
+{
+"value": "9.84926712745",
+"places": 4,
+"expected": "9.8493"
+},
+{
+"value": "9.84926712745",
+"places": 8,
+"expected": "9.84926713"
+},
+{
+"value": "0.2877109",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.2877109",
+"places": 2,
+"expected": "0.29"
+},
+{
+"value": "0.2877109",
+"places": 4,
+"expected": "0.2877"
+},
+{
+"value": "0.2877109",
+"places": 8,
+"expected": "0.2877109"
+},
+{
+"value": "9.425322",
+"places": 0,
+"expected": "9"
+},
+{
+"value": "9.425322",
+"places": 2,
+"expected": "9.43"
+},
+{
+"value": "9.425322",
+"places": 4,
+"expected": "9.4253"
+},
+{
+"value": "9.425322",
+"places": 8,
+"expected": "9.425322"
+},
+{
+"value": "-0.2",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.2",
+"places": 2,
+"expected": "-0.2"
+},
+{
+"value": "-0.2",
+"places": 4,
+"expected": "-0.2"
+},
+{
+"value": "-0.2",
+"places": 8,
+"expected": "-0.2"
+},
+{
+"value": "0.299510015157",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.299510015157",
+"places": 2,
+"expected": "0.3"
+},
+{
+"value": "0.299510015157",
+"places": 4,
+"expected": "0.2995"
+},
+{
+"value": "0.299510015157",
+"places": 8,
+"expected": "0.29951002"
+},
+{
+"value": "4.98",
+"places": 0,
+"expected": "5"
+},
+{
+"value": "4.98",
+"places": 2,
+"expected": "4.98"
+},
+{
+"value": "4.98",
+"places": 4,
+"expected": "4.98"
+},
+{
+"value": "4.98",
+"places": 8,
+"expected": "4.98"
+},
+{
+"value": "44106830312.8860831951192",
+"places": 0,
+"expected": "44106830313"
+},
+{
+"value": "44106830312.8860831951192",
+"places": 2,
+"expected": "44106830312.89"
+},
+{
+"value": "44106830312.8860831951192",
+"places": 4,
+"expected": "44106830312.8861"
+},
+{
+"value": "44106830312.8860831951192",
+"places": 8,
+"expected": "44106830312.8860832"
+},
+{
+"value": "2.15",
+"places": 0,
+"expected": "2"
+},
+{
+"value": "2.15",
+"places": 2,
+"expected": "2.15"
+},
+{
+"value": "2.15",
+"places": 4,
+"expected": "2.15"
+},
+{
+"value": "2.15",
+"places": 8,
+"expected": "2.15"
+},
+{
+"value": "-4.60180",
+"places": 0,
+"expected": "-5"
+},
+{
+"value": "-4.60180",
+"places": 2,
+"expected": "-4.6"
+},
+{
+"value": "-4.60180",
+"places": 4,
+"expected": "-4.6018"
+},
+{
+"value": "-4.60180",
+"places": 8,
+"expected": "-4.6018"
+},
+{
+"value": "787360.51125",
+"places": 0,
+"expected": "787361"
+},
+{
+"value": "787360.51125",
+"places": 2,
+"expected": "787360.51"
+},
+{
+"value": "787360.51125",
+"places": 4,
+"expected": "787360.5112"
+},
+{
+"value": "787360.51125",
+"places": 8,
+"expected": "787360.51125"
+},
+{
+"value": "80746006260.1270519494735",
+"places": 0,
+"expected": "80746006260"
+},
+{
+"value": "80746006260.1270519494735",
+"places": 2,
+"expected": "80746006260.13"
+},
+{
+"value": "80746006260.1270519494735",
+"places": 4,
+"expected": "80746006260.1271"
+},
+{
+"value": "80746006260.1270519494735",
+"places": 8,
+"expected": "80746006260.12705195"
+},
+{
+"value": "-604397.354635805",
+"places": 0,
+"expected": "-604397"
+},
+{
+"value": "-604397.354635805",
+"places": 2,
+"expected": "-604397.35"
+},
+{
+"value": "-604397.354635805",
+"places": 4,
+"expected": "-604397.3546"
+},
+{
+"value": "-604397.354635805",
+"places": 8,
+"expected": "-604397.3546358"
+},
+{
+"value": "-571267.65",
+"places": 0,
+"expected": "-571268"
+},
+{
+"value": "-571267.65",
+"places": 2,
+"expected": "-571267.65"
+},
+{
+"value": "-571267.65",
+"places": 4,
+"expected": "-571267.65"
+},
+{
+"value": "-571267.65",
+"places": 8,
+"expected": "-571267.65"
+},
+{
+"value": "38327169707.41323538654",
+"places": 0,
+"expected": "38327169707"
+},
+{
+"value": "38327169707.41323538654",
+"places": 2,
+"expected": "38327169707.41"
+},
+{
+"value": "38327169707.41323538654",
+"places": 4,
+"expected": "38327169707.4132"
+},
+{
+"value": "38327169707.41323538654",
+"places": 8,
+"expected": "38327169707.41323539"
+},
+{
+"value": "-394665.772310434",
+"places": 0,
+"expected": "-394666"
+},
+{
+"value": "-394665.772310434",
+"places": 2,
+"expected": "-394665.77"
+},
+{
+"value": "-394665.772310434",
+"places": 4,
+"expected": "-394665.7723"
+},
+{
+"value": "-394665.772310434",
+"places": 8,
+"expected": "-394665.77231043"
+},
+{
+"value": "-0.13460",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.13460",
+"places": 2,
+"expected": "-0.13"
+},
+{
+"value": "-0.13460",
+"places": 4,
+"expected": "-0.1346"
+},
+{
+"value": "-0.13460",
+"places": 8,
+"expected": "-0.1346"
+},
+{
+"value": "4",
+"places": 0,
+"expected": "4"
+},
+{
+"value": "4",
+"places": 2,
+"expected": "4"
+},
+{
+"value": "4",
+"places": 4,
+"expected": "4"
+},
+{
+"value": "4",
+"places": 8,
+"expected": "4"
+},
+{
+"value": "0.55",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.55",
+"places": 2,
+"expected": "0.55"
+},
+{
+"value": "0.55",
+"places": 4,
+"expected": "0.55"
+},
+{
+"value": "0.55",
+"places": 8,
+"expected": "0.55"
+},
+{
+"value": "-0.797082839955",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.797082839955",
+"places": 2,
+"expected": "-0.8"
+},
+{
+"value": "-0.797082839955",
+"places": 4,
+"expected": "-0.7971"
+},
+{
+"value": "-0.797082839955",
+"places": 8,
+"expected": "-0.79708284"
+},
+{
+"value": "-0.915551122",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.915551122",
+"places": 2,
+"expected": "-0.92"
+},
+{
+"value": "-0.915551122",
+"places": 4,
+"expected": "-0.9156"
+},
+{
+"value": "-0.915551122",
+"places": 8,
+"expected": "-0.91555112"
+},
+{
+"value": "542554.62662062140385",
+"places": 0,
+"expected": "542555"
+},
+{
+"value": "542554.62662062140385",
+"places": 2,
+"expected": "542554.63"
+},
+{
+"value": "542554.62662062140385",
+"places": 4,
+"expected": "542554.6266"
+},
+{
+"value": "542554.62662062140385",
+"places": 8,
+"expected": "542554.62662062"
+},
+{
+"value": "456944.5398",
+"places": 0,
+"expected": "456945"
+},
+{
+"value": "456944.5398",
+"places": 2,
+"expected": "456944.54"
+},
+{
+"value": "456944.5398",
+"places": 4,
+"expected": "456944.5398"
+},
+{
+"value": "456944.5398",
+"places": 8,
+"expected": "456944.5398"
+},
+{
+"value": "-1414127961.4929050642",
+"places": 0,
+"expected": "-1414127961"
+},
+{
+"value": "-1414127961.4929050642",
+"places": 2,
+"expected": "-1414127961.49"
+},
+{
+"value": "-1414127961.4929050642",
+"places": 4,
+"expected": "-1414127961.4929"
+},
+{
+"value": "-1414127961.4929050642",
+"places": 8,
+"expected": "-1414127961.49290506"
+},
+{
+"value": "28400474785.5",
+"places": 0,
+"expected": "28400474786"
+},
+{
+"value": "28400474785.5",
+"places": 2,
+"expected": "28400474785.5"
+},
+{
+"value": "28400474785.5",
+"places": 4,
+"expected": "28400474785.5"
+},
+{
+"value": "28400474785.5",
+"places": 8,
+"expected": "28400474785.5"
+},
+{
+"value": "14763204424.81163616",
+"places": 0,
+"expected": "14763204425"
+},
+{
+"value": "14763204424.81163616",
+"places": 2,
+"expected": "14763204424.81"
+},
+{
+"value": "14763204424.81163616",
+"places": 4,
+"expected": "14763204424.8116"
+},
+{
+"value": "14763204424.81163616",
+"places": 8,
+"expected": "14763204424.81163616"
+},
+{
+"value": "7.70",
+"places": 0,
+"expected": "8"
+},
+{
+"value": "7.70",
+"places": 2,
+"expected": "7.7"
+},
+{
+"value": "7.70",
+"places": 4,
+"expected": "7.7"
+},
+{
+"value": "7.70",
+"places": 8,
+"expected": "7.7"
+},
+{
+"value": "-699846",
+"places": 0,
+"expected": "-699846"
+},
+{
+"value": "-699846",
+"places": 2,
+"expected": "-699846"
+},
+{
+"value": "-699846",
+"places": 4,
+"expected": "-699846"
+},
+{
+"value": "-699846",
+"places": 8,
+"expected": "-699846"
+},
+{
+"value": "25339934511.35",
+"places": 0,
+"expected": "25339934511"
+},
+{
+"value": "25339934511.35",
+"places": 2,
+"expected": "25339934511.35"
+},
+{
+"value": "25339934511.35",
+"places": 4,
+"expected": "25339934511.35"
+},
+{
+"value": "25339934511.35",
+"places": 8,
+"expected": "25339934511.35"
+},
+{
+"value": "0.38748505120",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.38748505120",
+"places": 2,
+"expected": "0.39"
+},
+{
+"value": "0.38748505120",
+"places": 4,
+"expected": "0.3875"
+},
+{
+"value": "0.38748505120",
+"places": 8,
+"expected": "0.38748505"
+},
+{
+"value": "936508.6",
+"places": 0,
+"expected": "936509"
+},
+{
+"value": "936508.6",
+"places": 2,
+"expected": "936508.6"
+},
+{
+"value": "936508.6",
+"places": 4,
+"expected": "936508.6"
+},
+{
+"value": "936508.6",
+"places": 8,
+"expected": "936508.6"
+},
+{
+"value": "0.458826",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.458826",
+"places": 2,
+"expected": "0.46"
+},
+{
+"value": "0.458826",
+"places": 4,
+"expected": "0.4588"
+},
+{
+"value": "0.458826",
+"places": 8,
+"expected": "0.458826"
+},
+{
+"value": "0.0434384288",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.0434384288",
+"places": 2,
+"expected": "0.04"
+},
+{
+"value": "0.0434384288",
+"places": 4,
+"expected": "0.0434"
+},
+{
+"value": "0.0434384288",
+"places": 8,
+"expected": "0.04343843"
+},
+{
+"value": "2.90785",
+"places": 0,
+"expected": "3"
+},
+{
+"value": "2.90785",
+"places": 2,
+"expected": "2.91"
+},
+{
+"value": "2.90785",
+"places": 4,
+"expected": "2.9078"
+},
+{
+"value": "2.90785",
+"places": 8,
+"expected": "2.90785"
+},
+{
+"value": "4.723951562",
+"places": 0,
+"expected": "5"
+},
+{
+"value": "4.723951562",
+"places": 2,
+"expected": "4.72"
+},
+{
+"value": "4.723951562",
+"places": 4,
+"expected": "4.724"
+},
+{
+"value": "4.723951562",
+"places": 8,
+"expected": "4.72395156"
+},
+{
+"value": "84617649822",
+"places": 0,
+"expected": "84617649822"
+},
+{
+"value": "84617649822",
+"places": 2,
+"expected": "84617649822"
+},
+{
+"value": "84617649822",
+"places": 4,
+"expected": "84617649822"
+},
+{
+"value": "84617649822",
+"places": 8,
+"expected": "84617649822"
+},
+{
+"value": "4.178865638",
+"places": 0,
+"expected": "4"
+},
+{
+"value": "4.178865638",
+"places": 2,
+"expected": "4.18"
+},
+{
+"value": "4.178865638",
+"places": 4,
+"expected": "4.1789"
+},
+{
+"value": "4.178865638",
+"places": 8,
+"expected": "4.17886564"
+},
+{
+"value": "-160247.3223",
+"places": 0,
+"expected": "-160247"
+},
+{
+"value": "-160247.3223",
+"places": 2,
+"expected": "-160247.32"
+},
+{
+"value": "-160247.3223",
+"places": 4,
+"expected": "-160247.3223"
+},
+{
+"value": "-160247.3223",
+"places": 8,
+"expected": "-160247.3223"
+},
+{
+"value": "-4.17635296475",
+"places": 0,
+"expected": "-4"
+},
+{
+"value": "-4.17635296475",
+"places": 2,
+"expected": "-4.18"
+},
+{
+"value": "-4.17635296475",
+"places": 4,
+"expected": "-4.1764"
+},
+{
+"value": "-4.17635296475",
+"places": 8,
+"expected": "-4.17635296"
+},
+{
+"value": "-8.9",
+"places": 0,
+"expected": "-9"
+},
+{
+"value": "-8.9",
+"places": 2,
+"expected": "-8.9"
+},
+{
+"value": "-8.9",
+"places": 4,
+"expected": "-8.9"
+},
+{
+"value": "-8.9",
+"places": 8,
+"expected": "-8.9"
+},
+{
+"value": "95242878845.529",
+"places": 0,
+"expected": "95242878846"
+},
+{
+"value": "95242878845.529",
+"places": 2,
+"expected": "95242878845.53"
+},
+{
+"value": "95242878845.529",
+"places": 4,
+"expected": "95242878845.529"
+},
+{
+"value": "95242878845.529",
+"places": 8,
+"expected": "95242878845.529"
+},
+{
+"value": "304498.452457575",
+"places": 0,
+"expected": "304498"
+},
+{
+"value": "304498.452457575",
+"places": 2,
+"expected": "304498.45"
+},
+{
+"value": "304498.452457575",
+"places": 4,
+"expected": "304498.4525"
+},
+{
+"value": "304498.452457575",
+"places": 8,
+"expected": "304498.45245758"
+},
+{
+"value": "-2.7844439",
+"places": 0,
+"expected": "-3"
+},
+{
+"value": "-2.7844439",
+"places": 2,
+"expected": "-2.78"
+},
+{
+"value": "-2.7844439",
+"places": 4,
+"expected": "-2.7844"
+},
+{
+"value": "-2.7844439",
+"places": 8,
+"expected": "-2.7844439"
+},
+{
+"value": "0.136938714255",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.136938714255",
+"places": 2,
+"expected": "0.14"
+},
+{
+"value": "0.136938714255",
+"places": 4,
+"expected": "0.1369"
+},
+{
+"value": "0.136938714255",
+"places": 8,
+"expected": "0.13693871"
+},
+{
+"value": "0.8",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.8",
+"places": 2,
+"expected": "0.8"
+},
+{
+"value": "0.8",
+"places": 4,
+"expected": "0.8"
+},
+{
+"value": "0.8",
+"places": 8,
+"expected": "0.8"
+},
+{
+"value": "-58014671823.8253627669233",
+"places": 0,
+"expected": "-58014671824"
+},
+{
+"value": "-58014671823.8253627669233",
+"places": 2,
+"expected": "-58014671823.83"
+},
+{
+"value": "-58014671823.8253627669233",
+"places": 4,
+"expected": "-58014671823.8254"
+},
+{
+"value": "-58014671823.8253627669233",
+"places": 8,
+"expected": "-58014671823.82536277"
+},
+{
+"value": "0.5",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.5",
+"places": 2,
+"expected": "0.5"
+},
+{
+"value": "0.5",
+"places": 4,
+"expected": "0.5"
+},
+{
+"value": "0.5",
+"places": 8,
+"expected": "0.5"
+},
+{
+"value": "699377.082262",
+"places": 0,
+"expected": "699377"
+},
+{
+"value": "699377.082262",
+"places": 2,
+"expected": "699377.08"
+},
+{
+"value": "699377.082262",
+"places": 4,
+"expected": "699377.0823"
+},
+{
+"value": "699377.082262",
+"places": 8,
+"expected": "699377.082262"
+},
+{
+"value": "0",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 2,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 4,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 8,
+"expected": "0"
+},
+{
+"value": "0.69423",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.69423",
+"places": 2,
+"expected": "0.69"
+},
+{
+"value": "0.69423",
+"places": 4,
+"expected": "0.6942"
+},
+{
+"value": "0.69423",
+"places": 8,
+"expected": "0.69423"
+},
+{
+"value": "0.64",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.64",
+"places": 2,
+"expected": "0.64"
+},
+{
+"value": "0.64",
+"places": 4,
+"expected": "0.64"
+},
+{
+"value": "0.64",
+"places": 8,
+"expected": "0.64"
+},
+{
+"value": "2.7",
+"places": 0,
+"expected": "3"
+},
+{
+"value": "2.7",
+"places": 2,
+"expected": "2.7"
+},
+{
+"value": "2.7",
+"places": 4,
+"expected": "2.7"
+},
+{
+"value": "2.7",
+"places": 8,
+"expected": "2.7"
+},
+{
+"value": "213631.865531071",
+"places": 0,
+"expected": "213632"
+},
+{
+"value": "213631.865531071",
+"places": 2,
+"expected": "213631.87"
+},
+{
+"value": "213631.865531071",
+"places": 4,
+"expected": "213631.8655"
+},
+{
+"value": "213631.865531071",
+"places": 8,
+"expected": "213631.86553107"
+},
+{
+"value": "0.53313865",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.53313865",
+"places": 2,
+"expected": "0.53"
+},
+{
+"value": "0.53313865",
+"places": 4,
+"expected": "0.5331"
+},
+{
+"value": "0.53313865",
+"places": 8,
+"expected": "0.53313865"
+},
+{
+"value": "96713816008.42778808974185",
+"places": 0,
+"expected": "96713816008"
+},
+{
+"value": "96713816008.42778808974185",
+"places": 2,
+"expected": "96713816008.43"
+},
+{
+"value": "96713816008.42778808974185",
+"places": 4,
+"expected": "96713816008.4278"
+},
+{
+"value": "96713816008.42778808974185",
+"places": 8,
+"expected": "96713816008.42778809"
+},
+{
+"value": "7.50",
+"places": 0,
+"expected": "8"
+},
+{
+"value": "7.50",
+"places": 2,
+"expected": "7.5"
+},
+{
+"value": "7.50",
+"places": 4,
+"expected": "7.5"
+},
+{
+"value": "7.50",
+"places": 8,
+"expected": "7.5"
+},
+{
+"value": "2.39057",
+"places": 0,
+"expected": "2"
+},
+{
+"value": "2.39057",
+"places": 2,
+"expected": "2.39"
+},
+{
+"value": "2.39057",
+"places": 4,
+"expected": "2.3906"
+},
+{
+"value": "2.39057",
+"places": 8,
+"expected": "2.39057"
+},
+{
+"value": "-21046303057.3637006",
+"places": 0,
+"expected": "-21046303057"
+},
+{
+"value": "-21046303057.3637006",
+"places": 2,
+"expected": "-21046303057.36"
+},
+{
+"value": "-21046303057.3637006",
+"places": 4,
+"expected": "-21046303057.3637"
+},
+{
+"value": "-21046303057.3637006",
+"places": 8,
+"expected": "-21046303057.3637006"
+},
+{
+"value": "-0.268",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.268",
+"places": 2,
+"expected": "-0.27"
+},
+{
+"value": "-0.268",
+"places": 4,
+"expected": "-0.268"
+},
+{
+"value": "-0.268",
+"places": 8,
+"expected": "-0.268"
+},
+{
+"value": "-9.41057498545",
+"places": 0,
+"expected": "-9"
+},
+{
+"value": "-9.41057498545",
+"places": 2,
+"expected": "-9.41"
+},
+{
+"value": "-9.41057498545",
+"places": 4,
+"expected": "-9.4106"
+},
+{
+"value": "-9.41057498545",
+"places": 8,
+"expected": "-9.41057499"
+},
+{
+"value": "-0.6647356374405",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.6647356374405",
+"places": 2,
+"expected": "-0.66"
+},
+{
+"value": "-0.6647356374405",
+"places": 4,
+"expected": "-0.6647"
+},
+{
+"value": "-0.6647356374405",
+"places": 8,
+"expected": "-0.66473564"
+},
+{
+"value": "0.20",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.20",
+"places": 2,
+"expected": "0.2"
+},
+{
+"value": "0.20",
+"places": 4,
+"expected": "0.2"
+},
+{
+"value": "0.20",
+"places": 8,
+"expected": "0.2"
+},
+{
+"value": "406003.1",
+"places": 0,
+"expected": "406003"
+},
+{
+"value": "406003.1",
+"places": 2,
+"expected": "406003.1"
+},
+{
+"value": "406003.1",
+"places": 4,
+"expected": "406003.1"
+},
+{
+"value": "406003.1",
+"places": 8,
+"expected": "406003.1"
+},
+{
+"value": "-12876360296.84603842",
+"places": 0,
+"expected": "-12876360297"
+},
+{
+"value": "-12876360296.84603842",
+"places": 2,
+"expected": "-12876360296.85"
+},
+{
+"value": "-12876360296.84603842",
+"places": 4,
+"expected": "-12876360296.846"
+},
+{
+"value": "-12876360296.84603842",
+"places": 8,
+"expected": "-12876360296.84603842"
+},
+{
+"value": "89410082815.21",
+"places": 0,
+"expected": "89410082815"
+},
+{
+"value": "89410082815.21",
+"places": 2,
+"expected": "89410082815.21"
+},
+{
+"value": "89410082815.21",
+"places": 4,
+"expected": "89410082815.21"
+},
+{
+"value": "89410082815.21",
+"places": 8,
+"expected": "89410082815.21"
+},
+{
+"value": "0.3466256916619",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.3466256916619",
+"places": 2,
+"expected": "0.35"
+},
+{
+"value": "0.3466256916619",
+"places": 4,
+"expected": "0.3466"
+},
+{
+"value": "0.3466256916619",
+"places": 8,
+"expected": "0.34662569"
+},
+{
+"value": "0",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 2,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 4,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 8,
+"expected": "0"
+},
+{
+"value": "-463943.85",
+"places": 0,
+"expected": "-463944"
+},
+{
+"value": "-463943.85",
+"places": 2,
+"expected": "-463943.85"
+},
+{
+"value": "-463943.85",
+"places": 4,
+"expected": "-463943.85"
+},
+{
+"value": "-463943.85",
+"places": 8,
+"expected": "-463943.85"
+},
+{
+"value": "9.493",
+"places": 0,
+"expected": "9"
+},
+{
+"value": "9.493",
+"places": 2,
+"expected": "9.49"
+},
+{
+"value": "9.493",
+"places": 4,
+"expected": "9.493"
+},
+{
+"value": "9.493",
+"places": 8,
+"expected": "9.493"
+},
+{
+"value": "98874718850.2480",
+"places": 0,
+"expected": "98874718850"
+},
+{
+"value": "98874718850.2480",
+"places": 2,
+"expected": "98874718850.25"
+},
+{
+"value": "98874718850.2480",
+"places": 4,
+"expected": "98874718850.248"
+},
+{
+"value": "98874718850.2480",
+"places": 8,
+"expected": "98874718850.248"
+},
+{
+"value": "767939.8855069224",
+"places": 0,
+"expected": "767940"
+},
+{
+"value": "767939.8855069224",
+"places": 2,
+"expected": "767939.89"
+},
+{
+"value": "767939.8855069224",
+"places": 4,
+"expected": "767939.8855"
+},
+{
+"value": "767939.8855069224",
+"places": 8,
+"expected": "767939.88550692"
+},
+{
+"value": "9.5",
+"places": 0,
+"expected": "10"
+},
+{
+"value": "9.5",
+"places": 2,
+"expected": "9.5"
+},
+{
+"value": "9.5",
+"places": 4,
+"expected": "9.5"
+},
+{
+"value": "9.5",
+"places": 8,
+"expected": "9.5"
+},
+{
+"value": "0.352625",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.352625",
+"places": 2,
+"expected": "0.35"
+},
+{
+"value": "0.352625",
+"places": 4,
+"expected": "0.3526"
+},
+{
+"value": "0.352625",
+"places": 8,
+"expected": "0.352625"
+},
+{
+"value": "9478408040.6147595",
+"places": 0,
+"expected": "9478408041"
+},
+{
+"value": "9478408040.6147595",
+"places": 2,
+"expected": "9478408040.61"
+},
+{
+"value": "9478408040.6147595",
+"places": 4,
+"expected": "9478408040.6148"
+},
+{
+"value": "9478408040.6147595",
+"places": 8,
+"expected": "9478408040.6147595"
+},
+{
+"value": "0.11",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.11",
+"places": 2,
+"expected": "0.11"
+},
+{
+"value": "0.11",
+"places": 4,
+"expected": "0.11"
+},
+{
+"value": "0.11",
+"places": 8,
+"expected": "0.11"
+},
+{
+"value": "-0.4733801605",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.4733801605",
+"places": 2,
+"expected": "-0.47"
+},
+{
+"value": "-0.4733801605",
+"places": 4,
+"expected": "-0.4734"
+},
+{
+"value": "-0.4733801605",
+"places": 8,
+"expected": "-0.47338016"
+},
+{
+"value": "5.6175191760",
+"places": 0,
+"expected": "6"
+},
+{
+"value": "5.6175191760",
+"places": 2,
+"expected": "5.62"
+},
+{
+"value": "5.6175191760",
+"places": 4,
+"expected": "5.6175"
+},
+{
+"value": "5.6175191760",
+"places": 8,
+"expected": "5.61751918"
+},
+{
+"value": "-712838089.4872042",
+"places": 0,
+"expected": "-712838089"
+},
+{
+"value": "-712838089.4872042",
+"places": 2,
+"expected": "-712838089.49"
+},
+{
+"value": "-712838089.4872042",
+"places": 4,
+"expected": "-712838089.4872"
+},
+{
+"value": "-712838089.4872042",
+"places": 8,
+"expected": "-712838089.4872042"
+},
+{
+"value": "998772.72065",
+"places": 0,
+"expected": "998773"
+},
+{
+"value": "998772.72065",
+"places": 2,
+"expected": "998772.72"
+},
+{
+"value": "998772.72065",
+"places": 4,
+"expected": "998772.7206"
+},
+{
+"value": "998772.72065",
+"places": 8,
+"expected": "998772.72065"
+},
+{
+"value": "5.167873",
+"places": 0,
+"expected": "5"
+},
+{
+"value": "5.167873",
+"places": 2,
+"expected": "5.17"
+},
+{
+"value": "5.167873",
+"places": 4,
+"expected": "5.1679"
+},
+{
+"value": "5.167873",
+"places": 8,
+"expected": "5.167873"
+},
+{
+"value": "68237582161.859395",
+"places": 0,
+"expected": "68237582162"
+},
+{
+"value": "68237582161.859395",
+"places": 2,
+"expected": "68237582161.86"
+},
+{
+"value": "68237582161.859395",
+"places": 4,
+"expected": "68237582161.8594"
+},
+{
+"value": "68237582161.859395",
+"places": 8,
+"expected": "68237582161.859395"
+},
+{
+"value": "331609.11626087",
+"places": 0,
+"expected": "331609"
+},
+{
+"value": "331609.11626087",
+"places": 2,
+"expected": "331609.12"
+},
+{
+"value": "331609.11626087",
+"places": 4,
+"expected": "331609.1163"
+},
+{
+"value": "331609.11626087",
+"places": 8,
+"expected": "331609.11626087"
+},
+{
+"value": "24797296995.56686955880887",
+"places": 0,
+"expected": "24797296996"
+},
+{
+"value": "24797296995.56686955880887",
+"places": 2,
+"expected": "24797296995.57"
+},
+{
+"value": "24797296995.56686955880887",
+"places": 4,
+"expected": "24797296995.5669"
+},
+{
+"value": "24797296995.56686955880887",
+"places": 8,
+"expected": "24797296995.56686956"
+},
+{
+"value": "0.49020874153333",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.49020874153333",
+"places": 2,
+"expected": "0.49"
+},
+{
+"value": "0.49020874153333",
+"places": 4,
+"expected": "0.4902"
+},
+{
+"value": "0.49020874153333",
+"places": 8,
+"expected": "0.49020874"
+},
+{
+"value": "68607.0448222",
+"places": 0,
+"expected": "68607"
+},
+{
+"value": "68607.0448222",
+"places": 2,
+"expected": "68607.04"
+},
+{
+"value": "68607.0448222",
+"places": 4,
+"expected": "68607.0448"
+},
+{
+"value": "68607.0448222",
+"places": 8,
+"expected": "68607.0448222"
+},
+{
+"value": "0.2929815",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.2929815",
+"places": 2,
+"expected": "0.29"
+},
+{
+"value": "0.2929815",
+"places": 4,
+"expected": "0.293"
+},
+{
+"value": "0.2929815",
+"places": 8,
+"expected": "0.2929815"
+},
+{
+"value": "2.24760085",
+"places": 0,
+"expected": "2"
+},
+{
+"value": "2.24760085",
+"places": 2,
+"expected": "2.25"
+},
+{
+"value": "2.24760085",
+"places": 4,
+"expected": "2.2476"
+},
+{
+"value": "2.24760085",
+"places": 8,
+"expected": "2.24760085"
+},
+{
+"value": "919282.43344646668386",
+"places": 0,
+"expected": "919282"
+},
+{
+"value": "919282.43344646668386",
+"places": 2,
+"expected": "919282.43"
+},
+{
+"value": "919282.43344646668386",
+"places": 4,
+"expected": "919282.4334"
+},
+{
+"value": "919282.43344646668386",
+"places": 8,
+"expected": "919282.43344647"
+},
+{
+"value": "557751.95",
+"places": 0,
+"expected": "557752"
+},
+{
+"value": "557751.95",
+"places": 2,
+"expected": "557751.95"
+},
+{
+"value": "557751.95",
+"places": 4,
+"expected": "557751.95"
+},
+{
+"value": "557751.95",
+"places": 8,
+"expected": "557751.95"
+},
+{
+"value": "0.67848",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.67848",
+"places": 2,
+"expected": "0.68"
+},
+{
+"value": "0.67848",
+"places": 4,
+"expected": "0.6785"
+},
+{
+"value": "0.67848",
+"places": 8,
+"expected": "0.67848"
+},
+{
+"value": "-0.24836466",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.24836466",
+"places": 2,
+"expected": "-0.25"
+},
+{
+"value": "-0.24836466",
+"places": 4,
+"expected": "-0.2484"
+},
+{
+"value": "-0.24836466",
+"places": 8,
+"expected": "-0.24836466"
+},
+{
+"value": "3.275706048435",
+"places": 0,
+"expected": "3"
+},
+{
+"value": "3.275706048435",
+"places": 2,
+"expected": "3.28"
+},
+{
+"value": "3.275706048435",
+"places": 4,
+"expected": "3.2757"
+},
+{
+"value": "3.275706048435",
+"places": 8,
+"expected": "3.27570605"
+},
+{
+"value": "0.48692",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.48692",
+"places": 2,
+"expected": "0.49"
+},
+{
+"value": "0.48692",
+"places": 4,
+"expected": "0.4869"
+},
+{
+"value": "0.48692",
+"places": 8,
+"expected": "0.48692"
+},
+{
+"value": "0.520",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.520",
+"places": 2,
+"expected": "0.52"
+},
+{
+"value": "0.520",
+"places": 4,
+"expected": "0.52"
+},
+{
+"value": "0.520",
+"places": 8,
+"expected": "0.52"
+},
+{
+"value": "8.128823770",
+"places": 0,
+"expected": "8"
+},
+{
+"value": "8.128823770",
+"places": 2,
+"expected": "8.13"
+},
+{
+"value": "8.128823770",
+"places": 4,
+"expected": "8.1288"
+},
+{
+"value": "8.128823770",
+"places": 8,
+"expected": "8.12882377"
+},
+{
+"value": "584345.790558716881",
+"places": 0,
+"expected": "584346"
+},
+{
+"value": "584345.790558716881",
+"places": 2,
+"expected": "584345.79"
+},
+{
+"value": "584345.790558716881",
+"places": 4,
+"expected": "584345.7906"
+},
+{
+"value": "584345.790558716881",
+"places": 8,
+"expected": "584345.79055872"
+},
+{
+"value": "74731115697.2449139124584",
+"places": 0,
+"expected": "74731115697"
+},
+{
+"value": "74731115697.2449139124584",
+"places": 2,
+"expected": "74731115697.24"
+},
+{
+"value": "74731115697.2449139124584",
+"places": 4,
+"expected": "74731115697.2449"
+},
+{
+"value": "74731115697.2449139124584",
+"places": 8,
+"expected": "74731115697.24491391"
+},
+{
+"value": "-191158.2324546",
+"places": 0,
+"expected": "-191158"
+},
+{
+"value": "-191158.2324546",
+"places": 2,
+"expected": "-191158.23"
+},
+{
+"value": "-191158.2324546",
+"places": 4,
+"expected": "-191158.2325"
+},
+{
+"value": "-191158.2324546",
+"places": 8,
+"expected": "-191158.2324546"
+},
+{
+"value": "0.044",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.044",
+"places": 2,
+"expected": "0.04"
+},
+{
+"value": "0.044",
+"places": 4,
+"expected": "0.044"
+},
+{
+"value": "0.044",
+"places": 8,
+"expected": "0.044"
+},
+{
+"value": "-0.173777564",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.173777564",
+"places": 2,
+"expected": "-0.17"
+},
+{
+"value": "-0.173777564",
+"places": 4,
+"expected": "-0.1738"
+},
+{
+"value": "-0.173777564",
+"places": 8,
+"expected": "-0.17377756"
+},
+{
+"value": "-55097052434.73",
+"places": 0,
+"expected": "-55097052435"
+},
+{
+"value": "-55097052434.73",
+"places": 2,
+"expected": "-55097052434.73"
+},
+{
+"value": "-55097052434.73",
+"places": 4,
+"expected": "-55097052434.73"
+},
+{
+"value": "-55097052434.73",
+"places": 8,
+"expected": "-55097052434.73"
+},
+{
+"value": "0.8118636876",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.8118636876",
+"places": 2,
+"expected": "0.81"
+},
+{
+"value": "0.8118636876",
+"places": 4,
+"expected": "0.8119"
+},
+{
+"value": "0.8118636876",
+"places": 8,
+"expected": "0.81186369"
+},
+{
+"value": "0",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 2,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 4,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 8,
+"expected": "0"
+},
+{
+"value": "4.802650468",
+"places": 0,
+"expected": "5"
+},
+{
+"value": "4.802650468",
+"places": 2,
+"expected": "4.8"
+},
+{
+"value": "4.802650468",
+"places": 4,
+"expected": "4.8027"
+},
+{
+"value": "4.802650468",
+"places": 8,
+"expected": "4.80265047"
+},
+{
+"value": "0.4635",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.4635",
+"places": 2,
+"expected": "0.46"
+},
+{
+"value": "0.4635",
+"places": 4,
+"expected": "0.4635"
+},
+{
+"value": "0.4635",
+"places": 8,
+"expected": "0.4635"
+},
+{
+"value": "8.62841531606863",
+"places": 0,
+"expected": "9"
+},
+{
+"value": "8.62841531606863",
+"places": 2,
+"expected": "8.63"
+},
+{
+"value": "8.62841531606863",
+"places": 4,
+"expected": "8.6284"
+},
+{
+"value": "8.62841531606863",
+"places": 8,
+"expected": "8.62841532"
+},
+{
+"value": "281143.99",
+"places": 0,
+"expected": "281144"
+},
+{
+"value": "281143.99",
+"places": 2,
+"expected": "281143.99"
+},
+{
+"value": "281143.99",
+"places": 4,
+"expected": "281143.99"
+},
+{
+"value": "281143.99",
+"places": 8,
+"expected": "281143.99"
+},
+{
+"value": "6222997341.866680",
+"places": 0,
+"expected": "6222997342"
+},
+{
+"value": "6222997341.866680",
+"places": 2,
+"expected": "6222997341.87"
+},
+{
+"value": "6222997341.866680",
+"places": 4,
+"expected": "6222997341.8667"
+},
+{
+"value": "6222997341.866680",
+"places": 8,
+"expected": "6222997341.86668"
+},
+{
+"value": "-18535875264.291980651",
+"places": 0,
+"expected": "-18535875264"
+},
+{
+"value": "-18535875264.291980651",
+"places": 2,
+"expected": "-18535875264.29"
+},
+{
+"value": "-18535875264.291980651",
+"places": 4,
+"expected": "-18535875264.292"
+},
+{
+"value": "-18535875264.291980651",
+"places": 8,
+"expected": "-18535875264.29198065"
+},
+{
+"value": "774725.646065713855",
+"places": 0,
+"expected": "774726"
+},
+{
+"value": "774725.646065713855",
+"places": 2,
+"expected": "774725.65"
+},
+{
+"value": "774725.646065713855",
+"places": 4,
+"expected": "774725.6461"
+},
+{
+"value": "774725.646065713855",
+"places": 8,
+"expected": "774725.64606571"
+},
+{
+"value": "0.3750980116859",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.3750980116859",
+"places": 2,
+"expected": "0.38"
+},
+{
+"value": "0.3750980116859",
+"places": 4,
+"expected": "0.3751"
+},
+{
+"value": "0.3750980116859",
+"places": 8,
+"expected": "0.37509801"
+},
+{
+"value": "7056210422.70871933355",
+"places": 0,
+"expected": "7056210423"
+},
+{
+"value": "7056210422.70871933355",
+"places": 2,
+"expected": "7056210422.71"
+},
+{
+"value": "7056210422.70871933355",
+"places": 4,
+"expected": "7056210422.7087"
+},
+{
+"value": "7056210422.70871933355",
+"places": 8,
+"expected": "7056210422.70871933"
+},
+{
+"value": "4537.08478673765",
+"places": 0,
+"expected": "4537"
+},
+{
+"value": "4537.08478673765",
+"places": 2,
+"expected": "4537.08"
+},
+{
+"value": "4537.08478673765",
+"places": 4,
+"expected": "4537.0848"
+},
+{
+"value": "4537.08478673765",
+"places": 8,
+"expected": "4537.08478674"
+},
+{
+"value": "-9.94804991",
+"places": 0,
+"expected": "-10"
+},
+{
+"value": "-9.94804991",
+"places": 2,
+"expected": "-9.95"
+},
+{
+"value": "-9.94804991",
+"places": 4,
+"expected": "-9.948"
+},
+{
+"value": "-9.94804991",
+"places": 8,
+"expected": "-9.94804991"
+},
+{
+"value": "0.74946834207485",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.74946834207485",
+"places": 2,
+"expected": "0.75"
+},
+{
+"value": "0.74946834207485",
+"places": 4,
+"expected": "0.7495"
+},
+{
+"value": "0.74946834207485",
+"places": 8,
+"expected": "0.74946834"
+},
+{
+"value": "363786.036",
+"places": 0,
+"expected": "363786"
+},
+{
+"value": "363786.036",
+"places": 2,
+"expected": "363786.04"
+},
+{
+"value": "363786.036",
+"places": 4,
+"expected": "363786.036"
+},
+{
+"value": "363786.036",
+"places": 8,
+"expected": "363786.036"
+},
+{
+"value": "-89402353431.49448435",
+"places": 0,
+"expected": "-89402353431"
+},
+{
+"value": "-89402353431.49448435",
+"places": 2,
+"expected": "-89402353431.49"
+},
+{
+"value": "-89402353431.49448435",
+"places": 4,
+"expected": "-89402353431.4945"
+},
+{
+"value": "-89402353431.49448435",
+"places": 8,
+"expected": "-89402353431.49448435"
+},
+{
+"value": "4038930468.999",
+"places": 0,
+"expected": "4038930469"
+},
+{
+"value": "4038930468.999",
+"places": 2,
+"expected": "4038930469"
+},
+{
+"value": "4038930468.999",
+"places": 4,
+"expected": "4038930468.999"
+},
+{
+"value": "4038930468.999",
+"places": 8,
+"expected": "4038930468.999"
+},
+{
+"value": "0.12010317901372",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.12010317901372",
+"places": 2,
+"expected": "0.12"
+},
+{
+"value": "0.12010317901372",
+"places": 4,
+"expected": "0.1201"
+},
+{
+"value": "0.12010317901372",
+"places": 8,
+"expected": "0.12010318"
+},
+{
+"value": "0.92051427",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.92051427",
+"places": 2,
+"expected": "0.92"
+},
+{
+"value": "0.92051427",
+"places": 4,
+"expected": "0.9205"
+},
+{
+"value": "0.92051427",
+"places": 8,
+"expected": "0.92051427"
+},
+{
+"value": "0.655",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.655",
+"places": 2,
+"expected": "0.66"
+},
+{
+"value": "0.655",
+"places": 4,
+"expected": "0.655"
+},
+{
+"value": "0.655",
+"places": 8,
+"expected": "0.655"
+},
+{
+"value": "363059.160",
+"places": 0,
+"expected": "363059"
+},
+{
+"value": "363059.160",
+"places": 2,
+"expected": "363059.16"
+},
+{
+"value": "363059.160",
+"places": 4,
+"expected": "363059.16"
+},
+{
+"value": "363059.160",
+"places": 8,
+"expected": "363059.16"
+},
+{
+"value": "0.582730766",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.582730766",
+"places": 2,
+"expected": "0.58"
+},
+{
+"value": "0.582730766",
+"places": 4,
+"expected": "0.5827"
+},
+{
+"value": "0.582730766",
+"places": 8,
+"expected": "0.58273077"
+},
+{
+"value": "-0.172",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.172",
+"places": 2,
+"expected": "-0.17"
+},
+{
+"value": "-0.172",
+"places": 4,
+"expected": "-0.172"
+},
+{
+"value": "-0.172",
+"places": 8,
+"expected": "-0.172"
+},
+{
+"value": "655707",
+"places": 0,
+"expected": "655707"
+},
+{
+"value": "655707",
+"places": 2,
+"expected": "655707"
+},
+{
+"value": "655707",
+"places": 4,
+"expected": "655707"
+},
+{
+"value": "655707",
+"places": 8,
+"expected": "655707"
+},
+{
+"value": "0.5",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.5",
+"places": 2,
+"expected": "0.5"
+},
+{
+"value": "0.5",
+"places": 4,
+"expected": "0.5"
+},
+{
+"value": "0.5",
+"places": 8,
+"expected": "0.5"
+},
+{
+"value": "-0.00415",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.00415",
+"places": 2,
+"expected": "0"
+},
+{
+"value": "-0.00415",
+"places": 4,
+"expected": "-0.0042"
+},
+{
+"value": "-0.00415",
+"places": 8,
+"expected": "-0.00415"
+},
+{
+"value": "161780.96570",
+"places": 0,
+"expected": "161781"
+},
+{
+"value": "161780.96570",
+"places": 2,
+"expected": "161780.97"
+},
+{
+"value": "161780.96570",
+"places": 4,
+"expected": "161780.9657"
+},
+{
+"value": "161780.96570",
+"places": 8,
+"expected": "161780.9657"
+},
+{
+"value": "-561069.762153",
+"places": 0,
+"expected": "-561070"
+},
+{
+"value": "-561069.762153",
+"places": 2,
+"expected": "-561069.76"
+},
+{
+"value": "-561069.762153",
+"places": 4,
+"expected": "-561069.7622"
+},
+{
+"value": "-561069.762153",
+"places": 8,
+"expected": "-561069.762153"
+},
+{
+"value": "-681760.945",
+"places": 0,
+"expected": "-681761"
+},
+{
+"value": "-681760.945",
+"places": 2,
+"expected": "-681760.94"
+},
+{
+"value": "-681760.945",
+"places": 4,
+"expected": "-681760.945"
+},
+{
+"value": "-681760.945",
+"places": 8,
+"expected": "-681760.945"
+},
+{
+"value": "0.7753711",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.7753711",
+"places": 2,
+"expected": "0.78"
+},
+{
+"value": "0.7753711",
+"places": 4,
+"expected": "0.7754"
+},
+{
+"value": "0.7753711",
+"places": 8,
+"expected": "0.7753711"
+},
+{
+"value": "3.5",
+"places": 0,
+"expected": "4"
+},
+{
+"value": "3.5",
+"places": 2,
+"expected": "3.5"
+},
+{
+"value": "3.5",
+"places": 4,
+"expected": "3.5"
+},
+{
+"value": "3.5",
+"places": 8,
+"expected": "3.5"
+},
+{
+"value": "5",
+"places": 0,
+"expected": "5"
+},
+{
+"value": "5",
+"places": 2,
+"expected": "5"
+},
+{
+"value": "5",
+"places": 4,
+"expected": "5"
+},
+{
+"value": "5",
+"places": 8,
+"expected": "5"
+},
+{
+"value": "-74585019388.18297372378411",
+"places": 0,
+"expected": "-74585019388"
+},
+{
+"value": "-74585019388.18297372378411",
+"places": 2,
+"expected": "-74585019388.18"
+},
+{
+"value": "-74585019388.18297372378411",
+"places": 4,
+"expected": "-74585019388.183"
+},
+{
+"value": "-74585019388.18297372378411",
+"places": 8,
+"expected": "-74585019388.18297372"
+},
+{
+"value": "-0.14097309",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.14097309",
+"places": 2,
+"expected": "-0.14"
+},
+{
+"value": "-0.14097309",
+"places": 4,
+"expected": "-0.141"
+},
+{
+"value": "-0.14097309",
+"places": 8,
+"expected": "-0.14097309"
+},
+{
+"value": "4",
+"places": 0,
+"expected": "4"
+},
+{
+"value": "4",
+"places": 2,
+"expected": "4"
+},
+{
+"value": "4",
+"places": 4,
+"expected": "4"
+},
+{
+"value": "4",
+"places": 8,
+"expected": "4"
+},
+{
+"value": "0.834914745",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.834914745",
+"places": 2,
+"expected": "0.83"
+},
+{
+"value": "0.834914745",
+"places": 4,
+"expected": "0.8349"
+},
+{
+"value": "0.834914745",
+"places": 8,
+"expected": "0.83491474"
+},
+{
+"value": "9.165811",
+"places": 0,
+"expected": "9"
+},
+{
+"value": "9.165811",
+"places": 2,
+"expected": "9.17"
+},
+{
+"value": "9.165811",
+"places": 4,
+"expected": "9.1658"
+},
+{
+"value": "9.165811",
+"places": 8,
+"expected": "9.165811"
+},
+{
+"value": "-61423279806.0334189367",
+"places": 0,
+"expected": "-61423279806"
+},
+{
+"value": "-61423279806.0334189367",
+"places": 2,
+"expected": "-61423279806.03"
+},
+{
+"value": "-61423279806.0334189367",
+"places": 4,
+"expected": "-61423279806.0334"
+},
+{
+"value": "-61423279806.0334189367",
+"places": 8,
+"expected": "-61423279806.03341894"
+},
+{
+"value": "489083.18582579760",
+"places": 0,
+"expected": "489083"
+},
+{
+"value": "489083.18582579760",
+"places": 2,
+"expected": "489083.19"
+},
+{
+"value": "489083.18582579760",
+"places": 4,
+"expected": "489083.1858"
+},
+{
+"value": "489083.18582579760",
+"places": 8,
+"expected": "489083.1858258"
+},
+{
+"value": "-3.5628",
+"places": 0,
+"expected": "-4"
+},
+{
+"value": "-3.5628",
+"places": 2,
+"expected": "-3.56"
+},
+{
+"value": "-3.5628",
+"places": 4,
+"expected": "-3.5628"
+},
+{
+"value": "-3.5628",
+"places": 8,
+"expected": "-3.5628"
+},
+{
+"value": "495175.174258887528",
+"places": 0,
+"expected": "495175"
+},
+{
+"value": "495175.174258887528",
+"places": 2,
+"expected": "495175.17"
+},
+{
+"value": "495175.174258887528",
+"places": 4,
+"expected": "495175.1743"
+},
+{
+"value": "495175.174258887528",
+"places": 8,
+"expected": "495175.17425889"
+},
+{
+"value": "-3.35895452043095",
+"places": 0,
+"expected": "-3"
+},
+{
+"value": "-3.35895452043095",
+"places": 2,
+"expected": "-3.36"
+},
+{
+"value": "-3.35895452043095",
+"places": 4,
+"expected": "-3.359"
+},
+{
+"value": "-3.35895452043095",
+"places": 8,
+"expected": "-3.35895452"
+},
+{
+"value": "694041.58502141315",
+"places": 0,
+"expected": "694042"
+},
+{
+"value": "694041.58502141315",
+"places": 2,
+"expected": "694041.59"
+},
+{
+"value": "694041.58502141315",
+"places": 4,
+"expected": "694041.585"
+},
+{
+"value": "694041.58502141315",
+"places": 8,
+"expected": "694041.58502141"
+},
+{
+"value": "0.043730945",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.043730945",
+"places": 2,
+"expected": "0.04"
+},
+{
+"value": "0.043730945",
+"places": 4,
+"expected": "0.0437"
+},
+{
+"value": "0.043730945",
+"places": 8,
+"expected": "0.04373094"
+},
+{
+"value": "4.2843291498909",
+"places": 0,
+"expected": "4"
+},
+{
+"value": "4.2843291498909",
+"places": 2,
+"expected": "4.28"
+},
+{
+"value": "4.2843291498909",
+"places": 4,
+"expected": "4.2843"
+},
+{
+"value": "4.2843291498909",
+"places": 8,
+"expected": "4.28432915"
+},
+{
+"value": "-2.763035",
+"places": 0,
+"expected": "-3"
+},
+{
+"value": "-2.763035",
+"places": 2,
+"expected": "-2.76"
+},
+{
+"value": "-2.763035",
+"places": 4,
+"expected": "-2.763"
+},
+{
+"value": "-2.763035",
+"places": 8,
+"expected": "-2.763035"
+},
+{
+"value": "7.861682477672",
+"places": 0,
+"expected": "8"
+},
+{
+"value": "7.861682477672",
+"places": 2,
+"expected": "7.86"
+},
+{
+"value": "7.861682477672",
+"places": 4,
+"expected": "7.8617"
+},
+{
+"value": "7.861682477672",
+"places": 8,
+"expected": "7.86168248"
+},
+{
+"value": "-7.069",
+"places": 0,
+"expected": "-7"
+},
+{
+"value": "-7.069",
+"places": 2,
+"expected": "-7.07"
+},
+{
+"value": "-7.069",
+"places": 4,
+"expected": "-7.069"
+},
+{
+"value": "-7.069",
+"places": 8,
+"expected": "-7.069"
+},
+{
+"value": "0.8196414289853",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.8196414289853",
+"places": 2,
+"expected": "0.82"
+},
+{
+"value": "0.8196414289853",
+"places": 4,
+"expected": "0.8196"
+},
+{
+"value": "0.8196414289853",
+"places": 8,
+"expected": "0.81964143"
+},
+{
+"value": "53875193925",
+"places": 0,
+"expected": "53875193925"
+},
+{
+"value": "53875193925",
+"places": 2,
+"expected": "53875193925"
+},
+{
+"value": "53875193925",
+"places": 4,
+"expected": "53875193925"
+},
+{
+"value": "53875193925",
+"places": 8,
+"expected": "53875193925"
+},
+{
+"value": "36387075005.2921",
+"places": 0,
+"expected": "36387075005"
+},
+{
+"value": "36387075005.2921",
+"places": 2,
+"expected": "36387075005.29"
+},
+{
+"value": "36387075005.2921",
+"places": 4,
+"expected": "36387075005.2921"
+},
+{
+"value": "36387075005.2921",
+"places": 8,
+"expected": "36387075005.2921"
+},
+{
+"value": "1.95029764",
+"places": 0,
+"expected": "2"
+},
+{
+"value": "1.95029764",
+"places": 2,
+"expected": "1.95"
+},
+{
+"value": "1.95029764",
+"places": 4,
+"expected": "1.9503"
+},
+{
+"value": "1.95029764",
+"places": 8,
+"expected": "1.95029764"
+},
+{
+"value": "245672.515185",
+"places": 0,
+"expected": "245673"
+},
+{
+"value": "245672.515185",
+"places": 2,
+"expected": "245672.52"
+},
+{
+"value": "245672.515185",
+"places": 4,
+"expected": "245672.5152"
+},
+{
+"value": "245672.515185",
+"places": 8,
+"expected": "245672.515185"
+},
+{
+"value": "-4.013046",
+"places": 0,
+"expected": "-4"
+},
+{
+"value": "-4.013046",
+"places": 2,
+"expected": "-4.01"
+},
+{
+"value": "-4.013046",
+"places": 4,
+"expected": "-4.013"
+},
+{
+"value": "-4.013046",
+"places": 8,
+"expected": "-4.013046"
+},
+{
+"value": "-51641601505.77375",
+"places": 0,
+"expected": "-51641601506"
+},
+{
+"value": "-51641601505.77375",
+"places": 2,
+"expected": "-51641601505.77"
+},
+{
+"value": "-51641601505.77375",
+"places": 4,
+"expected": "-51641601505.7738"
+},
+{
+"value": "-51641601505.77375",
+"places": 8,
+"expected": "-51641601505.77375"
+},
+{
+"value": "758.8902",
+"places": 0,
+"expected": "759"
+},
+{
+"value": "758.8902",
+"places": 2,
+"expected": "758.89"
+},
+{
+"value": "758.8902",
+"places": 4,
+"expected": "758.8902"
+},
+{
+"value": "758.8902",
+"places": 8,
+"expected": "758.8902"
+},
+{
+"value": "-52867864238.2229",
+"places": 0,
+"expected": "-52867864238"
+},
+{
+"value": "-52867864238.2229",
+"places": 2,
+"expected": "-52867864238.22"
+},
+{
+"value": "-52867864238.2229",
+"places": 4,
+"expected": "-52867864238.2229"
+},
+{
+"value": "-52867864238.2229",
+"places": 8,
+"expected": "-52867864238.2229"
+},
+{
+"value": "204622.05435244161959",
+"places": 0,
+"expected": "204622"
+},
+{
+"value": "204622.05435244161959",
+"places": 2,
+"expected": "204622.05"
+},
+{
+"value": "204622.05435244161959",
+"places": 4,
+"expected": "204622.0544"
+},
+{
+"value": "204622.05435244161959",
+"places": 8,
+"expected": "204622.05435244"
+},
+{
+"value": "359387.8650",
+"places": 0,
+"expected": "359388"
+},
+{
+"value": "359387.8650",
+"places": 2,
+"expected": "359387.86"
+},
+{
+"value": "359387.8650",
+"places": 4,
+"expected": "359387.865"
+},
+{
+"value": "359387.8650",
+"places": 8,
+"expected": "359387.865"
+},
+{
+"value": "37850314315.1370827",
+"places": 0,
+"expected": "37850314315"
+},
+{
+"value": "37850314315.1370827",
+"places": 2,
+"expected": "37850314315.14"
+},
+{
+"value": "37850314315.1370827",
+"places": 4,
+"expected": "37850314315.1371"
+},
+{
+"value": "37850314315.1370827",
+"places": 8,
+"expected": "37850314315.1370827"
+},
+{
+"value": "581049.726553043",
+"places": 0,
+"expected": "581050"
+},
+{
+"value": "581049.726553043",
+"places": 2,
+"expected": "581049.73"
+},
+{
+"value": "581049.726553043",
+"places": 4,
+"expected": "581049.7266"
+},
+{
+"value": "581049.726553043",
+"places": 8,
+"expected": "581049.72655304"
+},
+{
+"value": "-82388034602",
+"places": 0,
+"expected": "-82388034602"
+},
+{
+"value": "-82388034602",
+"places": 2,
+"expected": "-82388034602"
+},
+{
+"value": "-82388034602",
+"places": 4,
+"expected": "-82388034602"
+},
+{
+"value": "-82388034602",
+"places": 8,
+"expected": "-82388034602"
+},
+{
+"value": "4250092819.87095",
+"places": 0,
+"expected": "4250092820"
+},
+{
+"value": "4250092819.87095",
+"places": 2,
+"expected": "4250092819.87"
+},
+{
+"value": "4250092819.87095",
+"places": 4,
+"expected": "4250092819.871"
+},
+{
+"value": "4250092819.87095",
+"places": 8,
+"expected": "4250092819.87095"
+},
+{
+"value": "-0.0438502535",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.0438502535",
+"places": 2,
+"expected": "-0.04"
+},
+{
+"value": "-0.0438502535",
+"places": 4,
+"expected": "-0.0439"
+},
+{
+"value": "-0.0438502535",
+"places": 8,
+"expected": "-0.04385025"
+},
+{
+"value": "52813607878.26",
+"places": 0,
+"expected": "52813607878"
+},
+{
+"value": "52813607878.26",
+"places": 2,
+"expected": "52813607878.26"
+},
+{
+"value": "52813607878.26",
+"places": 4,
+"expected": "52813607878.26"
+},
+{
+"value": "52813607878.26",
+"places": 8,
+"expected": "52813607878.26"
+},
+{
+"value": "6.11810115",
+"places": 0,
+"expected": "6"
+},
+{
+"value": "6.11810115",
+"places": 2,
+"expected": "6.12"
+},
+{
+"value": "6.11810115",
+"places": 4,
+"expected": "6.1181"
+},
+{
+"value": "6.11810115",
+"places": 8,
+"expected": "6.11810115"
+},
+{
+"value": "0.349435259",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.349435259",
+"places": 2,
+"expected": "0.35"
+},
+{
+"value": "0.349435259",
+"places": 4,
+"expected": "0.3494"
+},
+{
+"value": "0.349435259",
+"places": 8,
+"expected": "0.34943526"
+},
+{
+"value": "87717475098.994958385",
+"places": 0,
+"expected": "87717475099"
+},
+{
+"value": "87717475098.994958385",
+"places": 2,
+"expected": "87717475098.99"
+},
+{
+"value": "87717475098.994958385",
+"places": 4,
+"expected": "87717475098.995"
+},
+{
+"value": "87717475098.994958385",
+"places": 8,
+"expected": "87717475098.99495838"
+},
+{
+"value": "-400179.43930",
+"places": 0,
+"expected": "-400179"
+},
+{
+"value": "-400179.43930",
+"places": 2,
+"expected": "-400179.44"
+},
+{
+"value": "-400179.43930",
+"places": 4,
+"expected": "-400179.4393"
+},
+{
+"value": "-400179.43930",
+"places": 8,
+"expected": "-400179.4393"
+},
+{
+"value": "85777387969.9695",
+"places": 0,
+"expected": "85777387970"
+},
+{
+"value": "85777387969.9695",
+"places": 2,
+"expected": "85777387969.97"
+},
+{
+"value": "85777387969.9695",
+"places": 4,
+"expected": "85777387969.9695"
+},
+{
+"value": "85777387969.9695",
+"places": 8,
+"expected": "85777387969.9695"
+},
+{
+"value": "-0.6338",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.6338",
+"places": 2,
+"expected": "-0.63"
+},
+{
+"value": "-0.6338",
+"places": 4,
+"expected": "-0.6338"
+},
+{
+"value": "-0.6338",
+"places": 8,
+"expected": "-0.6338"
+},
+{
+"value": "0.70",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.70",
+"places": 2,
+"expected": "0.7"
+},
+{
+"value": "0.70",
+"places": 4,
+"expected": "0.7"
+},
+{
+"value": "0.70",
+"places": 8,
+"expected": "0.7"
+},
+{
+"value": "-0.512515",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.512515",
+"places": 2,
+"expected": "-0.51"
+},
+{
+"value": "-0.512515",
+"places": 4,
+"expected": "-0.5125"
+},
+{
+"value": "-0.512515",
+"places": 8,
+"expected": "-0.512515"
+},
+{
+"value": "-0.37102415",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.37102415",
+"places": 2,
+"expected": "-0.37"
+},
+{
+"value": "-0.37102415",
+"places": 4,
+"expected": "-0.371"
+},
+{
+"value": "-0.37102415",
+"places": 8,
+"expected": "-0.37102415"
+},
+{
+"value": "572916.1856815906809",
+"places": 0,
+"expected": "572916"
+},
+{
+"value": "572916.1856815906809",
+"places": 2,
+"expected": "572916.19"
+},
+{
+"value": "572916.1856815906809",
+"places": 4,
+"expected": "572916.1857"
+},
+{
+"value": "572916.1856815906809",
+"places": 8,
+"expected": "572916.18568159"
+},
+{
+"value": "-818797.5",
+"places": 0,
+"expected": "-818798"
+},
+{
+"value": "-818797.5",
+"places": 2,
+"expected": "-818797.5"
+},
+{
+"value": "-818797.5",
+"places": 4,
+"expected": "-818797.5"
+},
+{
+"value": "-818797.5",
+"places": 8,
+"expected": "-818797.5"
+},
+{
+"value": "0.88795703551408",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.88795703551408",
+"places": 2,
+"expected": "0.89"
+},
+{
+"value": "0.88795703551408",
+"places": 4,
+"expected": "0.888"
+},
+{
+"value": "0.88795703551408",
+"places": 8,
+"expected": "0.88795704"
+},
+{
+"value": "7076802731.004369452",
+"places": 0,
+"expected": "7076802731"
+},
+{
+"value": "7076802731.004369452",
+"places": 2,
+"expected": "7076802731"
+},
+{
+"value": "7076802731.004369452",
+"places": 4,
+"expected": "7076802731.0044"
+},
+{
+"value": "7076802731.004369452",
+"places": 8,
+"expected": "7076802731.00436945"
+},
+{
+"value": "7.4654634709",
+"places": 0,
+"expected": "7"
+},
+{
+"value": "7.4654634709",
+"places": 2,
+"expected": "7.47"
+},
+{
+"value": "7.4654634709",
+"places": 4,
+"expected": "7.4655"
+},
+{
+"value": "7.4654634709",
+"places": 8,
+"expected": "7.46546347"
+},
+{
+"value": "0.91587778315712",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.91587778315712",
+"places": 2,
+"expected": "0.92"
+},
+{
+"value": "0.91587778315712",
+"places": 4,
+"expected": "0.9159"
+},
+{
+"value": "0.91587778315712",
+"places": 8,
+"expected": "0.91587778"
+},
+{
+"value": "-826384.2960880322382",
+"places": 0,
+"expected": "-826384"
+},
+{
+"value": "-826384.2960880322382",
+"places": 2,
+"expected": "-826384.3"
+},
+{
+"value": "-826384.2960880322382",
+"places": 4,
+"expected": "-826384.2961"
+},
+{
+"value": "-826384.2960880322382",
+"places": 8,
+"expected": "-826384.29608803"
+},
+{
+"value": "-3575693219.675",
+"places": 0,
+"expected": "-3575693220"
+},
+{
+"value": "-3575693219.675",
+"places": 2,
+"expected": "-3575693219.68"
+},
+{
+"value": "-3575693219.675",
+"places": 4,
+"expected": "-3575693219.675"
+},
+{
+"value": "-3575693219.675",
+"places": 8,
+"expected": "-3575693219.675"
+},
+{
+"value": "7.121992170522",
+"places": 0,
+"expected": "7"
+},
+{
+"value": "7.121992170522",
+"places": 2,
+"expected": "7.12"
+},
+{
+"value": "7.121992170522",
+"places": 4,
+"expected": "7.122"
+},
+{
+"value": "7.121992170522",
+"places": 8,
+"expected": "7.12199217"
+},
+{
+"value": "-0.28277057503447",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.28277057503447",
+"places": 2,
+"expected": "-0.28"
+},
+{
+"value": "-0.28277057503447",
+"places": 4,
+"expected": "-0.2828"
+},
+{
+"value": "-0.28277057503447",
+"places": 8,
+"expected": "-0.28277058"
+},
+{
+"value": "-69262.7750152376",
+"places": 0,
+"expected": "-69263"
+},
+{
+"value": "-69262.7750152376",
+"places": 2,
+"expected": "-69262.78"
+},
+{
+"value": "-69262.7750152376",
+"places": 4,
+"expected": "-69262.775"
+},
+{
+"value": "-69262.7750152376",
+"places": 8,
+"expected": "-69262.77501524"
+},
+{
+"value": "9.9514732",
+"places": 0,
+"expected": "10"
+},
+{
+"value": "9.9514732",
+"places": 2,
+"expected": "9.95"
+},
+{
+"value": "9.9514732",
+"places": 4,
+"expected": "9.9515"
+},
+{
+"value": "9.9514732",
+"places": 8,
+"expected": "9.9514732"
+},
+{
+"value": "7.55895435255185",
+"places": 0,
+"expected": "8"
+},
+{
+"value": "7.55895435255185",
+"places": 2,
+"expected": "7.56"
+},
+{
+"value": "7.55895435255185",
+"places": 4,
+"expected": "7.559"
+},
+{
+"value": "7.55895435255185",
+"places": 8,
+"expected": "7.55895435"
+},
+{
+"value": "-18761969036",
+"places": 0,
+"expected": "-18761969036"
+},
+{
+"value": "-18761969036",
+"places": 2,
+"expected": "-18761969036"
+},
+{
+"value": "-18761969036",
+"places": 4,
+"expected": "-18761969036"
+},
+{
+"value": "-18761969036",
+"places": 8,
+"expected": "-18761969036"
+},
+{
+"value": "0",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 2,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 4,
+"expected": "0"
+},
+{
+"value": "0",
+"places": 8,
+"expected": "0"
+},
+{
+"value": "890673.718",
+"places": 0,
+"expected": "890674"
+},
+{
+"value": "890673.718",
+"places": 2,
+"expected": "890673.72"
+},
+{
+"value": "890673.718",
+"places": 4,
+"expected": "890673.718"
+},
+{
+"value": "890673.718",
+"places": 8,
+"expected": "890673.718"
+},
+{
+"value": "-583325.49304262479185",
+"places": 0,
+"expected": "-583325"
+},
+{
+"value": "-583325.49304262479185",
+"places": 2,
+"expected": "-583325.49"
+},
+{
+"value": "-583325.49304262479185",
+"places": 4,
+"expected": "-583325.493"
+},
+{
+"value": "-583325.49304262479185",
+"places": 8,
+"expected": "-583325.49304262"
+},
+{
+"value": "2",
+"places": 0,
+"expected": "2"
+},
+{
+"value": "2",
+"places": 2,
+"expected": "2"
+},
+{
+"value": "2",
+"places": 4,
+"expected": "2"
+},
+{
+"value": "2",
+"places": 8,
+"expected": "2"
+},
+{
+"value": "16742127950.9190277084528",
+"places": 0,
+"expected": "16742127951"
+},
+{
+"value": "16742127950.9190277084528",
+"places": 2,
+"expected": "16742127950.92"
+},
+{
+"value": "16742127950.9190277084528",
+"places": 4,
+"expected": "16742127950.919"
+},
+{
+"value": "16742127950.9190277084528",
+"places": 8,
+"expected": "16742127950.91902771"
+},
+{
+"value": "0.584769183",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.584769183",
+"places": 2,
+"expected": "0.58"
+},
+{
+"value": "0.584769183",
+"places": 4,
+"expected": "0.5848"
+},
+{
+"value": "0.584769183",
+"places": 8,
+"expected": "0.58476918"
+},
+{
+"value": "-45915391370.474186508702",
+"places": 0,
+"expected": "-45915391370"
+},
+{
+"value": "-45915391370.474186508702",
+"places": 2,
+"expected": "-45915391370.47"
+},
+{
+"value": "-45915391370.474186508702",
+"places": 4,
+"expected": "-45915391370.4742"
+},
+{
+"value": "-45915391370.474186508702",
+"places": 8,
+"expected": "-45915391370.47418651"
+},
+{
+"value": "0.991",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.991",
+"places": 2,
+"expected": "0.99"
+},
+{
+"value": "0.991",
+"places": 4,
+"expected": "0.991"
+},
+{
+"value": "0.991",
+"places": 8,
+"expected": "0.991"
+},
+{
+"value": "24563396694.5",
+"places": 0,
+"expected": "24563396694"
+},
+{
+"value": "24563396694.5",
+"places": 2,
+"expected": "24563396694.5"
+},
+{
+"value": "24563396694.5",
+"places": 4,
+"expected": "24563396694.5"
+},
+{
+"value": "24563396694.5",
+"places": 8,
+"expected": "24563396694.5"
+},
+{
+"value": "0.65",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.65",
+"places": 2,
+"expected": "0.65"
+},
+{
+"value": "0.65",
+"places": 4,
+"expected": "0.65"
+},
+{
+"value": "0.65",
+"places": 8,
+"expected": "0.65"
+},
+{
+"value": "23941066569.98",
+"places": 0,
+"expected": "23941066570"
+},
+{
+"value": "23941066569.98",
+"places": 2,
+"expected": "23941066569.98"
+},
+{
+"value": "23941066569.98",
+"places": 4,
+"expected": "23941066569.98"
+},
+{
+"value": "23941066569.98",
+"places": 8,
+"expected": "23941066569.98"
+},
+{
+"value": "-80492150902.225",
+"places": 0,
+"expected": "-80492150902"
+},
+{
+"value": "-80492150902.225",
+"places": 2,
+"expected": "-80492150902.22"
+},
+{
+"value": "-80492150902.225",
+"places": 4,
+"expected": "-80492150902.225"
+},
+{
+"value": "-80492150902.225",
+"places": 8,
+"expected": "-80492150902.225"
+},
+{
+"value": "1617719995.585297560",
+"places": 0,
+"expected": "1617719996"
+},
+{
+"value": "1617719995.585297560",
+"places": 2,
+"expected": "1617719995.59"
+},
+{
+"value": "1617719995.585297560",
+"places": 4,
+"expected": "1617719995.5853"
+},
+{
+"value": "1617719995.585297560",
+"places": 8,
+"expected": "1617719995.58529756"
+},
+{
+"value": "589222.4593",
+"places": 0,
+"expected": "589222"
+},
+{
+"value": "589222.4593",
+"places": 2,
+"expected": "589222.46"
+},
+{
+"value": "589222.4593",
+"places": 4,
+"expected": "589222.4593"
+},
+{
+"value": "589222.4593",
+"places": 8,
+"expected": "589222.4593"
+},
+{
+"value": "0.13472679019732",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.13472679019732",
+"places": 2,
+"expected": "0.13"
+},
+{
+"value": "0.13472679019732",
+"places": 4,
+"expected": "0.1347"
+},
+{
+"value": "0.13472679019732",
+"places": 8,
+"expected": "0.13472679"
+},
+{
+"value": "729336.805",
+"places": 0,
+"expected": "729337"
+},
+{
+"value": "729336.805",
+"places": 2,
+"expected": "729336.8"
+},
+{
+"value": "729336.805",
+"places": 4,
+"expected": "729336.805"
+},
+{
+"value": "729336.805",
+"places": 8,
+"expected": "729336.805"
+},
+{
+"value": "7289537384.329602",
+"places": 0,
+"expected": "7289537384"
+},
+{
+"value": "7289537384.329602",
+"places": 2,
+"expected": "7289537384.33"
+},
+{
+"value": "7289537384.329602",
+"places": 4,
+"expected": "7289537384.3296"
+},
+{
+"value": "7289537384.329602",
+"places": 8,
+"expected": "7289537384.329602"
+},
+{
+"value": "750592.97316152732875",
+"places": 0,
+"expected": "750593"
+},
+{
+"value": "750592.97316152732875",
+"places": 2,
+"expected": "750592.97"
+},
+{
+"value": "750592.97316152732875",
+"places": 4,
+"expected": "750592.9732"
+},
+{
+"value": "750592.97316152732875",
+"places": 8,
+"expected": "750592.97316153"
+},
+{
+"value": "100825.731909",
+"places": 0,
+"expected": "100826"
+},
+{
+"value": "100825.731909",
+"places": 2,
+"expected": "100825.73"
+},
+{
+"value": "100825.731909",
+"places": 4,
+"expected": "100825.7319"
+},
+{
+"value": "100825.731909",
+"places": 8,
+"expected": "100825.731909"
+},
+{
+"value": "974833.450059181984",
+"places": 0,
+"expected": "974833"
+},
+{
+"value": "974833.450059181984",
+"places": 2,
+"expected": "974833.45"
+},
+{
+"value": "974833.450059181984",
+"places": 4,
+"expected": "974833.4501"
+},
+{
+"value": "974833.450059181984",
+"places": 8,
+"expected": "974833.45005918"
+},
+{
+"value": "0.69359100400272",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.69359100400272",
+"places": 2,
+"expected": "0.69"
+},
+{
+"value": "0.69359100400272",
+"places": 4,
+"expected": "0.6936"
+},
+{
+"value": "0.69359100400272",
+"places": 8,
+"expected": "0.693591"
+},
+{
+"value": "0.191677012",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.191677012",
+"places": 2,
+"expected": "0.19"
+},
+{
+"value": "0.191677012",
+"places": 4,
+"expected": "0.1917"
+},
+{
+"value": "0.191677012",
+"places": 8,
+"expected": "0.19167701"
+},
+{
+"value": "0.218332404",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.218332404",
+"places": 2,
+"expected": "0.22"
+},
+{
+"value": "0.218332404",
+"places": 4,
+"expected": "0.2183"
+},
+{
+"value": "0.218332404",
+"places": 8,
+"expected": "0.2183324"
+},
+{
+"value": "10844.500539",
+"places": 0,
+"expected": "10845"
+},
+{
+"value": "10844.500539",
+"places": 2,
+"expected": "10844.5"
+},
+{
+"value": "10844.500539",
+"places": 4,
+"expected": "10844.5005"
+},
+{
+"value": "10844.500539",
+"places": 8,
+"expected": "10844.500539"
+},
+{
+"value": "7.5800642671845",
+"places": 0,
+"expected": "8"
+},
+{
+"value": "7.5800642671845",
+"places": 2,
+"expected": "7.58"
+},
+{
+"value": "7.5800642671845",
+"places": 4,
+"expected": "7.5801"
+},
+{
+"value": "7.5800642671845",
+"places": 8,
+"expected": "7.58006427"
+},
+{
+"value": "47430741592.0251",
+"places": 0,
+"expected": "47430741592"
+},
+{
+"value": "47430741592.0251",
+"places": 2,
+"expected": "47430741592.03"
+},
+{
+"value": "47430741592.0251",
+"places": 4,
+"expected": "47430741592.0251"
+},
+{
+"value": "47430741592.0251",
+"places": 8,
+"expected": "47430741592.0251"
+},
+{
+"value": "3.05992115",
+"places": 0,
+"expected": "3"
+},
+{
+"value": "3.05992115",
+"places": 2,
+"expected": "3.06"
+},
+{
+"value": "3.05992115",
+"places": 4,
+"expected": "3.0599"
+},
+{
+"value": "3.05992115",
+"places": 8,
+"expected": "3.05992115"
+},
+{
+"value": "4.30767317252",
+"places": 0,
+"expected": "4"
+},
+{
+"value": "4.30767317252",
+"places": 2,
+"expected": "4.31"
+},
+{
+"value": "4.30767317252",
+"places": 4,
+"expected": "4.3077"
+},
+{
+"value": "4.30767317252",
+"places": 8,
+"expected": "4.30767317"
+},
+{
+"value": "619385.947732733731",
+"places": 0,
+"expected": "619386"
+},
+{
+"value": "619385.947732733731",
+"places": 2,
+"expected": "619385.95"
+},
+{
+"value": "619385.947732733731",
+"places": 4,
+"expected": "619385.9477"
+},
+{
+"value": "619385.947732733731",
+"places": 8,
+"expected": "619385.94773273"
+},
+{
+"value": "-86513365694.76374273995",
+"places": 0,
+"expected": "-86513365695"
+},
+{
+"value": "-86513365694.76374273995",
+"places": 2,
+"expected": "-86513365694.76"
+},
+{
+"value": "-86513365694.76374273995",
+"places": 4,
+"expected": "-86513365694.7637"
+},
+{
+"value": "-86513365694.76374273995",
+"places": 8,
+"expected": "-86513365694.76374274"
+},
+{
+"value": "-0.7740197",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.7740197",
+"places": 2,
+"expected": "-0.77"
+},
+{
+"value": "-0.7740197",
+"places": 4,
+"expected": "-0.774"
+},
+{
+"value": "-0.7740197",
+"places": 8,
+"expected": "-0.7740197"
+},
+{
+"value": "0.37163815962",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.37163815962",
+"places": 2,
+"expected": "0.37"
+},
+{
+"value": "0.37163815962",
+"places": 4,
+"expected": "0.3716"
+},
+{
+"value": "0.37163815962",
+"places": 8,
+"expected": "0.37163816"
+},
+{
+"value": "999197.436055054",
+"places": 0,
+"expected": "999197"
+},
+{
+"value": "999197.436055054",
+"places": 2,
+"expected": "999197.44"
+},
+{
+"value": "999197.436055054",
+"places": 4,
+"expected": "999197.4361"
+},
+{
+"value": "999197.436055054",
+"places": 8,
+"expected": "999197.43605505"
+},
+{
+"value": "-20738858206.914536",
+"places": 0,
+"expected": "-20738858207"
+},
+{
+"value": "-20738858206.914536",
+"places": 2,
+"expected": "-20738858206.91"
+},
+{
+"value": "-20738858206.914536",
+"places": 4,
+"expected": "-20738858206.9145"
+},
+{
+"value": "-20738858206.914536",
+"places": 8,
+"expected": "-20738858206.914536"
+},
+{
+"value": "66090721364.63178375",
+"places": 0,
+"expected": "66090721365"
+},
+{
+"value": "66090721364.63178375",
+"places": 2,
+"expected": "66090721364.63"
+},
+{
+"value": "66090721364.63178375",
+"places": 4,
+"expected": "66090721364.6318"
+},
+{
+"value": "66090721364.63178375",
+"places": 8,
+"expected": "66090721364.63178375"
+},
+{
+"value": "9.04839237296",
+"places": 0,
+"expected": "9"
+},
+{
+"value": "9.04839237296",
+"places": 2,
+"expected": "9.05"
+},
+{
+"value": "9.04839237296",
+"places": 4,
+"expected": "9.0484"
+},
+{
+"value": "9.04839237296",
+"places": 8,
+"expected": "9.04839237"
+},
+{
+"value": "5.0547213734505",
+"places": 0,
+"expected": "5"
+},
+{
+"value": "5.0547213734505",
+"places": 2,
+"expected": "5.05"
+},
+{
+"value": "5.0547213734505",
+"places": 4,
+"expected": "5.0547"
+},
+{
+"value": "5.0547213734505",
+"places": 8,
+"expected": "5.05472137"
+},
+{
+"value": "97132918481.4725",
+"places": 0,
+"expected": "97132918481"
+},
+{
+"value": "97132918481.4725",
+"places": 2,
+"expected": "97132918481.47"
+},
+{
+"value": "97132918481.4725",
+"places": 4,
+"expected": "97132918481.4725"
+},
+{
+"value": "97132918481.4725",
+"places": 8,
+"expected": "97132918481.4725"
+},
+{
+"value": "0.8234",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.8234",
+"places": 2,
+"expected": "0.82"
+},
+{
+"value": "0.8234",
+"places": 4,
+"expected": "0.8234"
+},
+{
+"value": "0.8234",
+"places": 8,
+"expected": "0.8234"
+},
+{
+"value": "650493.545",
+"places": 0,
+"expected": "650494"
+},
+{
+"value": "650493.545",
+"places": 2,
+"expected": "650493.54"
+},
+{
+"value": "650493.545",
+"places": 4,
+"expected": "650493.545"
+},
+{
+"value": "650493.545",
+"places": 8,
+"expected": "650493.545"
+},
+{
+"value": "6.5",
+"places": 0,
+"expected": "6"
+},
+{
+"value": "6.5",
+"places": 2,
+"expected": "6.5"
+},
+{
+"value": "6.5",
+"places": 4,
+"expected": "6.5"
+},
+{
+"value": "6.5",
+"places": 8,
+"expected": "6.5"
+},
+{
+"value": "-44555219509.7275",
+"places": 0,
+"expected": "-44555219510"
+},
+{
+"value": "-44555219509.7275",
+"places": 2,
+"expected": "-44555219509.73"
+},
+{
+"value": "-44555219509.7275",
+"places": 4,
+"expected": "-44555219509.7275"
+},
+{
+"value": "-44555219509.7275",
+"places": 8,
+"expected": "-44555219509.7275"
+},
+{
+"value": "-61882463259.2311188490025",
+"places": 0,
+"expected": "-61882463259"
+},
+{
+"value": "-61882463259.2311188490025",
+"places": 2,
+"expected": "-61882463259.23"
+},
+{
+"value": "-61882463259.2311188490025",
+"places": 4,
+"expected": "-61882463259.2311"
+},
+{
+"value": "-61882463259.2311188490025",
+"places": 8,
+"expected": "-61882463259.23111885"
+},
+{
+"value": "-904870",
+"places": 0,
+"expected": "-904870"
+},
+{
+"value": "-904870",
+"places": 2,
+"expected": "-904870"
+},
+{
+"value": "-904870",
+"places": 4,
+"expected": "-904870"
+},
+{
+"value": "-904870",
+"places": 8,
+"expected": "-904870"
+},
+{
+"value": "194040.388752513",
+"places": 0,
+"expected": "194040"
+},
+{
+"value": "194040.388752513",
+"places": 2,
+"expected": "194040.39"
+},
+{
+"value": "194040.388752513",
+"places": 4,
+"expected": "194040.3888"
+},
+{
+"value": "194040.388752513",
+"places": 8,
+"expected": "194040.38875251"
+},
+{
+"value": "-994851.59306245",
+"places": 0,
+"expected": "-994852"
+},
+{
+"value": "-994851.59306245",
+"places": 2,
+"expected": "-994851.59"
+},
+{
+"value": "-994851.59306245",
+"places": 4,
+"expected": "-994851.5931"
+},
+{
+"value": "-994851.59306245",
+"places": 8,
+"expected": "-994851.59306245"
+},
+{
+"value": "0.167134",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.167134",
+"places": 2,
+"expected": "0.17"
+},
+{
+"value": "0.167134",
+"places": 4,
+"expected": "0.1671"
+},
+{
+"value": "0.167134",
+"places": 8,
+"expected": "0.167134"
+},
+{
+"value": "8.79175",
+"places": 0,
+"expected": "9"
+},
+{
+"value": "8.79175",
+"places": 2,
+"expected": "8.79"
+},
+{
+"value": "8.79175",
+"places": 4,
+"expected": "8.7918"
+},
+{
+"value": "8.79175",
+"places": 8,
+"expected": "8.79175"
+},
+{
+"value": "319913.4255895",
+"places": 0,
+"expected": "319913"
+},
+{
+"value": "319913.4255895",
+"places": 2,
+"expected": "319913.43"
+},
+{
+"value": "319913.4255895",
+"places": 4,
+"expected": "319913.4256"
+},
+{
+"value": "319913.4255895",
+"places": 8,
+"expected": "319913.4255895"
+},
+{
+"value": "-17314221548.66364",
+"places": 0,
+"expected": "-17314221549"
+},
+{
+"value": "-17314221548.66364",
+"places": 2,
+"expected": "-17314221548.66"
+},
+{
+"value": "-17314221548.66364",
+"places": 4,
+"expected": "-17314221548.6636"
+},
+{
+"value": "-17314221548.66364",
+"places": 8,
+"expected": "-17314221548.66364"
+},
+{
+"value": "942397.1118004274",
+"places": 0,
+"expected": "942397"
+},
+{
+"value": "942397.1118004274",
+"places": 2,
+"expected": "942397.11"
+},
+{
+"value": "942397.1118004274",
+"places": 4,
+"expected": "942397.1118"
+},
+{
+"value": "942397.1118004274",
+"places": 8,
+"expected": "942397.11180043"
+},
+{
+"value": "-331080.0875",
+"places": 0,
+"expected": "-331080"
+},
+{
+"value": "-331080.0875",
+"places": 2,
+"expected": "-331080.09"
+},
+{
+"value": "-331080.0875",
+"places": 4,
+"expected": "-331080.0875"
+},
+{
+"value": "-331080.0875",
+"places": 8,
+"expected": "-331080.0875"
+},
+{
+"value": "92445404505.7705715",
+"places": 0,
+"expected": "92445404506"
+},
+{
+"value": "92445404505.7705715",
+"places": 2,
+"expected": "92445404505.77"
+},
+{
+"value": "92445404505.7705715",
+"places": 4,
+"expected": "92445404505.7706"
+},
+{
+"value": "92445404505.7705715",
+"places": 8,
+"expected": "92445404505.7705715"
+},
+{
+"value": "986124.1500093407554",
+"places": 0,
+"expected": "986124"
+},
+{
+"value": "986124.1500093407554",
+"places": 2,
+"expected": "986124.15"
+},
+{
+"value": "986124.1500093407554",
+"places": 4,
+"expected": "986124.15"
+},
+{
+"value": "986124.1500093407554",
+"places": 8,
+"expected": "986124.15000934"
+},
+{
+"value": "0.67640814295",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.67640814295",
+"places": 2,
+"expected": "0.68"
+},
+{
+"value": "0.67640814295",
+"places": 4,
+"expected": "0.6764"
+},
+{
+"value": "0.67640814295",
+"places": 8,
+"expected": "0.67640814"
+},
+{
+"value": "381038.258838929165",
+"places": 0,
+"expected": "381038"
+},
+{
+"value": "381038.258838929165",
+"places": 2,
+"expected": "381038.26"
+},
+{
+"value": "381038.258838929165",
+"places": 4,
+"expected": "381038.2588"
+},
+{
+"value": "381038.258838929165",
+"places": 8,
+"expected": "381038.25883893"
+},
+{
+"value": "6.5026213228",
+"places": 0,
+"expected": "7"
+},
+{
+"value": "6.5026213228",
+"places": 2,
+"expected": "6.5"
+},
+{
+"value": "6.5026213228",
+"places": 4,
+"expected": "6.5026"
+},
+{
+"value": "6.5026213228",
+"places": 8,
+"expected": "6.50262132"
+},
+{
+"value": "-6.008959410108",
+"places": 0,
+"expected": "-6"
+},
+{
+"value": "-6.008959410108",
+"places": 2,
+"expected": "-6.01"
+},
+{
+"value": "-6.008959410108",
+"places": 4,
+"expected": "-6.009"
+},
+{
+"value": "-6.008959410108",
+"places": 8,
+"expected": "-6.00895941"
+},
+{
+"value": "0.635560407",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.635560407",
+"places": 2,
+"expected": "0.64"
+},
+{
+"value": "0.635560407",
+"places": 4,
+"expected": "0.6356"
+},
+{
+"value": "0.635560407",
+"places": 8,
+"expected": "0.63556041"
+},
+{
+"value": "-8.59914",
+"places": 0,
+"expected": "-9"
+},
+{
+"value": "-8.59914",
+"places": 2,
+"expected": "-8.6"
+},
+{
+"value": "-8.59914",
+"places": 4,
+"expected": "-8.5991"
+},
+{
+"value": "-8.59914",
+"places": 8,
+"expected": "-8.59914"
+},
+{
+"value": "-14052598381.420052003",
+"places": 0,
+"expected": "-14052598381"
+},
+{
+"value": "-14052598381.420052003",
+"places": 2,
+"expected": "-14052598381.42"
+},
+{
+"value": "-14052598381.420052003",
+"places": 4,
+"expected": "-14052598381.4201"
+},
+{
+"value": "-14052598381.420052003",
+"places": 8,
+"expected": "-14052598381.420052"
+},
+{
+"value": "-262576.187865545",
+"places": 0,
+"expected": "-262576"
+},
+{
+"value": "-262576.187865545",
+"places": 2,
+"expected": "-262576.19"
+},
+{
+"value": "-262576.187865545",
+"places": 4,
+"expected": "-262576.1879"
+},
+{
+"value": "-262576.187865545",
+"places": 8,
+"expected": "-262576.18786554"
+},
+{
+"value": "0.11",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.11",
+"places": 2,
+"expected": "0.11"
+},
+{
+"value": "0.11",
+"places": 4,
+"expected": "0.11"
+},
+{
+"value": "0.11",
+"places": 8,
+"expected": "0.11"
+},
+{
+"value": "0.35",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.35",
+"places": 2,
+"expected": "0.35"
+},
+{
+"value": "0.35",
+"places": 4,
+"expected": "0.35"
+},
+{
+"value": "0.35",
+"places": 8,
+"expected": "0.35"
+},
+{
+"value": "6.21",
+"places": 0,
+"expected": "6"
+},
+{
+"value": "6.21",
+"places": 2,
+"expected": "6.21"
+},
+{
+"value": "6.21",
+"places": 4,
+"expected": "6.21"
+},
+{
+"value": "6.21",
+"places": 8,
+"expected": "6.21"
+},
+{
+"value": "-13583464223.5919",
+"places": 0,
+"expected": "-13583464224"
+},
+{
+"value": "-13583464223.5919",
+"places": 2,
+"expected": "-13583464223.59"
+},
+{
+"value": "-13583464223.5919",
+"places": 4,
+"expected": "-13583464223.5919"
+},
+{
+"value": "-13583464223.5919",
+"places": 8,
+"expected": "-13583464223.5919"
+},
+{
+"value": "8.0719694915",
+"places": 0,
+"expected": "8"
+},
+{
+"value": "8.0719694915",
+"places": 2,
+"expected": "8.07"
+},
+{
+"value": "8.0719694915",
+"places": 4,
+"expected": "8.072"
+},
+{
+"value": "8.0719694915",
+"places": 8,
+"expected": "8.07196949"
+},
+{
+"value": "7.36765",
+"places": 0,
+"expected": "7"
+},
+{
+"value": "7.36765",
+"places": 2,
+"expected": "7.37"
+},
+{
+"value": "7.36765",
+"places": 4,
+"expected": "7.3676"
+},
+{
+"value": "7.36765",
+"places": 8,
+"expected": "7.36765"
+},
+{
+"value": "40402186010",
+"places": 0,
+"expected": "40402186010"
+},
+{
+"value": "40402186010",
+"places": 2,
+"expected": "40402186010"
+},
+{
+"value": "40402186010",
+"places": 4,
+"expected": "40402186010"
+},
+{
+"value": "40402186010",
+"places": 8,
+"expected": "40402186010"
+},
+{
+"value": "21027668386.5",
+"places": 0,
+"expected": "21027668386"
+},
+{
+"value": "21027668386.5",
+"places": 2,
+"expected": "21027668386.5"
+},
+{
+"value": "21027668386.5",
+"places": 4,
+"expected": "21027668386.5"
+},
+{
+"value": "21027668386.5",
+"places": 8,
+"expected": "21027668386.5"
+},
+{
+"value": "60005576574",
+"places": 0,
+"expected": "60005576574"
+},
+{
+"value": "60005576574",
+"places": 2,
+"expected": "60005576574"
+},
+{
+"value": "60005576574",
+"places": 4,
+"expected": "60005576574"
+},
+{
+"value": "60005576574",
+"places": 8,
+"expected": "60005576574"
+},
+{
+"value": "0.8905592766088",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.8905592766088",
+"places": 2,
+"expected": "0.89"
+},
+{
+"value": "0.8905592766088",
+"places": 4,
+"expected": "0.8906"
+},
+{
+"value": "0.8905592766088",
+"places": 8,
+"expected": "0.89055928"
+},
+{
+"value": "6.140045",
+"places": 0,
+"expected": "6"
+},
+{
+"value": "6.140045",
+"places": 2,
+"expected": "6.14"
+},
+{
+"value": "6.140045",
+"places": 4,
+"expected": "6.14"
+},
+{
+"value": "6.140045",
+"places": 8,
+"expected": "6.140045"
+},
+{
+"value": "0.191235484",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.191235484",
+"places": 2,
+"expected": "0.19"
+},
+{
+"value": "0.191235484",
+"places": 4,
+"expected": "0.1912"
+},
+{
+"value": "0.191235484",
+"places": 8,
+"expected": "0.19123548"
+},
+{
+"value": "8.8424",
+"places": 0,
+"expected": "9"
+},
+{
+"value": "8.8424",
+"places": 2,
+"expected": "8.84"
+},
+{
+"value": "8.8424",
+"places": 4,
+"expected": "8.8424"
+},
+{
+"value": "8.8424",
+"places": 8,
+"expected": "8.8424"
+},
+{
+"value": "2.520675249667",
+"places": 0,
+"expected": "3"
+},
+{
+"value": "2.520675249667",
+"places": 2,
+"expected": "2.52"
+},
+{
+"value": "2.520675249667",
+"places": 4,
+"expected": "2.5207"
+},
+{
+"value": "2.520675249667",
+"places": 8,
+"expected": "2.52067525"
+},
+{
+"value": "496841",
+"places": 0,
+"expected": "496841"
+},
+{
+"value": "496841",
+"places": 2,
+"expected": "496841"
+},
+{
+"value": "496841",
+"places": 4,
+"expected": "496841"
+},
+{
+"value": "496841",
+"places": 8,
+"expected": "496841"
+},
+{
+"value": "8.52282",
+"places": 0,
+"expected": "9"
+},
+{
+"value": "8.52282",
+"places": 2,
+"expected": "8.52"
+},
+{
+"value": "8.52282",
+"places": 4,
+"expected": "8.5228"
+},
+{
+"value": "8.52282",
+"places": 8,
+"expected": "8.52282"
+},
+{
+"value": "925862.07904967808",
+"places": 0,
+"expected": "925862"
+},
+{
+"value": "925862.07904967808",
+"places": 2,
+"expected": "925862.08"
+},
+{
+"value": "925862.07904967808",
+"places": 4,
+"expected": "925862.079"
+},
+{
+"value": "925862.07904967808",
+"places": 8,
+"expected": "925862.07904968"
+},
+{
+"value": "6.4",
+"places": 0,
+"expected": "6"
+},
+{
+"value": "6.4",
+"places": 2,
+"expected": "6.4"
+},
+{
+"value": "6.4",
+"places": 4,
+"expected": "6.4"
+},
+{
+"value": "6.4",
+"places": 8,
+"expected": "6.4"
+},
+{
+"value": "0.6055",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.6055",
+"places": 2,
+"expected": "0.61"
+},
+{
+"value": "0.6055",
+"places": 4,
+"expected": "0.6055"
+},
+{
+"value": "0.6055",
+"places": 8,
+"expected": "0.6055"
+},
+{
+"value": "535090.5562690367075",
+"places": 0,
+"expected": "535091"
+},
+{
+"value": "535090.5562690367075",
+"places": 2,
+"expected": "535090.56"
+},
+{
+"value": "535090.5562690367075",
+"places": 4,
+"expected": "535090.5563"
+},
+{
+"value": "535090.5562690367075",
+"places": 8,
+"expected": "535090.55626904"
+},
+{
+"value": "0.80",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.80",
+"places": 2,
+"expected": "0.8"
+},
+{
+"value": "0.80",
+"places": 4,
+"expected": "0.8"
+},
+{
+"value": "0.80",
+"places": 8,
+"expected": "0.8"
+},
+{
+"value": "44641485848.439",
+"places": 0,
+"expected": "44641485848"
+},
+{
+"value": "44641485848.439",
+"places": 2,
+"expected": "44641485848.44"
+},
+{
+"value": "44641485848.439",
+"places": 4,
+"expected": "44641485848.439"
+},
+{
+"value": "44641485848.439",
+"places": 8,
+"expected": "44641485848.439"
+},
+{
+"value": "-23982.9",
+"places": 0,
+"expected": "-23983"
+},
+{
+"value": "-23982.9",
+"places": 2,
+"expected": "-23982.9"
+},
+{
+"value": "-23982.9",
+"places": 4,
+"expected": "-23982.9"
+},
+{
+"value": "-23982.9",
+"places": 8,
+"expected": "-23982.9"
+},
+{
+"value": "-915344.11768758239",
+"places": 0,
+"expected": "-915344"
+},
+{
+"value": "-915344.11768758239",
+"places": 2,
+"expected": "-915344.12"
+},
+{
+"value": "-915344.11768758239",
+"places": 4,
+"expected": "-915344.1177"
+},
+{
+"value": "-915344.11768758239",
+"places": 8,
+"expected": "-915344.11768758"
+},
+{
+"value": "-0.527847956",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.527847956",
+"places": 2,
+"expected": "-0.53"
+},
+{
+"value": "-0.527847956",
+"places": 4,
+"expected": "-0.5278"
+},
+{
+"value": "-0.527847956",
+"places": 8,
+"expected": "-0.52784796"
+},
+{
+"value": "55717109106.7298",
+"places": 0,
+"expected": "55717109107"
+},
+{
+"value": "55717109106.7298",
+"places": 2,
+"expected": "55717109106.73"
+},
+{
+"value": "55717109106.7298",
+"places": 4,
+"expected": "55717109106.7298"
+},
+{
+"value": "55717109106.7298",
+"places": 8,
+"expected": "55717109106.7298"
+},
+{
+"value": "-255124.739",
+"places": 0,
+"expected": "-255125"
+},
+{
+"value": "-255124.739",
+"places": 2,
+"expected": "-255124.74"
+},
+{
+"value": "-255124.739",
+"places": 4,
+"expected": "-255124.739"
+},
+{
+"value": "-255124.739",
+"places": 8,
+"expected": "-255124.739"
+},
+{
+"value": "0.3506190606",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.3506190606",
+"places": 2,
+"expected": "0.35"
+},
+{
+"value": "0.3506190606",
+"places": 4,
+"expected": "0.3506"
+},
+{
+"value": "0.3506190606",
+"places": 8,
+"expected": "0.35061906"
+},
+{
+"value": "0.2473",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.2473",
+"places": 2,
+"expected": "0.25"
+},
+{
+"value": "0.2473",
+"places": 4,
+"expected": "0.2473"
+},
+{
+"value": "0.2473",
+"places": 8,
+"expected": "0.2473"
+},
+{
+"value": "9.56",
+"places": 0,
+"expected": "10"
+},
+{
+"value": "9.56",
+"places": 2,
+"expected": "9.56"
+},
+{
+"value": "9.56",
+"places": 4,
+"expected": "9.56"
+},
+{
+"value": "9.56",
+"places": 8,
+"expected": "9.56"
+},
+{
+"value": "4.3982862996",
+"places": 0,
+"expected": "4"
+},
+{
+"value": "4.3982862996",
+"places": 2,
+"expected": "4.4"
+},
+{
+"value": "4.3982862996",
+"places": 4,
+"expected": "4.3983"
+},
+{
+"value": "4.3982862996",
+"places": 8,
+"expected": "4.3982863"
+},
+{
+"value": "35677643474.428233",
+"places": 0,
+"expected": "35677643474"
+},
+{
+"value": "35677643474.428233",
+"places": 2,
+"expected": "35677643474.43"
+},
+{
+"value": "35677643474.428233",
+"places": 4,
+"expected": "35677643474.4282"
+},
+{
+"value": "35677643474.428233",
+"places": 8,
+"expected": "35677643474.428233"
+},
+{
+"value": "0.94445616",
+"places": 0,
+"expected": "1"
+},
+{
+"value": "0.94445616",
+"places": 2,
+"expected": "0.94"
+},
+{
+"value": "0.94445616",
+"places": 4,
+"expected": "0.9445"
+},
+{
+"value": "0.94445616",
+"places": 8,
+"expected": "0.94445616"
+},
+{
+"value": "61869260225.5",
+"places": 0,
+"expected": "61869260226"
+},
+{
+"value": "61869260225.5",
+"places": 2,
+"expected": "61869260225.5"
+},
+{
+"value": "61869260225.5",
+"places": 4,
+"expected": "61869260225.5"
+},
+{
+"value": "61869260225.5",
+"places": 8,
+"expected": "61869260225.5"
+},
+{
+"value": "-511513.4423689087",
+"places": 0,
+"expected": "-511513"
+},
+{
+"value": "-511513.4423689087",
+"places": 2,
+"expected": "-511513.44"
+},
+{
+"value": "-511513.4423689087",
+"places": 4,
+"expected": "-511513.4424"
+},
+{
+"value": "-511513.4423689087",
+"places": 8,
+"expected": "-511513.44236891"
+},
+{
+"value": "104730.870928278705",
+"places": 0,
+"expected": "104731"
+},
+{
+"value": "104730.870928278705",
+"places": 2,
+"expected": "104730.87"
+},
+{
+"value": "104730.870928278705",
+"places": 4,
+"expected": "104730.8709"
+},
+{
+"value": "104730.870928278705",
+"places": 8,
+"expected": "104730.87092828"
+},
+{
+"value": "-8.5514874435",
+"places": 0,
+"expected": "-9"
+},
+{
+"value": "-8.5514874435",
+"places": 2,
+"expected": "-8.55"
+},
+{
+"value": "-8.5514874435",
+"places": 4,
+"expected": "-8.5515"
+},
+{
+"value": "-8.5514874435",
+"places": 8,
+"expected": "-8.55148744"
+},
+{
+"value": "-0.97134",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.97134",
+"places": 2,
+"expected": "-0.97"
+},
+{
+"value": "-0.97134",
+"places": 4,
+"expected": "-0.9713"
+},
+{
+"value": "-0.97134",
+"places": 8,
+"expected": "-0.97134"
+},
+{
+"value": "0.412635032",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.412635032",
+"places": 2,
+"expected": "0.41"
+},
+{
+"value": "0.412635032",
+"places": 4,
+"expected": "0.4126"
+},
+{
+"value": "0.412635032",
+"places": 8,
+"expected": "0.41263503"
+},
+{
+"value": "5.3468547961874",
+"places": 0,
+"expected": "5"
+},
+{
+"value": "5.3468547961874",
+"places": 2,
+"expected": "5.35"
+},
+{
+"value": "5.3468547961874",
+"places": 4,
+"expected": "5.3469"
+},
+{
+"value": "5.3468547961874",
+"places": 8,
+"expected": "5.3468548"
+},
+{
+"value": "-6.213912736016",
+"places": 0,
+"expected": "-6"
+},
+{
+"value": "-6.213912736016",
+"places": 2,
+"expected": "-6.21"
+},
+{
+"value": "-6.213912736016",
+"places": 4,
+"expected": "-6.2139"
+},
+{
+"value": "-6.213912736016",
+"places": 8,
+"expected": "-6.21391274"
+},
+{
+"value": "0.5",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.5",
+"places": 2,
+"expected": "0.5"
+},
+{
+"value": "0.5",
+"places": 4,
+"expected": "0.5"
+},
+{
+"value": "0.5",
+"places": 8,
+"expected": "0.5"
+},
+{
+"value": "14725.653488138",
+"places": 0,
+"expected": "14726"
+},
+{
+"value": "14725.653488138",
+"places": 2,
+"expected": "14725.65"
+},
+{
+"value": "14725.653488138",
+"places": 4,
+"expected": "14725.6535"
+},
+{
+"value": "14725.653488138",
+"places": 8,
+"expected": "14725.65348814"
+},
+{
+"value": "34494957417.21",
+"places": 0,
+"expected": "34494957417"
+},
+{
+"value": "34494957417.21",
+"places": 2,
+"expected": "34494957417.21"
+},
+{
+"value": "34494957417.21",
+"places": 4,
+"expected": "34494957417.21"
+},
+{
+"value": "34494957417.21",
+"places": 8,
+"expected": "34494957417.21"
+},
+{
+"value": "11168290099.56501",
+"places": 0,
+"expected": "11168290100"
+},
+{
+"value": "11168290099.56501",
+"places": 2,
+"expected": "11168290099.57"
+},
+{
+"value": "11168290099.56501",
+"places": 4,
+"expected": "11168290099.565"
+},
+{
+"value": "11168290099.56501",
+"places": 8,
+"expected": "11168290099.56501"
+},
+{
+"value": "-0.268794785769",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "-0.268794785769",
+"places": 2,
+"expected": "-0.27"
+},
+{
+"value": "-0.268794785769",
+"places": 4,
+"expected": "-0.2688"
+},
+{
+"value": "-0.268794785769",
+"places": 8,
+"expected": "-0.26879479"
+},
+{
+"value": "32511503108.46308571665791",
+"places": 0,
+"expected": "32511503108"
+},
+{
+"value": "32511503108.46308571665791",
+"places": 2,
+"expected": "32511503108.46"
+},
+{
+"value": "32511503108.46308571665791",
+"places": 4,
+"expected": "32511503108.4631"
+},
+{
+"value": "32511503108.46308571665791",
+"places": 8,
+"expected": "32511503108.46308572"
+},
+{
+"value": "-0.7872323",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.7872323",
+"places": 2,
+"expected": "-0.79"
+},
+{
+"value": "-0.7872323",
+"places": 4,
+"expected": "-0.7872"
+},
+{
+"value": "-0.7872323",
+"places": 8,
+"expected": "-0.7872323"
+},
+{
+"value": "0.201981075",
+"places": 0,
+"expected": "0"
+},
+{
+"value": "0.201981075",
+"places": 2,
+"expected": "0.2"
+},
+{
+"value": "0.201981075",
+"places": 4,
+"expected": "0.202"
+},
+{
+"value": "0.201981075",
+"places": 8,
+"expected": "0.20198108"
+},
+{
+"value": "-7983",
+"places": 0,
+"expected": "-7983"
+},
+{
+"value": "-7983",
+"places": 2,
+"expected": "-7983"
+},
+{
+"value": "-7983",
+"places": 4,
+"expected": "-7983"
+},
+{
+"value": "-7983",
+"places": 8,
+"expected": "-7983"
+},
+{
+"value": "-0.5294364640",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.5294364640",
+"places": 2,
+"expected": "-0.53"
+},
+{
+"value": "-0.5294364640",
+"places": 4,
+"expected": "-0.5294"
+},
+{
+"value": "-0.5294364640",
+"places": 8,
+"expected": "-0.52943646"
+},
+{
+"value": "192334",
+"places": 0,
+"expected": "192334"
+},
+{
+"value": "192334",
+"places": 2,
+"expected": "192334"
+},
+{
+"value": "192334",
+"places": 4,
+"expected": "192334"
+},
+{
+"value": "192334",
+"places": 8,
+"expected": "192334"
+},
+{
+"value": "-9258634083.212848058105",
+"places": 0,
+"expected": "-9258634083"
+},
+{
+"value": "-9258634083.212848058105",
+"places": 2,
+"expected": "-9258634083.21"
+},
+{
+"value": "-9258634083.212848058105",
+"places": 4,
+"expected": "-9258634083.2128"
+},
+{
+"value": "-9258634083.212848058105",
+"places": 8,
+"expected": "-9258634083.21284806"
+},
+{
+"value": "-0.6208582294939",
+"places": 0,
+"expected": "-1"
+},
+{
+"value": "-0.6208582294939",
+"places": 2,
+"expected": "-0.62"
+},
+{
+"value": "-0.6208582294939",
+"places": 4,
+"expected": "-0.6209"
+},
+{
+"value": "-0.6208582294939",
+"places": 8,
+"expected": "-0.62085823"
+}
+]
+}

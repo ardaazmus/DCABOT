@@ -4,13 +4,14 @@ import { describe, expect, it, vi } from "vitest";
 import { BotContextHeader, BotTable, type BotTableRow } from "./BotTable";
 
 const rows: BotTableRow[] = [
-  { botId: "bot-1", name: "Grid Alpha", sessionCount: 2, selected: true },
-  { botId: "bot-2", name: null, sessionCount: null, selected: false },
+  { botId: "bot-1", name: "Grid Alpha", sessionCount: 2, activeDeals: 3, selected: true },
+  { botId: "bot-2", name: null, sessionCount: null, activeDeals: null, selected: false },
 ];
 
 describe("BotTable", () => {
-  it("satırları ve bilinmeyen alanları dürüst gösterir", () => {
-    render(<BotTable rows={rows} busy={false} onSelect={() => {}} onCreate={() => {}} onOpenHistory={() => {}} />);
+  it("kartları ve bilinmeyen alanları dürüst gösterir", () => {
+    const { container } = render(<BotTable rows={rows} busy={false} onSelect={() => {}} onCreate={() => {}} onOpenHistory={() => {}} />);
+    expect(container.querySelector(".botcard-grid")).toBeInTheDocument();
     expect(screen.getByText("bot-1")).toBeInTheDocument();
     expect(screen.getByText("Grid Alpha")).toBeInTheDocument();
     expect(screen.getByText("Seçili")).toBeInTheDocument();
@@ -24,13 +25,20 @@ describe("BotTable", () => {
     expect(screen.getByText("bot-2")).toBeInTheDocument();
   });
 
-  it("Yükle seçili olmayan satırda handler çağırır", () => {
+  it("17.4/17.5: karta tıklamak detay seçimini çağırır (seçili dahil)", () => {
     const onSelect = vi.fn();
     render(<BotTable rows={rows} busy={false} onSelect={onSelect} onCreate={() => {}} onOpenHistory={() => {}} />);
-    const buttons = screen.getAllByRole("button", { name: "Yükle" });
-    expect(buttons[0]).toBeDisabled();
-    fireEvent.click(buttons[1]);
+    fireEvent.click(screen.getByRole("button", { name: /bot-2/ }));
     expect(onSelect).toHaveBeenCalledWith("bot-2");
+    fireEvent.click(screen.getByRole("button", { name: /bot-1/ }));
+    expect(onSelect).toHaveBeenCalledWith("bot-1");
+  });
+
+  it("17.5: meşgulken kartlar kilitlidir, seçili kart işaretlidir", () => {
+    render(<BotTable rows={rows} busy={true} onSelect={() => {}} onCreate={() => {}} onOpenHistory={() => {}} />);
+    expect(screen.getByRole("button", { name: /bot-1/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /bot-2/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /bot-1/ })).toHaveAttribute("aria-current", "true");
   });
 
   it("15.3: boş envanterde standart boş-durum + CTA gösterir", () => {
@@ -47,9 +55,14 @@ describe("BotTable", () => {
     expect(screen.getByRole("tab", { name: "Aktif botlar" })).toHaveAttribute("aria-selected", "true");
     fireEvent.click(screen.getByRole("tab", { name: "Geçmiş" }));
     expect(screen.queryByText("bot-1")).not.toBeInTheDocument();
-    expect(screen.getByText(/Olaylar & Denetim/)).toBeInTheDocument();
+    expect(screen.getByText(/Backtest'te/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Geçmişi aç" }));
     expect(onOpenHistory).toHaveBeenCalledTimes(1);
+  });
+
+  it("AA.3a: kart aktif-deal rozetini dizer, yoksa tire", () => {
+    render(<BotTable rows={rows} busy={false} onSelect={() => {}} onCreate={() => {}} onOpenHistory={() => {}} />);
+    expect(screen.getByText("3 aktif deal")).toBeInTheDocument();
   });
 
   it("15.3: tip filtresi taslak türüne göre daraltır", () => {

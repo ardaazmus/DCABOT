@@ -72,6 +72,7 @@ def _base_config() -> dict:
         "fee_rate": "0.001",
         "fee_quantum": "0.00000001",
         "slippage": "0",
+        "margin_mode": "ISOLATED",
     }
 
 
@@ -93,6 +94,19 @@ class OptimizeTests(unittest.TestCase):
         best = next(t for t in result["trials"] if t["recipe_id"] == result["best_recipe_id"])
         self.assertEqual(result["best_overrides"], best["overrides"])
         self.assertEqual(set(best["overrides"]), {"take_profit", "deviation"})
+
+    def test_each_trial_carries_the_shared_aa7a_derived_metrics(self):
+        """AA.7a wire-finding #1 (2026-09-23): sweep trials reuse the exact
+        same `performance_metrics()` the saved-run contract uses -- not a
+        second computation. Denominators are degenerate on this 4-bar
+        no-fill-guaranteed fixture, so fields may be null, but must be
+        present as keys on every trial."""
+        result = optimize_parameters(
+            _dataset(), _base_config(), space=SPACE, max_trials=4, seed=0, sampler="grid"
+        )
+        for trial in result["trials"]:
+            for key in ("win_rate", "profit_factor", "roi", "safety_order_fill_rate"):
+                self.assertIn(key, trial)
 
     def test_mixed_space_runs_valid_and_skips_invalid(self):
         space = {"deviation": {"kind": "categorical", "choices": ["0.1", "1.5"]}}

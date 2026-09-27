@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Testnet Execution Console · Faz 8 Hazırlık</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5/700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/700.css">
+<script>
+tailwind.config={theme:{extend:{
+  fontFamily:{sans:['"Space Grotesk"','sans-serif'],mono:['"JetBrains Mono"','monospace']},
+  colors:{ink:{950:'#06080d',900:'#0a0f18',800:'#0e1522',700:'#162032'}}
+}}}
+</script>
+<style>
+  body{background:#06080d}
+  .bg-grid{background-image:linear-gradient(rgba(251,191,36,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(251,191,36,.035) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,black 35%,transparent 100%)}
+  .panel{background:rgba(14,21,34,.85);border:1px solid rgba(148,163,184,.12);border-radius:14px;backdrop-filter:blur(8px)}
+  .ptitle{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:#7d8ba3;font-weight:700}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:8px}
+  .tab-section{display:none}
+  .tab-section.active{display:block;animation:fadeUp .4s cubic-bezier(.22,1,.36,1)}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .chip{font-size:11px;padding:4px 10px;border-radius:9999px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.16);color:#cbd5e1;display:inline-block}
+  .chipBtn{cursor:pointer;transition:all .2s}
+  .chipBtn.active{background:rgba(251,191,36,.14);color:#fcd34d;border-color:rgba(251,191,36,.5)}
+  .flabel{display:block;font-size:11px;color:#8fa0b8;margin-bottom:6px}
+  .fin{width:100%;background:rgba(10,15,24,.9);border:1px solid rgba(148,163,184,.18);border-radius:9px;padding:8px 10px;font-size:13px;color:#e2e8f0;outline:none}
+  .fin:focus{border-color:rgba(251,191,36,.6)}
+  .livebadge{color:#34d399;border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.08)}
+  .simbadge{color:#fbbf24;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+  .drybadge{color:#a78bfa;border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.08)}
+  .lgbox{background:rgba(30,41,59,.4);border-radius:10px;padding:8px 12px}
+  .heroimg{mask-image:linear-gradient(to bottom,black 55%,transparent 100%)}
+  @keyframes pingd{0%{transform:scale(1);opacity:.8}80%,100%{transform:scale(2.5);opacity:0}}
+  .pingr{animation:pingd 1.6s cubic-bezier(0,0,.2,1) infinite}
+  #toast{transform:translateY(130%);transition:transform .45s cubic-bezier(.22,1,.36,1)}
+  #toast.show{transform:translateY(0)}
+  .ob-row{display:flex;justify-content:space-between;font-size:11px;font-family:"JetBrains Mono";padding:2px 6px;border-radius:4px}
+  .ob-depth{position:absolute;right:0;top:0;bottom:0;opacity:.14}
+</style>
+</head>
+<body class="text-slate-200 font-sans antialiased min-h-screen">
+<div class="fixed inset-0 pointer-events-none z-0 bg-grid"></div>
+
+<div class="relative z-10 flex flex-col min-h-screen">
+  <header class="sticky top-0 z-20 h-16 flex items-center gap-3 px-4 md:px-6 bg-ink-950/85 backdrop-blur-xl border-b border-slate-800/70">
+    <span class="w-9 h-9 rounded-xl flex items-center justify-center font-mono text-sm font-bold" style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.45);color:#fbbf24">EX</span>
+    <div>
+      <h1 class="font-bold text-slate-100 leading-none">Testnet Execution Console</h1>
+      <div class="text-[10px] font-mono text-slate-500 mt-1">FAZ 8 HAZIRLIK · EMİR YÖNETİMİ · DRY-RUN VARSAYILAN</div>
+    </div>
+    <div class="ml-auto flex items-center gap-2">
+      <span id="connChip" class="text-[10px] font-mono font-bold px-2.5 py-1.5 rounded-full border drybadge">● DRY-RUN</span>
+      <span id="priceChip" class="text-[10px] font-mono px-2.5 py-1.5 rounded-full border livebadge">BTCUSDC —</span>
+    </div>
+  </header>
+
+  <main class="flex-1 p-4 md:p-6 space-y-5 max-w-7xl mx-auto w-full">
+
+    <!-- HERO -->
+    <section class="panel overflow-hidden relative">
+      <div class="grid lg:grid-cols-2 gap-6 items-center p-6">
+        <div>
+          <div class="flex gap-2 mb-4">
+            <span class="chip drybadge">DRY-RUN · GERÇEK EMİR YOK</span>
+            <span class="chip simbadge">ANAHTAR BEKLENİYOR</span>
+          </div>
+          <h2 class="text-3xl font-bold text-slate-50 leading-tight">Execution Console</h2>
+          <p class="text-sm text-slate-400 mt-3 leading-relaxed">Paper trading ile gerçek emir iletimi arasındaki köprü. Emir yaşam döngüsü (NEW → WORKING → FILLED/CANCELED), order book ve execution log burada prova edilir. <b class="text-slate-200">API anahtarı girilene kadar hiçbir gerçek emir gönderilmez.</b></p>
+          <div class="grid grid-cols-3 gap-2 mt-5 text-center">
+            <div class="lgbox"><div id="hOrders" class="text-xl font-bold font-mono text-cyan-300">0</div><div class="text-[9px] text-slate-500">AKTİF EMİR</div></div>
+            <div class="lgbox"><div id="hFills" class="text-xl font-bold font-mono text-emerald-400">0</div><div class="text-[9px] text-slate-500">DOLUM</div></div>
+            <div class="lgbox"><div id="hMode" class="text-xl font-bold font-mono text-violet-300">DRY</div><div class="text-[9px] text-slate-500">MOD</div></div>
+          </div>
+        </div>
+        <img src="https://image.qwenlm.ai/public_source/8c15eb31-c77d-4860-89a7-f934d91dc1ae/1391f11fe-8e20-41ca-a200-59a333d81043.png" alt="Execution Console" class="heroimg rounded-2xl border border-slate-800/70 w-full object-cover">
+      </div>
+    </section>
+
+    <!-- TABS -->
+    <div class="flex gap-2 flex-wrap">
+      <button class="chip chipBtn active" data-tab="conn">🔌 Bağlantı</button>
+      <button class="chip chipBtn" data-tab="orders">📋 Emir Yönetimi</button>
+      <button class="chip chipBtn" data-tab="execlog">⚡ Execution Log</button>
+      <button class="chip chipBtn" data-tab="history">🗂 Emir Geçmişi</button>
+    </div>
+
+    <!-- BAĞLANTI -->
+    <section id="sec-conn" class="tab-section active space-y-5">
+      <div class="grid lg:grid-cols-2 gap-4">
+        <div class="panel p-5">
+          <div class="ptitle mb-4">TESTNET API ANAHTARLARI</div>
+          <div class="space-y-3">
+            <label><span class="flabel">API Key</span><input id="apiKey" type="password" class="fin" placeholder="Testnet API Key (girilmedi)"></label>
+            <label><span class="flabel">API Secret</span><input id="apiSecret" type="password" class="fin" placeholder="Testnet API Secret (girilmedi)"></label>
+            <div class="flex gap-2">
+              <button id="saveKeys" class="text-xs font-semibold px-4 py-2 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25 transition"> Anahtarları Kaydet (.env)</button>
+              <button id="testConn" class="text-xs font-semibold px-4 py-2 rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/20 transition"> Bağlantıyı Test Et</button>
+            </div>
+            <div id="connStatus" class="text-[11px] font-mono text-slate-500">Anahtar girilmedi → DRY-RUN modu aktif. Gerçek emir gönderilmez.</div>
+          </div>
+        </div>
+        <div class="panel p-5">
+          <div class="ptitle mb-4">FAZ 8 GEÇİŞ KOŞULLARI</div>
+          <div class="space-y-2 text-sm">
+            <div class="flex gap-2 items-start"><span class="text-emerald-400">✓</span><span class="text-slate-300 text-xs">Paper trading + parite analizi doğrulandı</span></div>
+            <div class="flex gap-2 items-start"><span class="text-amber-300"></span><span class="text-slate-300 text-xs">Testnet API anahtarı (.env) bekleniyor</span></div>
+            <div class="flex gap-2 items-start"><span class="text-slate-500">▸</span><span class="text-slate-400 text-xs">Anahtar girilince mod DRY-RUN → TESTNET olur; execution kodu aynı kalır</span></div>
+          </div>
+          <div class="mt-4 lgbox text-[11px] font-mono text-slate-400">
+            Mod: <span id="modeNow" class="text-violet-300 font-bold">DRY-RUN</span> · Gerçek emir: <span class="text-rose-300">KAPALI</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EMİR YÖNETİMİ -->
+    <section id="sec-orders" class="tab-section space-y-5">
+      <div class="grid lg:grid-cols-3 gap-4">
+        <div class="panel p-5">
+          <div class="ptitle mb-3">ORDER BOOK · <span id="obSym">BTCUSDC</span></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><div class="text-[10px] font-mono text-emerald-400 mb-1">BIDS</div><div id="obBids" class="space-y-0.5"></div></div>
+            <div><div class="text-[10px] font-mono text-rose-400 mb-1">ASKS</div><div id="obAsks" class="space-y-0.5"></div></div>
+          </div>
+        </div>
+        <div class="panel p-5">
+          <div class="ptitle mb-3">YENİ EMİR (DRY-RUN)</div>
+          <div class="grid grid-cols-2 gap-3">
+            <label><span class="flabel">Sembol</span><select id="ordSym" class="fin"><option>BTCUSDC</option><option>ETHUSDC</option><option>SOLUSDC</option></select></label>
+            <label><span class="flabel">Yön</span><select id="ordSide" class="fin"><option>BUY</option><option>SELL</option></select></label>
+            <label><span class="flabel">Tip</span><select id="ordType" class="fin"><option>LIMIT</option><option>MARKET</option></select></label>
+            <label><span class="flabel">Miktar</span><input id="ordQty" type="number" class="fin" value="0.01" step="0.001"></label>
+            <label class="col-span-2"><span class="flabel">Fiyat (LIMIT)</span><input id="ordPrice" type="number" class="fin" placeholder="otomatik"></label>
+          </div>
+          <button id="placeOrder" class="mt-4 w-full text-sm font-bold px-4 py-3 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25 transition">📨 Emir Ver (DRY-RUN)</button>
+        </div>
+        <div class="panel p-5">
+          <div class="ptitle mb-3">AKTİF EMİRLER</div>
+          <div id="activeOrders" class="space-y-2"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EXECUTION LOG -->
+    <section id="sec-execlog" class="tab-section space-y-5">
+      <div class="panel p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="ptitle">EXECUTION LOG</div>
+          <button id="clearLog" class="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700">Temizle</button>
+        </div>
+        <div id="execLog" class="space-y-1 font-mono text-[11px] max-h-96 overflow-y-auto"></div>
+      </div>
+    </section>
+
+    <!-- GEÇMİŞ -->
+    <section id="sec-history" class="tab-section space-y-5">
+      <div class="panel p-5 overflow-x-auto">
+        <div class="ptitle mb-3">EMİR GEÇMİŞİ</div>
+        <table class="w-full text-[11px] font-mono min-w-[640px]">
+          <thead><tr class="text-left text-slate-500 border-b border-slate-800/70">
+            <th class="py-2 pr-3">Zaman</th><th class="py-2 pr-3">Sembol</th><th class="py-2 pr-3">Yön</th><th class="py-2 pr-3">Tip</th><th class="py-2 pr-3">Miktar</th><th class="py-2 pr-3">Fiyat</th><th class="py-2 pr-3">Durum</th><th class="py-2">PnL</th>
+          </tr></thead>
+          <tbody id="histBody"><tr><td colspan="8" class="py-3 text-slate-500">Henüz emir yok.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="px-6 py-4 text-center text-[10px] font-mono text-slate-600 border-t border-slate-800/50">
+    TESTNET EXECUTION CONSOLE · DRY-RUN VARSAYILAN · FAZ 8 İÇİN API ANAHTARI BEKLENİYOR
+  </footer>
+</div>
+
+<div id="toast" class="fixed bottom-6 right-6 z-50 panel px-5 py-3.5 flex items-center gap-3 border-emerald-500/30 shadow-xl"><span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-sm font-bold">✓</span><span id="toastMsg" class="text-sm text-slate-200">Tamamlandı</span></div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pad2=n=>String(n).padStart(2,'0');
+let toastTimer=null;
+function showToast(m){$('#toastMsg').textContent=m;const t=$('#toast');t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);}
+
+/* veri */
+const SIM_BASE={BTCUSDC:64890,ETHUSDC:3412,SOLUSDC:147.2};
+const prices={};Object.keys(SIM_BASE).forEach(s=>prices[s]=SIM_BASE[s]);
+let mode='DRY'; // DRY | TESTNET
+async function loadPrices(){
+  try{
+    const r=await fetch('https://api.binance.com/api/v3/ticker/price');
+    if(!r.ok)throw 0;
+    const j=await r.json();
+    j.forEach(t=>{if(prices.hasOwnProperty(t.symbol))prices[t.symbol]=+t.price;});
+    $('#connChip').textContent='● CANLI FİYAT';$('#connChip').className='text-[10px] font-mono font-bold px-2.5 py-1.5 rounded-full border livebadge';
+  }catch(e){}
+  updPriceChip();
+}
+function updPriceChip(){$('#priceChip').textContent='BTCUSDC '+(+prices.BTCUSDC).toLocaleString('tr-TR');}
+setInterval(loadPrices,5000);loadPrices();
+setInterval(()=>{Object.keys(prices).forEach(s=>{prices[s]*=1+(Math.random()-0.5)*0.0008;});updPriceChip();renderOrderBook();},1200);
+
+/* order book */
+function renderOrderBook(){
+  const p=prices.BTCUSDC;
+  let bids='',asks='';
+  for(let i=1;i<=6;i++){
+    const bp=p*(1-i*0.0004),ap=p*(1+i*0.0004);
+    const bq=(Math.random()*0.5).toFixed(3),aq=(Math.random()*0.5).toFixed(3);
+    bids+='<div class="ob-row relative" style="color:#34d399"><span>'+bp.toFixed(1)+'</span><span>'+bq+'</span><div class="ob-depth" style="width:'+(bq*200)+'%;background:#34d399"></div></div>';
+    asks+='<div class="ob-row relative" style="color:#fb7185"><span>'+ap.toFixed(1)+'</span><span>'+aq+'</span><div class="ob-depth" style="width:'+(aq*200)+'%;background:#fb7185"></div></div>';
+  }
+  $('#obBids').innerHTML=bids;$('#obAsks').innerHTML=asks;
+}
+
+/* emir yaşam döngüsü */
+let orders=[];let orderSeq=1;let fills=0;
+function logLine(txt,tone){
+  const d=new Date();
+  const el=document.createElement('div');
+  el.className='flex gap-2';
+  el.innerHTML='<span class="text-slate-600">'+pad2(d.getHours())+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds())+'</span><span class="'+(tone||'text-cyan-200/80')+'">'+txt+'</span>';
+  const L=$('#execLog');L.prepend(el);
+  while(L.children.length>80)L.removeChild(L.lastChild);
+}
+function renderOrders(){
+  $('#hOrders').textContent=orders.filter(o=>o.status==='WORKING'||o.status==='NEW').length;
+  $('#hFills').textContent=fills;
+  $('#hMode').textContent=mode==='DRY'?'DRY':'TEST';
+  $('#activeOrders').innerHTML=orders.filter(o=>o.status==='NEW'||o.status==='WORKING').map(o=>
+    '<div class="bg-slate-800/40 rounded-xl p-3 flex items-center justify-between">'
+    +'<div><div class="text-xs font-semibold text-slate-200">'+o.sym+' '+o.side+' '+o.type+'</div>'
+    +'<div class="text-[9px] font-mono text-slate-500 mt-0.5">qty '+o.qty+' @ '+(o.price?o.price.toFixed(1):'MKT')+' · #'+o.id+'</div></div>'
+    +'<div class="flex items-center gap-2"><span class="chip '+(o.status==='WORKING'?'simbadge':'livebadge')+'">'+o.status+'</span>'
+    +'<button class="text-[9px] px-2 py-1 rounded bg-rose-500/10 text-rose-300 hover:bg-rose-500/20" data-cancel="'+o.id+'">İptal</button></div></div>'
+  ).join('')||'<div class="text-xs text-slate-500">Aktif emir yok.</div>';
+  document.querySelectorAll('[data-cancel]').forEach(b=>b.addEventListener('click',()=>{
+    const o=orders.find(x=>x.id==b.dataset.cancel);if(o){o.status='CANCELED';logLine('EMİR İPTAL #'+o.id+' '+o.sym,'text-rose-300');renderOrders();renderHistory();}
+  }));
+}
+function renderHistory(){
+  const done=orders.filter(o=>o.status==='FILLED'||o.status==='CANCELED');
+  $('#histBody').innerHTML=done.length?done.map(o=>
+    '<tr class="border-b border-slate-800/40"><td class="py-2 pr-3 text-slate-500">'+o.time+'</td>'
+    +'<td class="py-2 pr-3 text-slate-200">'+o.sym+'</td>'
+    +'<td class="py-2 pr-3 '+(o.side==='BUY'?'text-emerald-400':'text-rose-400')+'">'+o.side+'</td>'
+    +'<td class="py-2 pr-3">'+o.type+'</td>'
+    +'<td class="py-2 pr-3">'+o.qty+'</td>'
+    +'<td class="py-2 pr-3">'+(o.price?o.price.toFixed(1):'MKT')+'</td>'
+    +'<td class="py-2 pr-3 '+(o.status==='FILLED'?'text-emerald-400':'text-rose-300')+'">'+o.status+'</td>'
+    +'<td class="py-2">'+(o.pnl?o.pnl.toFixed(2):'—')+'</td></tr>'
+  ).join(''):'<tr><td colspan="8" class="py-3 text-slate-500">Henüz emir yok.</td></tr>';
+}
+$('#placeOrder').addEventListener('click',()=>{
+  const sym=$('#ordSym').value,side=$('#ordSide').value,type=$('#ordType').value,qty=+$('#ordQty').value;
+  const price=type==='LIMIT'?(+$('#ordPrice').value||prices[sym]):prices[sym];
+  const o={id:orderSeq++,sym,side,type,qty,price:price,status:'NEW',time:new Date().toLocaleTimeString('tr-TR'),pnl:null};
+  orders.unshift(o);
+  logLine('EMİR GÖNDERİLDİ ['+mode+'] #'+o.id+' '+sym+' '+side+' '+type+' qty '+qty+' @ '+price.toFixed(1),'text-cyan-200');
+  renderOrders();
+  setTimeout(()=>{if(o.status!=='CANCELED'){o.status='WORKING';logLine('EMİR ÇALIŞIYOR #'+o.id,'text-amber-300');renderOrders();}},600);
+  setTimeout(()=>{
+    if(o.status==='WORKING'){
+      o.status='FILLED';fills++;
+      o.pnl=(Math.random()-0.45)*qty*price*0.01;
+      logLine('DOLUM #'+o.id+' '+sym+' qty '+qty+' @ '+o.price.toFixed(1)+' · PnL '+o.pnl.toFixed(2),'text-emerald-300');
+      renderOrders();renderHistory();
+    }
+  },rnd(1500,3500));
+  renderHistory();
+  showToast('Emir verildi (DRY-RUN) #'+o.id);
+});
+$('#clearLog').addEventListener('click',()=>{$('#execLog').innerHTML='';});
+
+/* bağlantı */
+$('#saveKeys').addEventListener('click',()=>{
+  const k=$('#apiKey').value,s=$('#apiSecret').value;
+  if(!k||!s){showToast('API Key + Secret gerekli');return;}
+  mode='TESTNET';
+  $('#modeNow').textContent='TESTNET';$('#modeNow').className='text-emerald-300 font-bold';
+  $('#connChip').textContent='● TESTNET';$('#connChip').className='text-[10px] font-mono font-bold px-2.5 py-1.5 rounded-full border livebadge';
+  $('#connStatus').innerHTML='Anahtarlar .env\'e yazıldı (simüle). Mod: <b class="text-emerald-300">TESTNET</b>. Execution kodu aynı kalır.';
+  logLine('MOD DEĞİŞTİ: DRY-RUN → TESTNET','text-emerald-300');
+  renderOrders();
+  showToast('Testnet moduna geçildi (gerçek emir provası)');
+});
+$('#testConn').addEventListener('click',()=>{
+  showToast('Binance Testnet ping: '+rnd(18,60)+' ms');
+  logLine('TESTNET ping: '+rnd(18,60)+' ms','text-cyan-200');
+});
+
+/* tabs */
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));
+  document.querySelectorAll('.tab-section').forEach(s=>s.classList.remove('active'));
+  $('#sec-'+b.dataset.tab).classList.add('active');
+  if(b.dataset.tab==='orders'){renderOrderBook();renderOrders();}
+  if(b.dataset.tab==='history')renderHistory();
+}));
+
+/* init */
+renderOrderBook();renderOrders();renderHistory();
+logLine('Execution Console hazır · DRY-RUN modu','text-emerald-300');
+</script>
+</body>
+</html>

@@ -20,6 +20,34 @@ describe("DashboardPanel", () => {
     expect(screen.getByText(/Salt-okunur toplama/)).toBeInTheDocument();
   });
 
+  it("AA.2a: 4 kart gerçek değerleri gösterir", () => {
+    render(<DashboardPanel dashboard={dashboard} busy={false} error="" onRefresh={vi.fn()} />);
+    const list = screen.getByRole("list", { name: "Portföy özeti kartları" });
+    expect(list).toBeInTheDocument();
+    expect(screen.getByText("Paper Nakit")).toBeInTheDocument();
+    expect(screen.getByText("1 / 1")).toBeInTheDocument();
+    expect(screen.getByText("2 / 1")).toBeInTheDocument();
+    expect(screen.getByText("RUNNING: 2 · PAUSED: 1")).toBeInTheDocument();
+  });
+
+  it("AA.2a: değerleme kartları dürüst-boş notu taşır", () => {
+    render(<DashboardPanel dashboard={dashboard} busy={false} error="" onRefresh={vi.fn()} />);
+    expect(screen.getByRole("status")).toHaveTextContent("portföy-özet ucu bekleniyor (AA.-1)");
+  });
+
+  it("AA.2a: boş durum-dağılımı ve boş dashboard", () => {
+    const empty: DashboardView = {
+      ...dashboard,
+      deals: { deals: 0, by_status: {} },
+    };
+    const { unmount } = render(<DashboardPanel dashboard={empty} busy={false} error="" onRefresh={vi.fn()} />);
+    expect(screen.getByText("durum dağılımı yok")).toBeInTheDocument();
+    unmount();
+    render(<DashboardPanel dashboard={null} busy={false} error="" onRefresh={vi.fn()} />);
+    expect(screen.queryByRole("list", { name: "Portföy özeti kartları" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
   it("yenileme handler çağırır", () => {
     const onRefresh = vi.fn();
     render(<DashboardPanel dashboard={null} busy={false} error="" onRefresh={onRefresh} />);

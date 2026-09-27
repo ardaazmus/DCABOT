@@ -1,0 +1,158 @@
+# Qwen oturumunda Arda'nin verdigi tum istekler (ham, kronolojik)
+
+## [0]
+bu projeyi başlatalım.
+
+## [1]
+bu ney
+
+## [2]
+ilk yaptıgın bu nexus bot nedir bu nereden cıktı?
+
+## [3]
+bu projeyi tüm adımları ile tamamlarmısın.
+
+## [4]
+bu botta temel eksiklik gerçek zamanlı tradingview benzeri veya kendisi bir grafik. Bu Grafik Genel Bakışta, Bot olustururken de bot un paramatlerini kar noktasını safety order ların yerini, varsa liq seviyesini yani botun tüm parametrelerini online gostersin. Ayrıca her aktif işlemdeaynı şekilde devam eden işlemi aynı şekilde devam eden botun tüm parametrelerini yasıtacak şekilde göstersin. Backtest Studio da da backtest sonucunu kar zarar noktalarını göstersin. Ayrıca soru olarak soruyorum backtest icin veriyi nereden alıyorsun. Şimdi sadece matematiksel bir hesapmı? gercek verimi bu matematiksel hesap mı veri mi sorusu şimdi çalısan tüm botlar içinde geçerli yani bu sistem kurgu mu gercek veriyle çalısan mı ? çalışabilecek durumda mı?
+
+## [5]
+bot kartları da tıklanabilir olmalı tıklandığında botun durumunu gösteren bir istatistik sayfası ve yine tradingview benzeri ve botun aktif olan ayarlarını online canlı şekilde gösteren bir grafik olmalı. Ayrıca temel İndikatörlerin de secimli olarak görünebilmesi gerekiyor tüm grafiklerde. 
+
+## [6]
+veri kaynağı olarak Binance Public WebSocket, görselleştirme motoru olarak ise TradingView Lightweight Charts kütüphanesini kullanmanız en optimum çözümü kullanalım. 
+
+## [7]
+aktif deals lere tıklanmıyor orasıda tıklandığında grafik üzerinde görünsün. Canlı Piyasa verisi grafiği Trandingview den alınacak ama farklı işlem ciftlerini gorebilmek için daha doğrusu işlem yapılan borsanın işlem çiftlerinin hepsini görebilmeliyim bu ekranda yani Canlı piyasa verisinde.
+
+## [8]
+botlar ve aktif işlemlerde grafik ekranı popup acılmasın ayrıntılı botun durumunu gösteren ayarlarını gösteren ayrınılı bir sayfa olsun. Bot kartlarında veya aktif işlemlerde bir işleme tıklandıgında ayrıntılı grafik ile beraber botun ozelliklerini veren büyük sayfa acılsın diger işlemler veya botlar sayafsına gore tabi üstte kücük secilebilir kalsın eğer cok fazla olursa iki satırdan sonra scroll olsun.
+
+## [9]
+soru olarak soruyorum herhnagi bir kod işlemi yapma sececeğim işlem çiftleri için backtest in hızlı ve etkin çalısabilmesi için 5 yıllık 1m dahil verisini cekebileceğim kaynaklar varmı ücretsiz olarak. Bu bot için anlamlı ve gecmiş backtestler için dogru sonuclar cıkarmasını sağlarmı bir de backtestin doğruluğu yani sonucta güncel veriyede sahip oldugu icin gercekten kontrolü kurgulumu.
+
+## [10]
+yine soru cevap şeklinde gidelim. Sonrasında bizim şimdiki botumumuz için backtest motorunda eğer bir halusinasyon olusacaksa hesaplamalarında onları onleyecek kurallar eklersin ve kapsamlı bir motor olusturursun. Bu sonraki görev. Şimdiki sorum. Bot güvenli bir serverda çalısacak ama bu cekeceğim ve kullanacağım veri setleri boyut olarak artacak veriri kendi bilgiyarımdan okutmak mantıklı mı yoksa backtest icin binance varken yerelde o veriyi tutmak mantıksızmı? Çünkü ayda en fazla 20 sorgu yaparım oda ilk strateji olustururken sonrasına cok daha azalacaktır backtesi kullanmam.
+
+## [11]
+ok botumuza bu konuştuğumuz konuyu analiz ederek yapılması gerekenleri ve doğru yöntemleri uygula ben senin istediğin şekilde istediğim kripto ciftlerini download edip organize edeceğim ve kendi bilgisayarımda tutacağım. Botta ordan okuyum ancak güncel veri seti gerektiğinde oraya ekleme yapıp işleme devam edecek değilmi? Evet ise bunun kurgusunu ve yazılımsal mimarisini entegre et.
+
+## [12]
+Ayrıca botumuzun sürdürülebilir ve ileride cıkabilecek piyasa değişiklikleri için modüler olması en kücük  parcalar halinde calısabilmesi gerek backtest motoru, DCA stratejileri,  Grid Stratejileri, Arbitraj strajileri biribiri ile konusur ama moduler kalması onemli yeni stratejiler hesap yöntemleri eklemek istediğimde bot sisteminin geneli değişmememeli . Ayrıca bot app in tüm calısma mantığını içeriden bot stratejisinin tüm kodunu ve app in calısmasını bilen bir ai pencerei eklenmeli. Şimdiki asamada geliştirme oldugu icin sadece kurgusal olacak ama deploy edeceğimiz zaman bota atayacağım yapay zekasının bot hakkında bir kalıcı hafızası olmalı ki sürekli botu kontrol edip yeniden ogrenmeye calısıp context harcamasın.
+
+## [13]
+yine sadece soru soruyorum bu tüm backend leri sen yazabilirmisin ben sonradan sana binance test apisi mi vermem gerekiyor yoksa şimdiden o api ye ihtiyac varmı?
+
+## [14]
+evet önerdiğin tüm yolları kabul ediyorum. Ve şimdilik ETH/USDC, SOL/USDC, BTC/USDC, XRP/USDC, XMR/USDC çiftleri benim için yeterli. Tüm Kontrol sende.
+
+## [15]
+devam et
+
+## [16]
+devam et
+
+## [17]
+devam et
+
+## [18]
+devam
+
+## [19]
+devam et
+
+## [20]
+devam
+
+## [21]
+proje bütünde ne durumda testnet apiyi de girdi.
+
+## [22]
+kalan moduller burada yazılamazmı motor testleri backend tarafında yapılamazmı. Gelişmiş moduller , DCA engini Grid&Hybrit motor ve maliyet arbitraj lar için diyorum.
+
+## [23]
+projeyi senden kuruluma hazır halde alırım ve sunucuda yeniden deploy ederim.
+
+## [24]
+nasıl yani binlerce satır kod strateji 339 satıra mı düştü
+
+## [25]
+projenin bitmiş halinin bir projektörü varmı arayüzü tam olarak görebileceğim.
+
+## [26]
+bu projeyi başlatalım.
+
+## [27]
+bu ney
+
+## [28]
+ilk yaptıgın bu nexus bot nedir bu nereden cıktı?
+
+## [29]
+bu projeyi tüm adımları ile tamamlarmısın.
+
+## [30]
+bu botta temel eksiklik gerçek zamanlı tradingview benzeri veya kendisi bir grafik. Bu Grafik Genel Bakışta, Bot olustururken de bot un paramatlerini kar noktasını safety order ların yerini, varsa liq seviyesini yani botun tüm parametrelerini online gostersin. Ayrıca her aktif işlemdeaynı şekilde devam eden işlemi aynı şekilde devam eden botun tüm parametrelerini yasıtacak şekilde göstersin. Backtest Studio da da backtest sonucunu kar zarar noktalarını göstersin. Ayrıca soru olarak soruyorum backtest icin veriyi nereden alıyorsun. Şimdi sadece matematiksel bir hesapmı? gercek verimi bu matematiksel hesap mı veri mi sorusu şimdi çalısan tüm botlar içinde geçerli yani bu sistem kurgu mu gercek veriyle çalısan mı ? çalışabilecek durumda mı?
+
+## [31]
+bot kartları da tıklanabilir olmalı tıklandığında botun durumunu gösteren bir istatistik sayfası ve yine tradingview benzeri ve botun aktif olan ayarlarını online canlı şekilde gösteren bir grafik olmalı. Ayrıca temel İndikatörlerin de secimli olarak görünebilmesi gerekiyor tüm grafiklerde. 
+
+## [32]
+veri kaynağı olarak Binance Public WebSocket, görselleştirme motoru olarak ise TradingView Lightweight Charts kütüphanesini kullanmanız en optimum çözümü kullanalım. 
+
+## [33]
+aktif deals lere tıklanmıyor orasıda tıklandığında grafik üzerinde görünsün. Canlı Piyasa verisi grafiği Trandingview den alınacak ama farklı işlem ciftlerini gorebilmek için daha doğrusu işlem yapılan borsanın işlem çiftlerinin hepsini görebilmeliyim bu ekranda yani Canlı piyasa verisinde.
+
+## [34]
+botlar ve aktif işlemlerde grafik ekranı popup acılmasın ayrıntılı botun durumunu gösteren ayarlarını gösteren ayrınılı bir sayfa olsun. Bot kartlarında veya aktif işlemlerde bir işleme tıklandıgında ayrıntılı grafik ile beraber botun ozelliklerini veren büyük sayfa acılsın diger işlemler veya botlar sayafsına gore tabi üstte kücük secilebilir kalsın eğer cok fazla olursa iki satırdan sonra scroll olsun.
+
+## [35]
+soru olarak soruyorum herhnagi bir kod işlemi yapma sececeğim işlem çiftleri için backtest in hızlı ve etkin çalısabilmesi için 5 yıllık 1m dahil verisini cekebileceğim kaynaklar varmı ücretsiz olarak. Bu bot için anlamlı ve gecmiş backtestler için dogru sonuclar cıkarmasını sağlarmı bir de backtestin doğruluğu yani sonucta güncel veriyede sahip oldugu icin gercekten kontrolü kurgulumu.
+
+## [36]
+yine soru cevap şeklinde gidelim. Sonrasında bizim şimdiki botumumuz için backtest motorunda eğer bir halusinasyon olusacaksa hesaplamalarında onları onleyecek kurallar eklersin ve kapsamlı bir motor olusturursun. Bu sonraki görev. Şimdiki sorum. Bot güvenli bir serverda çalısacak ama bu cekeceğim ve kullanacağım veri setleri boyut olarak artacak veriri kendi bilgiyarımdan okutmak mantıklı mı yoksa backtest icin binance varken yerelde o veriyi tutmak mantıksızmı? Çünkü ayda en fazla 20 sorgu yaparım oda ilk strateji olustururken sonrasına cok daha azalacaktır backtesi kullanmam.
+
+## [37]
+ok botumuza bu konuştuğumuz konuyu analiz ederek yapılması gerekenleri ve doğru yöntemleri uygula ben senin istediğin şekilde istediğim kripto ciftlerini download edip organize edeceğim ve kendi bilgisayarımda tutacağım. Botta ordan okuyum ancak güncel veri seti gerektiğinde oraya ekleme yapıp işleme devam edecek değilmi? Evet ise bunun kurgusunu ve yazılımsal mimarisini entegre et.
+
+## [38]
+Ayrıca botumuzun sürdürülebilir ve ileride cıkabilecek piyasa değişiklikleri için modüler olması en kücük  parcalar halinde calısabilmesi gerek backtest motoru, DCA stratejileri,  Grid Stratejileri, Arbitraj strajileri biribiri ile konusur ama moduler kalması onemli yeni stratejiler hesap yöntemleri eklemek istediğimde bot sisteminin geneli değişmememeli . Ayrıca bot app in tüm calısma mantığını içeriden bot stratejisinin tüm kodunu ve app in calısmasını bilen bir ai pencerei eklenmeli. Şimdiki asamada geliştirme oldugu icin sadece kurgusal olacak ama deploy edeceğimiz zaman bota atayacağım yapay zekasının bot hakkında bir kalıcı hafızası olmalı ki sürekli botu kontrol edip yeniden ogrenmeye calısıp context harcamasın.
+
+## [39]
+yine sadece soru soruyorum bu tüm backend leri sen yazabilirmisin ben sonradan sana binance test apisi mi vermem gerekiyor yoksa şimdiden o api ye ihtiyac varmı?
+
+## [40]
+evet önerdiğin tüm yolları kabul ediyorum. Ve şimdilik ETH/USDC, SOL/USDC, BTC/USDC, XRP/USDC, XMR/USDC çiftleri benim için yeterli. Tüm Kontrol sende.
+
+## [41]
+devam et
+
+## [42]
+devam et
+
+## [43]
+devam et
+
+## [44]
+devam
+
+## [45]
+devam et
+
+## [46]
+devam
+
+## [47]
+proje bütünde ne durumda testnet apiyi de girdi.
+
+## [48]
+kalan moduller burada yazılamazmı motor testleri backend tarafında yapılamazmı. Gelişmiş moduller , DCA engini Grid&Hybrit motor ve maliyet arbitraj lar için diyorum.
+
+## [49]
+projeyi senden kuruluma hazır halde alırım ve sunucuda yeniden deploy ederim.
+
+## [50]
+nasıl yani binlerce satır kod strateji 339 satıra mı düştü
+
+## [51]
+projenin bitmiş halinin bir projektörü varmı arayüzü tam olarak görebileceğim.
+
