@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("/design koyu tema: galeri ve görsel taban", async ({ page }) => {
+test("/design koyu tema: galeri ve görsel taban @visual", async ({ page }) => {
   await page.goto("/design");
   await expect(page.getByText("Paper")).toBeVisible({ timeout: 15000 });
   await expect(
@@ -19,7 +19,7 @@ test("/design koyu tema: galeri ve görsel taban", async ({ page }) => {
   });
 });
 
-test("/design açık tema: galeri ve görsel taban", async ({ page }) => {
+test("/design açık tema: galeri ve görsel taban @visual", async ({ page }) => {
   await page.goto("/design");
   await expect(page.getByText("Paper")).toBeVisible({ timeout: 15000 });
   await page.getByRole("button", { name: "Tema değiştir" }).click();

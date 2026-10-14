@@ -102,7 +102,7 @@ test("erişilebilirlik: kritik ihlal yok", async ({ page }) => {
   ).toEqual([]);
 });
 
-test("sonuç masaüstü: ekran görüntüsü ve görsel taban", async ({ page }) => {
+test("sonuç masaüstü: ekran görüntüsü ve görsel taban @visual", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/backtest?${PREFILL}`);
   await expect(page.getByTestId("backtest-run")).toBeEnabled({ timeout: 20000 });
@@ -119,7 +119,7 @@ test("sonuç masaüstü: ekran görüntüsü ve görsel taban", async ({ page })
   });
 });
 
-test("sonuç mobil: ekran görüntüsü ve görsel taban", async ({ page }) => {
+test("sonuç mobil: ekran görüntüsü ve görsel taban @visual", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/backtest?${PREFILL}`);
   await expect(page.getByTestId("backtest-run")).toBeEnabled({ timeout: 20000 });

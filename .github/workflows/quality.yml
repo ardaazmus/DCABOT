@@ -47,4 +47,4 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: web
       # Backend ve web'i Playwright webServer başlatır (8001 + 3001, yalıtımlı veri).
-      - run: npm run test:e2e --prefix web
+      - run: npm run test:e2e:ci --prefix web

@@ -54,7 +54,7 @@ test("bilinmeyen sembol dürüst hata + Piyasaya dön", async ({ page }) => {
   await expect(page).toHaveURL("/market");
 });
 
-test("/market/BTCUSDT indikatörsüz: ekran görüntüsü ve görsel taban", async ({
+test("/market/BTCUSDT indikatörsüz: ekran görüntüsü ve görsel taban @visual", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -78,7 +78,7 @@ test("/market/BTCUSDT indikatörsüz: ekran görüntüsü ve görsel taban", asy
   });
 });
 
-test("/market/BTCUSDT indikatörlü: ekran görüntüsü ve görsel taban", async ({
+test("/market/BTCUSDT indikatörlü: ekran görüntüsü ve görsel taban @visual", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -112,7 +112,7 @@ test("/market/BTCUSDT indikatörlü: ekran görüntüsü ve görsel taban", asyn
   });
 });
 
-test("/market/BTCUSDT mobil: ekran görüntüsü ve görsel taban", async ({
+test("/market/BTCUSDT mobil: ekran görüntüsü ve görsel taban @visual", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });

@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:ci": "playwright test --grep-invert \"@visual|@venue|@vault\"",
     "gen:api": "openapi-typescript http://127.0.0.1:8770/openapi.json -o src/lib/api/schema.d.ts",
     "record:fixtures": "node scripts/record-fixtures.mjs"
   },

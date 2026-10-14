@@ -86,7 +86,7 @@ test("grid sihirbaz: tür seç → aralık → önizleme → oluştur → detay"
   expect(archive.ok()).toBe(true);
 });
 
-test("futures grid sihirbaz: tür seç → yön+kaldıraç → önizleme → oluştur → detay", async ({
+test("futures grid sihirbaz: tür seç → yön+kaldıraç → önizleme → oluştur → detay @venue", async ({
   page,
 }) => {
   await page.goto("/bots/new?symbol=BTCUSDT");
@@ -143,7 +143,7 @@ test("grid yaşam döngüsü: başlat → durdur → arşivle", async ({ page })
   expect(archive.ok()).toBe(true);
 });
 
-test("futures grid yaşam döngüsü: başlat → durdur → arşivle", async ({ page }) => {
+test("futures grid yaşam döngüsü: başlat → durdur → arşivle @venue", async ({ page }) => {
   const botId = await createFuturesGridBot(page, "E2E futures grid runner");
   await page.goto(`/bots/${botId}`);
   await expect(page.getByRole("heading", { name: "E2E futures grid runner", level: 1 })).toBeVisible({

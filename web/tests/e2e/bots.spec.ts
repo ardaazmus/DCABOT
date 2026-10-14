@@ -153,7 +153,7 @@ test("erişilebilirlik: kritik ihlal yok", async ({ page }) => {
   ).toEqual([]);
 });
 
-test("sihirbaz masaüstü: ekran görüntüsü ve görsel taban", async ({ page }) => {
+test("sihirbaz masaüstü: ekran görüntüsü ve görsel taban @visual", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/bots/new?symbol=BTCUSDT");
   await expect(page.getByRole("heading", { name: "DCA botu kur", level: 1 })).toBeVisible();
@@ -171,7 +171,7 @@ test("sihirbaz masaüstü: ekran görüntüsü ve görsel taban", async ({ page 
   });
 });
 
-test("sihirbaz mobil: ekran görüntüsü ve görsel taban", async ({ page }) => {
+test("sihirbaz mobil: ekran görüntüsü ve görsel taban @visual", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/bots/new?symbol=BTCUSDT");
   await expect(page.getByRole("heading", { name: "DCA botu kur", level: 1 })).toBeVisible();
@@ -183,7 +183,7 @@ test("sihirbaz mobil: ekran görüntüsü ve görsel taban", async ({ page }) =>
   });
 });
 
-test("liste ve detay: ekran görüntüleri ve görsel taban", async ({ page }) => {
+test("liste ve detay: ekran görüntüleri ve görsel taban @visual", async ({ page }) => {
   // Öz-yeterli: önceki testlerin botlarını arşivleyip kendi listesini kurar.
   const existing = (await (await page.request.get("/api/v2/bots")).json()) as {
     data: { bot_id: string; name: string; revision: number }[];

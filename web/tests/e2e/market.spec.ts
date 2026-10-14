@@ -29,7 +29,7 @@ test("erişilebilirlik: kritik ihlal yok", async ({ page }) => {
   ).toEqual([]);
 });
 
-test("/market masaüstü: ekran görüntüsü ve görsel taban", async ({ page }) => {
+test("/market masaüstü: ekran görüntüsü ve görsel taban @visual", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await gotoMarketList(page);
   await page.screenshot({ path: "tests/e2e/screenshots/market-desktop.png" });
@@ -41,7 +41,7 @@ test("/market masaüstü: ekran görüntüsü ve görsel taban", async ({ page }
   });
 });
 
-test("/market mobil: ekran görüntüsü ve görsel taban", async ({ page }) => {
+test("/market mobil: ekran görüntüsü ve görsel taban @visual", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await gotoMarketList(page);
   await page.screenshot({ path: "tests/e2e/screenshots/market-mobile.png" });

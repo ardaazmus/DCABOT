@@ -5,7 +5,7 @@ soru sorulmaz. Hedef: minimum 3Commas/Bitsgap spot/futures DCA+grid
 paritesi. Sınır: gerçek emir için ayrıca açık emir gerekir; anahtar
 yokken mutation kapıları kapalı.
 
-Aktif iş: **Q1 kapalı; sırada Q2.**
+Aktif iş: **Q2 kapalı; sırada Q3.** Kaynak makine: notebook (2026-10-14).
 - **KAPALI (bu oturum): Q1** backtest fiyat+işlem grafiği + PF.
 - **KAPALI (bu oturum): F09a** DCA trailing TP (motor+API+UI+e2e).
 - **KAPALI (bu oturum): F20a** bot-copy; **F10a** deal brüt/net.
@@ -13,8 +13,8 @@ Aktif iş: **Q1 kapalı; sırada Q2.**
   COMBO-lite; **G3-d** multi-pair; **N2-impl**.
 - HAZIR: N2 Telegram (canlı kanıt en sonda, Arda kararı).
 - Kalan: G3 canlı likidasyon (NO-GO, credential+venue kararı).
-Doğrulanan: checker **2516/2516 OK** (1 skip), vitest 265/265,
-tsc+lint temiz, e2e 79/79.
+Doğrulanan: checker **2528/2528 OK** (1 skip), vitest 267/267,
+tsc temiz, e2e 80/80 (yerel; CI 64, görsel/venue/kasa ayrı).
 Eksenler: implementation=COMPLETE (Q1) · verification=PASS ·
 evidence_scope=LOCAL_INTEGRATION · review=NOT_RUN ·
 deployment=NOT_DEPLOYED
@@ -37,4 +37,4 @@ Grid (yapılacak), bildirim (Telegram+uygulama-içi), testnet bot başına
 onay (evet), masaüstü öncelikli, canary DRAFT değerleri, P4 (OKX+Bybit),
 Pine DEFERRED, HCM W-F9'da, ADX/marjin defaultları. Bkz. KARARLAR.md.
 P4 + Qwen taraması + N2 canlı kanıt en sonda (2026-09-27).
-Sıra: Q2 → Q3 → F31-bulk (aday) → en son P4+N2-canlı.
+Sıra: Q3 → F31-bulk (aday) → en son P4+N2-canlı.

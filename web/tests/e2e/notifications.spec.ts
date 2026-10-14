@@ -56,7 +56,7 @@ test("bildirim: rozet belirir, okundu temizler, merkez listeler", async ({ page 
   await page.request.post("/api/notifications/read", { data: { upto_seq: 999999 } });
 });
 
-test("telegram: kaydet → bağlı → unut (sahte kimlik, gerçek kasa)", async ({ page }) => {
+test("telegram: kaydet → bağlı → unut (sahte kimlik, gerçek kasa) @vault", async ({ page }) => {
   await page.goto("/notifications");
   await expect(page.getByTestId("telegram-settings")).toBeVisible({ timeout: 15000 });
 

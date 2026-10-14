@@ -47,7 +47,7 @@ test("kabuk masaüstü 1440px: kontrol merkezi açılır", async ({ page }) => {
   await page.screenshot({ path: "tests/e2e/screenshots/shell-desktop.png" });
 });
 
-test("kabuk mobil 390px: çekmece menü ve ekran görüntüsü", async ({
+test("kabuk mobil 390px: çekmece menü ve ekran görüntüsü @visual", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
