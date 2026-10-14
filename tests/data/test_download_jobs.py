@@ -2,7 +2,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
-from threading import Event
+from threading import Event, enumerate as live_threads
 from unittest.mock import patch
 
 from dcabot.data_adapters.download_jobs import (
@@ -105,6 +105,7 @@ class DownloadJobTests(unittest.TestCase):
         manager = DownloadJobManager()
         with tempfile.TemporaryDirectory() as directory:
             opener = _BlockingOpener()
+            before = set(live_threads())
             job_id = manager.start(
                 "dataset-id",
                 BINANCE_BTCUSDT_1H_2025_01_01_PLAN,
@@ -120,6 +121,11 @@ class DownloadJobTests(unittest.TestCase):
                 )
             manager.cancel(job_id)
             opener.release.set()
+            # Wait for the worker to clean up its .part file; otherwise removing the
+            # temp directory races it (CI linux: "Directory not empty").
+            for worker in set(live_threads()) - before:
+                worker.join(timeout=10)
+                self.assertFalse(worker.is_alive())
 
     def test_unexpected_job_error_fails_without_retrying_as_public_download_error(self):
         with tempfile.TemporaryDirectory() as directory:
