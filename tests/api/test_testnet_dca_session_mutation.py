@@ -70,6 +70,9 @@ def _account_snapshot() -> BinanceTestnetAccountSnapshot:
 
 class TestnetDcaSessionMutationApiTests(unittest.TestCase):
     def setUp(self):
+        self._original_provider = api.WindowsCredentialManagerProvider
+        # Gerçek kasa yalnız Windows'ta; sahte venue çağrıları sağlayıcıyı kullanmaz (CI linux).
+        api.WindowsCredentialManagerProvider = lambda **_: object()
         self._tmp = tempfile.TemporaryDirectory()
         session_path = Path(self._tmp.name) / "dca-sessions.sqlite3"
         attempts_path = Path(self._tmp.name) / "dca-attempts.sqlite3"
@@ -93,6 +96,7 @@ class TestnetDcaSessionMutationApiTests(unittest.TestCase):
         _asgi("/api/testnet/dca-sessions/s1/mark", method="POST", body=json.dumps({"price": "100"}).encode())
 
     def tearDown(self):
+        api.WindowsCredentialManagerProvider = self._original_provider
         api.TESTNET_DCA_SESSION_STORE.close()
         api.TESTNET_DCA_ATTEMPT_STORE.close()
         api.TESTNET_DCA_SESSION_STORE = self._original_session_store
@@ -188,6 +192,9 @@ class TestnetDcaSessionMutationApiTests(unittest.TestCase):
 
 class TestnetDcaSessionSyncApiTests(unittest.TestCase):
     def setUp(self):
+        self._original_provider = api.WindowsCredentialManagerProvider
+        # Gerçek kasa yalnız Windows'ta; sahte venue çağrıları sağlayıcıyı kullanmaz (CI linux).
+        api.WindowsCredentialManagerProvider = lambda **_: object()
         self._tmp = tempfile.TemporaryDirectory()
         session_path = Path(self._tmp.name) / "dca-sessions.sqlite3"
         self._original_session_store = api.TESTNET_DCA_SESSION_STORE
@@ -201,6 +208,7 @@ class TestnetDcaSessionSyncApiTests(unittest.TestCase):
         _asgi("/api/testnet/dca-sessions", method="POST", body=payload)
 
     def tearDown(self):
+        api.WindowsCredentialManagerProvider = self._original_provider
         api.TESTNET_DCA_SESSION_STORE.close()
         api.TESTNET_DCA_SESSION_STORE = self._original_session_store
         api.sync_order_fills = self._original_sync

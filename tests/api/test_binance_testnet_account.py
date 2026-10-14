@@ -51,12 +51,16 @@ def _open_order() -> BinanceTestnetOpenOrder:
 
 class BinanceTestnetAccountApiTests(unittest.TestCase):
     def setUp(self):
+        self._original_provider = api.WindowsCredentialManagerProvider
+        # Gerçek kasa yalnız Windows'ta; sahte venue çağrıları sağlayıcıyı kullanmaz (CI linux).
+        api.WindowsCredentialManagerProvider = lambda **_: object()
         self.original_env = api.os.environ.get("DCABOT_TESTNET_CREDENTIAL_ID")
         self.original_fetch_account = api.fetch_binance_testnet_account
         self.original_fetch_orders = api.fetch_binance_testnet_open_orders
         api.os.environ["DCABOT_TESTNET_CREDENTIAL_ID"] = "testnet-readonly"
 
     def tearDown(self):
+        api.WindowsCredentialManagerProvider = self._original_provider
         if self.original_env is None:
             api.os.environ.pop("DCABOT_TESTNET_CREDENTIAL_ID", None)
         else:

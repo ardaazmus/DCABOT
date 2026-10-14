@@ -24,6 +24,12 @@ P4 + Qwen taraması + N2 canlı kanıt en sonda (Arda 2026-09-27).
 - G3-c + G3-b + G3-a + Faz G2 + N1 + W-B8 + W-B6 + W-F7 + Faz G1.
 
 ## Sırada
+- **CI e2e (GitHub, linux) 16/80 kırmızı (2026-10-14, run 38609641568)** — kod hatası değil, ortam:
+  13 görsel taban (Windows'ta canlı veriyle üretildi, linux render + canlı piyasa farkı),
+  2 futures grid (CI'da `POST /api/v2/futures-grid-bots` 502 — Binance futures erişimi; kök neden
+  doğrulanmadı), 1 telegram (gerçek Windows kasası). Karar: CI'da görsel/canlı-venue/kasa testlerini
+  ayır (etiket) ya da e2e'yi Windows runner'a taşı. Python CI kırmızısı (7 test, Windows kasası
+  varsayımı) aynı gün düzeltildi.
 1. **Q2:** korelasyon-matrisi UI; sonra **Q3:** RSI/hacim göstergeleri.
 2. **F31-bulk (aday):** bot lifecycle + toplu işlemler (DEFERRED olabilir).
 3. **EN SON:** P4 marketler + N2 canlı (Qwen taraması kapalı, KARARLAR'da).
