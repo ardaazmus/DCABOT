@@ -139,7 +139,7 @@ from dcabot.application.two_leg_fill_projection import (
 )
 from dcabot.persistence.two_leg_journal import TwoLegJournal
 from dcabot.persistence.bot_store import BotStore
-from dcabot.server import bot_runner, telegram_worker, v2_backtests, v2_bots, v2_futures_grid_backtests, v2_grid_backtests, v2_notifications_telegram, v2_stats
+from dcabot.server import bot_runner, telegram_worker, v2_backtests, v2_bots, v2_futures_grid_backtests, v2_grid_backtests, v2_notifications_telegram, v2_risk, v2_stats
 from dcabot.data_adapters.binance_futures_public_transport import (
     fetch_funding_rate_history,
     fetch_futures_public_klines_range,
@@ -4505,6 +4505,7 @@ def _stop_paper_bot_runner() -> None:
 
 KLINE_CACHE_PATH = DATA_DIR / "klines.sqlite3"
 ROUTE_BODY_LIMITS["/api/v2/backtests"] = SMALL_JSON_BODY_LIMIT_BYTES
+ROUTE_BODY_LIMITS["/api/v2/risk/correlation-matrix"] = SMALL_JSON_BODY_LIMIT_BYTES
 ROUTE_BODY_LIMITS["/api/v2/bots/{bot_id}/replay"] = SMALL_JSON_BODY_LIMIT_BYTES
 ROUTE_BODY_LIMITS["/api/v2/bots/{bot_id}/copy"] = SMALL_JSON_BODY_LIMIT_BYTES
 ROUTE_BODY_LIMITS["/api/v2/grid-bots"] = SMALL_JSON_BODY_LIMIT_BYTES
@@ -4575,6 +4576,15 @@ V2_STATS_DEPS = v2_stats.V2StatsDeps(
     problem=_problem,
 )
 v2_stats.register_routes(app, V2_STATS_DEPS)
+V2_RISK_DEPS = v2_risk.V2RiskDeps(
+    market=V2_BOT_DEPS.market,
+    fetch_range=fetch_binance_public_klines_range,
+    cache=KlineCache(KLINE_CACHE_PATH),
+    clock_us=lambda: time.time_ns() // 1000,
+    problem=_problem,
+    transport_error=BinancePublicTransportError,
+)
+v2_risk.register_routes(app, V2_RISK_DEPS)
 
 
 @app.get("/api/health")

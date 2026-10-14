@@ -14,10 +14,22 @@ const DASHBOARD_BOT = {
   stop_loss: null,
 };
 
-async function createBot(page: Page, name: string): Promise<void> {
-  await postWithUpstreamRetry(page.request, "/api/v2/bots", {
-    data: { name, mode: "PAPER", budget: "1000", strategy: DASHBOARD_BOT },
+async function createBot(
+    page: Page,
+    name: string,
+    symbol = "BTCUSDT",
+  ): Promise<{ bot_id: string; revision: number }> {
+  const created = await postWithUpstreamRetry(page.request, "/api/v2/bots", {
+    data: { name, mode: "PAPER", budget: "1000", strategy: { ...DASHBOARD_BOT, symbol } },
   });
+  return ((await created.json()) as { data: { bot_id: string; revision: number } }).data;
+}
+
+async function archiveBot(page: Page, botId: string, revision: number): Promise<void> {
+  const archived = await page.request.post(`/api/v2/bots/${botId}/archive`, {
+    data: { revision },
+  });
+  expect(archived.ok()).toBe(true);
 }
 
 test.describe("kontrol merkezi", () => {
@@ -33,6 +45,34 @@ test.describe("kontrol merkezi", () => {
     const row = page.getByRole("link", { name });
     await expect(row).toBeVisible();
     await expect(page.getByText("Aktif deal'ler")).toBeVisible();
+  });
+
+  test("bot korelasyon kartı matris ya da dürüst hata gösterir", async ({ page }) => {
+    const btc = await createBot(page, "E2E korelasyon btc", "BTCUSDT");
+    const eth = await createBot(page, "E2E korelasyon eth", "ETHUSDT");
+    try {
+      await page.goto("/");
+      const card = page.getByTestId("dashboard-correlation");
+      await expect(card).toBeVisible();
+      await expect(card.getByText("Bot korelasyonu")).toBeVisible();
+      // Canlı klines tekil düşerse kart dürüst-hata gösterir; bir kez yenile.
+      const table = card.locator("table");
+      const alert = card.getByRole("alert");
+      await expect(table.or(alert)).toBeVisible({ timeout: 30000 });
+      if (await alert.isVisible()) {
+        await page.reload();
+        await expect(card).toBeVisible();
+        await expect(table.or(alert)).toBeVisible({ timeout: 30000 });
+      }
+      if (await table.isVisible()) {
+        await expect(table.getByRole("columnheader", { name: "BTCUSDT" })).toBeVisible();
+        await expect(table.getByRole("rowheader", { name: "ETHUSDT" })).toBeVisible();
+      }
+    } finally {
+      // Liste ekran görüntülerini kirletmemek için kendi botlarını arşivle.
+      await archiveBot(page, btc.bot_id, btc.revision);
+      await archiveBot(page, eth.bot_id, eth.revision);
+    }
   });
 
   test("equity aralık seçimi grafiği korur", async ({ page }) => {

@@ -59,6 +59,10 @@ ANALYTICS_BRIDGE_ALLOWLIST = {
     # returns stay exact Fraction in this module, only the final Sharpe
     # statistic crosses the float boundary.
     "src/dcabot/application/equity_curve_scores.py",
+    # Q2: read-only risk matrix; display coefficients via the tested
+    # correlation_scores advisors, breach verdicts via the exact
+    # integer comparison. No execution path (no orders/reservations).
+    "src/dcabot/application/correlation_matrix.py",
 }
 
 

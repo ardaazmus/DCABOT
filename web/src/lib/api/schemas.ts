@@ -77,6 +77,33 @@ export const canarySchema = z.object({
 
 export type Canary = z.infer<typeof canarySchema>;
 
+/** POST /api/v2/risk/correlation-matrix — bot sembol korelasyon matrisi. */
+export const matrixCellSchema = z.object({
+  x: z.string(),
+  y: z.string(),
+  coefficient: z.string().nullable(),
+  verdict: z.enum(["BREACH", "OK", "INSUFFICIENT"]),
+  detail: z.enum(["INSUFFICIENT_HISTORY", "INSUFFICIENT_PRECISION", "PSD_VIOLATION"]).nullable(),
+  samples: z.number(),
+});
+
+export type MatrixCell = z.infer<typeof matrixCellSchema>;
+
+export const matrixEnvelopeSchema = z.object({
+  data: z.object({
+    symbols: z.array(z.string()),
+    interval: z.string(),
+    window: z.number(),
+    threshold: z.string(),
+    computed_at_us: z.number(),
+    overlap_bars: z.number(),
+    data_source: z.enum(["CACHE", "VENUE", "MIXED"]),
+    cells: z.array(matrixCellSchema),
+  }),
+});
+
+export type MatrixEnvelope = z.infer<typeof matrixEnvelopeSchema>;
+
 /** Tek landmark: GET /api/events satırı ve SSE /api/stream `data` yükü. */
 export const landmarkSchema = z.object({
   seq: z.number(),

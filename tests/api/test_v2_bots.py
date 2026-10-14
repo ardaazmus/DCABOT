@@ -352,6 +352,7 @@ class RealAppContractTests(unittest.TestCase):
                 "/api/v2/bots/{bot_id}/deals/{deal_seq}/add-funds", "/api/v2/stats/portfolio/summary",
                 "/api/v2/stats/portfolio/equity", "/api/v2/stats/portfolio/daily-profit",
                 "/api/v2/stats/portfolio/by-bot", "/api/v2/stats/portfolio/by-pair",
+                "/api/v2/risk/correlation-matrix",
             },
         )
         for path, ops in v2.items():

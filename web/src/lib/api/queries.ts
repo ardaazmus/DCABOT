@@ -42,6 +42,7 @@ import {
   killSwitchSchema,
   klinesSchema,
   macdSchema,
+  matrixEnvelopeSchema,
   portfolioSummaryEnvelopeSchema,
   regimeSchema,
   riskExplainSchema,
@@ -67,6 +68,7 @@ import {
   type ByBotEnvelope,
   type ByPairEnvelope,
   type Canary,
+  type MatrixEnvelope,
   type Capabilities,
   type Datasets,
   type DcaStrategy,
@@ -116,6 +118,22 @@ export function useCapabilities() {
   return useQuery<Capabilities>({
     queryKey: ["capabilities"],
     queryFn: () => apiGet("/api/capabilities", capabilitiesSchema),
+  });
+}
+
+export function useCorrelationMatrix(symbols: string[] | null) {
+  return useQuery<MatrixEnvelope>({
+    queryKey: ["v2-risk-matrix", symbols],
+    queryFn: () =>
+      apiPost(
+        "/api/v2/risk/correlation-matrix",
+        { symbols, interval: "1h", window: 30, threshold: "0.7" },
+        matrixEnvelopeSchema,
+      ),
+    enabled: symbols !== null,
+    retry: shouldRetryPreview,
+    // 1s barlar yavas degisir; 5 dk taze sayilir.
+    staleTime: 300_000,
   });
 }
 

@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
 
+import { BotCorrelation } from "@/components/dashboard/correlation-matrix";
 import { DailyBars } from "@/components/dashboard/daily-bars";
 import { EquityChart } from "@/components/dashboard/equity-chart";
 import { EventsFeed } from "@/components/dashboard/events-feed";
@@ -119,6 +120,7 @@ export default function Home() {
       ) : byBot.isError || byPair.isError ? null : (
         <ProfitSplits byBot={byBot.data.data} byPair={byPair.data.data} />
       )}
+      <BotCorrelation />
       <Card>
         <CardHeader>
           <CardTitle>
